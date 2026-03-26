@@ -25,7 +25,6 @@ export default function LoginPage() {
           password,
         });
         if (error) throw error;
-        // Auto-login after signup
         const { error: loginError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -49,20 +48,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-hclub-black px-4">
+    <div className="min-h-screen flex items-center justify-center login-bg px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-10">
-          <h1 className="font-oswald text-6xl font-bold tracking-wider">
+          <h1 className="font-oswald text-6xl font-bold tracking-wider logo-glow">
             H-<span className="text-hclub-magenta">CLUB</span>
           </h1>
-          <p className="text-gray-400 mt-2 text-sm uppercase tracking-[0.3em] font-oswald">
+          <p className="text-gray-400 mt-2 text-sm uppercase tracking-[0.3em] font-oswald fade-in-up"
+             style={{ opacity: 0, animationDelay: '0.5s' }}>
             Workout Timer
           </p>
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5 fade-in-up" style={{ opacity: 0, animationDelay: '0.7s' }}>
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1 uppercase tracking-wider font-oswald">
               E-Mail
@@ -112,7 +112,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center fade-in-up" style={{ opacity: 0, animationDelay: '0.9s' }}>
           <button
             onClick={() => {
               setIsSignUp(!isSignUp);

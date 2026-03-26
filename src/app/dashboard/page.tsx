@@ -63,6 +63,30 @@ export default function DashboardPage() {
     }
   }
 
+  async function duplicateWorkout(workout: Workout) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('workouts')
+      .insert({
+        user_id: user.id,
+        name: `${workout.name} (Kopie)`,
+        trainer_name: workout.trainer_name,
+        config: workout.config,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error duplicating workout:', error);
+      return;
+    }
+    if (data) {
+      loadWorkouts();
+    }
+  }
+
   async function deleteWorkout(id: string) {
     if (!confirm('Workout wirklich löschen?')) return;
     await supabase.from('workouts').delete().eq('id', id);
@@ -103,13 +127,20 @@ export default function DashboardPage() {
       {/* Main */}
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="font-oswald text-2xl uppercase tracking-wider">
-            Meine Workouts
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="font-oswald text-2xl uppercase tracking-wider">
+              Meine Workouts
+            </h2>
+            {!loading && workouts.length > 0 && (
+              <span className="bg-hclub-magenta/20 text-hclub-magenta text-sm font-oswald px-2.5 py-0.5 rounded-full">
+                {workouts.length}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Create new workout */}
-        <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-6 mb-8">
+        <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-6 mb-8 fade-in-up" style={{ opacity: 0, animationDelay: '0s' }}>
           <h3 className="font-oswald text-xl uppercase tracking-wider mb-4">
             Neues Workout erstellen
           </h3>
@@ -148,11 +179,12 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {workouts.map((workout) => (
+            {workouts.map((workout, index) => (
               <div
                 key={workout.id}
-                className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 hover:border-hclub-magenta/50
-                           transition-colors group"
+                className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 card-gradient-border
+                           transition-all duration-300 group fade-in-up"
+                style={{ opacity: 0, animationDelay: `${0.1 + index * 0.08}s` }}
               >
                 <h3 className="font-oswald text-lg uppercase tracking-wider mb-1">
                   {workout.name}
@@ -172,7 +204,7 @@ export default function DashboardPage() {
                     minute: '2-digit',
                   })}
                 </p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => router.push(`/workout/${workout.id}`)}
                     className="flex-1 px-3 py-2 bg-hclub-gray hover:bg-hclub-magenta text-white text-sm
@@ -188,6 +220,14 @@ export default function DashboardPage() {
                                font-oswald uppercase tracking-wider rounded-lg transition-colors"
                   >
                     Starten
+                  </button>
+                  <button
+                    onClick={() => duplicateWorkout(workout)}
+                    className="px-3 py-2 bg-hclub-gray hover:bg-purple-900/60 text-gray-300 hover:text-purple-300 text-sm
+                               font-oswald uppercase rounded-lg transition-colors"
+                    title="Duplizieren"
+                  >
+                    Duplizieren
                   </button>
                   <button
                     onClick={() => deleteWorkout(workout.id)}
