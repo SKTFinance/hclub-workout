@@ -716,9 +716,25 @@ export default function LiveWorkoutPage() {
         </div>
       )}
 
-      {/* Work phase - group columns */}
+      {/* Work phase - group columns (grid on mobile, flex on desktop) */}
       {phase === 'work' && (
-        <div className="flex-1 flex">
+        <>
+          <style>{`
+            .work-groups-grid {
+              display: grid;
+              grid-template-columns: ${config.numGroups <= 2 ? '1fr' : 'repeat(2, 1fr)'};
+              flex: 1;
+            }
+            @media (min-width: 768px) {
+              .work-groups-grid {
+                display: flex;
+              }
+              .work-groups-grid > div {
+                flex: 1;
+              }
+            }
+          `}</style>
+          <div className="work-groups-grid">
           {Array.from({ length: config.numGroups }, (_, groupIndex) => {
             const exercises = config.rounds[currentRound]?.[groupIndex] || [];
             const currentExercise = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
@@ -728,10 +744,11 @@ export default function LiveWorkoutPage() {
             return (
               <div
                 key={groupIndex}
-                className="flex-1 flex flex-col items-center justify-center relative slide-up"
+                className="flex flex-col items-center justify-center relative slide-up min-h-[120px] md:min-h-0"
                 style={{
                   backgroundColor: GROUP_BG_SHADES[groupIndex % GROUP_BG_SHADES.length],
                   borderRight: groupIndex < config.numGroups - 1 ? '1px solid #333' : 'none',
+                  borderBottom: '1px solid #333',
                   animationDelay: `${groupIndex * 0.1}s`,
                 }}
               >
@@ -746,25 +763,25 @@ export default function LiveWorkoutPage() {
                 />
 
                 {/* Group label */}
-                <div className="absolute top-3 font-oswald text-sm md:text-base uppercase tracking-widest text-gray-500">
+                <div className="font-oswald text-xs md:text-base uppercase tracking-widest text-gray-500 mt-1 md:absolute md:top-3">
                   Gruppe {groupIndex + 1}
                 </div>
 
                 {/* Exercise name */}
                 <div
                   key={exerciseAnimKey}
-                  className="font-oswald text-3xl md:text-5xl lg:text-6xl uppercase tracking-wider text-center px-4 mb-6 exercise-enter"
+                  className="font-oswald text-xl sm:text-2xl md:text-5xl lg:text-6xl uppercase tracking-wider text-center px-2 md:px-4 mb-2 md:mb-6 exercise-enter"
                   style={{ color: exerciseColor }}
                 >
                   {currentExercise}
                 </div>
 
                 {/* Exercise progress dots */}
-                <div className="flex gap-2 mb-4">
+                <div className="flex gap-1 md:gap-2 mb-1 md:mb-4">
                   {exercises.map((_, idx) => (
                     <div
                       key={idx}
-                      className="w-3 h-3 rounded-full transition-all duration-300"
+                      className="w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300"
                       style={{
                         backgroundColor:
                           idx === currentExerciseIndex
@@ -780,7 +797,7 @@ export default function LiveWorkoutPage() {
 
                 {/* Next exercise preview */}
                 {nextExercise && (
-                  <div className="text-gray-500 text-sm font-oswald uppercase tracking-wider">
+                  <div className="text-gray-500 text-xs md:text-sm font-oswald uppercase tracking-wider mb-1">
                     Nächste: <span style={{ color: getExerciseColor(nextExercise), opacity: 0.7 }}>{nextExercise}</span>
                   </div>
                 )}
@@ -793,7 +810,8 @@ export default function LiveWorkoutPage() {
               </div>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Bottom bar */}

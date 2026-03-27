@@ -109,6 +109,70 @@ export default function WorkoutEditorPage() {
     setCustomExercise('');
   }
 
+  function randomFill() {
+    setConfig((prev) => {
+      const rounds = JSON.parse(JSON.stringify(prev.rounds));
+      const exercisePool = ALL_EXERCISES.map((e) => e.name);
+
+      for (let r = 0; r < prev.numRounds; r++) {
+        if (!rounds[r]) rounds[r] = {};
+
+        // Collect previous round's exercises per group to avoid same-in-a-row
+        const prevRoundExercises: Record<number, string> = {};
+        if (r > 0 && rounds[r - 1]) {
+          for (let g = 0; g < prev.numGroups; g++) {
+            const prevEx = rounds[r - 1]?.[g];
+            if (prevEx && prevEx.length > 0) {
+              prevRoundExercises[g] = prevEx[prevEx.length - 1];
+            }
+          }
+        }
+
+        // For each exercise slot in the round, assign unique exercises per group
+        const maxExercisesInRound = Math.max(
+          ...Array.from({ length: prev.numGroups }, (_, g) =>
+            (rounds[r]?.[g]?.length || 1)
+          )
+        );
+
+        for (let exIdx = 0; exIdx < maxExercisesInRound; exIdx++) {
+          // Shuffle available exercises
+          const available = [...exercisePool];
+          for (let i = available.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [available[i], available[j]] = [available[j], available[i]];
+          }
+
+          const usedInSlot = new Set<string>();
+
+          for (let g = 0; g < prev.numGroups; g++) {
+            if (!rounds[r][g]) rounds[r][g] = [];
+            if (exIdx >= rounds[r][g].length) continue;
+
+            const prevExForGroup = exIdx === 0 ? prevRoundExercises[g] : rounds[r][g][exIdx - 1];
+
+            // Find an exercise not used in this slot and not same as previous for this group
+            let chosen = available.find(
+              (ex) => !usedInSlot.has(ex) && ex !== prevExForGroup
+            );
+            if (!chosen) {
+              // Fallback: just avoid same-in-a-row
+              chosen = available.find((ex) => ex !== prevExForGroup);
+            }
+            if (!chosen) {
+              chosen = available[0] || 'Wall Balls';
+            }
+
+            rounds[r][g][exIdx] = chosen;
+            usedInSlot.add(chosen);
+          }
+        }
+      }
+
+      return { ...prev, rounds };
+    });
+  }
+
   async function saveWorkout() {
     setSaving(true);
     await supabase
@@ -314,13 +378,25 @@ export default function WorkoutEditorPage() {
           </div>
         </div>
 
+        {/* Random fill button */}
+        <div className="flex justify-center mb-8">
+          <button
+            onClick={randomFill}
+            className="px-8 py-3 bg-purple-900/40 hover:bg-hclub-magenta border border-purple-500/50 hover:border-hclub-magenta
+                       text-purple-300 hover:text-white font-oswald text-lg uppercase tracking-wider rounded-xl
+                       transition-all duration-300"
+          >
+            Zufällig befüllen
+          </button>
+        </div>
+
         {/* Rounds editor */}
         {Array.from({ length: config.numRounds }, (_, roundIndex) => (
           <div key={roundIndex} className="mb-8">
             <h3 className="font-oswald text-xl uppercase tracking-wider mb-4 text-hclub-magenta">
               Runde {roundIndex + 1}
             </h3>
-            <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${config.numGroups}, 1fr)` }}>
+            <div className={`grid gap-4 grid-cols-1 ${config.numGroups >= 2 ? 'sm:grid-cols-2' : ''} ${config.numGroups >= 3 ? 'lg:grid-cols-3' : ''} ${config.numGroups >= 4 ? 'xl:grid-cols-4' : ''}`}>
               {Array.from({ length: config.numGroups }, (_, groupIndex) => (
                 <div
                   key={groupIndex}
