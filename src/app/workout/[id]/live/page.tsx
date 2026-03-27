@@ -22,7 +22,8 @@ const PARTICLE_COLORS = ['#FF00FF', '#CC00CC', '#9900FF', '#FF66FF', '#FFD700', 
 export default function LiveWorkoutPage() {
   const params = useParams();
   const id = params.id as string;
-  const supabase = createClient();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const supabase = useMemo(() => createClient(), []);
 
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [exerciseColors, setExerciseColors] = useState<Record<string, string>>({});

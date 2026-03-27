@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
 import type { Workout, WorkoutConfig } from '@/lib/types';
@@ -12,7 +12,8 @@ export default function WorkoutEditorPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const supabase = createClient();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const supabase = useMemo(() => createClient(), []);
 
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [name, setName] = useState('');
