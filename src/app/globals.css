@@ -251,6 +251,7 @@ h1, h2, h3, h4, h5, h6, .font-oswald {
   opacity: 0;
   transition: opacity 0.3s ease;
   animation: gradient-border 3s ease infinite;
+  pointer-events: none;
 }
 .card-gradient-border:hover::before {
   opacity: 1;
