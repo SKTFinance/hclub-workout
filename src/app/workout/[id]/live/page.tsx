@@ -97,13 +97,20 @@ export default function LiveWorkoutPage() {
     if (!workout) return 0;
     const c = workout.config;
     let total = c.warmupTime;
+    // Each round: all groups rotate through all stations,
+    // so total exercises = sum of all exercises across all groups (not max)
     for (let r = 0; r < c.numRounds; r++) {
-      const maxEx = getMaxExercisesInRound(c, r);
-      total += maxEx * c.workTime;
-      total += (maxEx - 1) * c.restTime;
+      let totalExInRound = 0;
+      for (let g = 0; g < c.numGroups; g++) {
+        const exercises = c.rounds[r]?.[g] || [];
+        totalExInRound += exercises.length;
+      }
+      totalExInRound = Math.max(totalExInRound, 1);
+      total += totalExInRound * c.workTime;
+      total += (totalExInRound - 1) * c.restTime;
       if (r < c.numRounds - 1) total += c.roundRestTime;
     }
-    // Add countdown time (3s per work start)
+    // Add countdown time (3s per work/round start)
     total += 3 * c.numRounds;
     return total;
     // eslint-disable-next-line react-hooks/exhaustive-deps
