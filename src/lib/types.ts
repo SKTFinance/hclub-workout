@@ -28,6 +28,14 @@ export interface WorkoutConfig {
   roundSettings?: {
     [roundIndex: number]: RoundSettings;
   };
+  iconOverrides?: {
+    // iconOverrides[roundIndex][groupIndex][exerciseIndex] = icon key from exerciseIconMap
+    [roundIndex: number]: {
+      [groupIndex: number]: {
+        [exerciseIndex: number]: string;
+      };
+    };
+  };
 }
 
 export interface Workout {

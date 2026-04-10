@@ -12,11 +12,25 @@ import {
   playPhaseEndSound,
   playRoundEndSound,
 } from '@/lib/sounds';
-import { getExerciseIcon } from '@/lib/exerciseIcons';
+import { getExerciseIcon, exerciseIconMap } from '@/lib/exerciseIcons';
 
 type Phase = 'idle' | 'summary' | 'warmup' | 'countdown' | 'work' | 'rest' | 'roundRest' | 'finished';
 
 const GROUP_BG_SHADES = ['#1a1a1a', '#222222', '#2a2a2a', '#1e1e1e', '#252525', '#202020'];
+
+function getIconForExercise(
+  config: WorkoutConfig,
+  roundIndex: number,
+  groupIndex: number,
+  exerciseIndex: number,
+  exerciseName: string
+) {
+  const overrideKey = config.iconOverrides?.[roundIndex]?.[groupIndex]?.[exerciseIndex];
+  if (overrideKey && exerciseIconMap[overrideKey]) {
+    return exerciseIconMap[overrideKey];
+  }
+  return getExerciseIcon(exerciseName);
+}
 
 const PARTICLE_COLORS = ['#FF00FF', '#CC00CC', '#9900FF', '#FF66FF', '#FFD700', '#00BFFF', '#FF4444', '#32CD32'];
 
@@ -732,7 +746,7 @@ export default function LiveWorkoutPage() {
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const nextExercises = config.rounds[currentRound]?.[gIdx] || [];
               const nextEx = nextExercises[0] || 'Übung';
-              const ExIcon = getExerciseIcon(nextEx);
+              const ExIcon = getIconForExercise(config, currentRound, gIdx, 0, nextEx);
               return (
                 <div key={gIdx} className="bg-hclub-dark/60 border border-hclub-gray/40 rounded-xl p-4 text-center">
                   <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-2">
@@ -766,7 +780,7 @@ export default function LiveWorkoutPage() {
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const exercises = config.rounds[currentRound]?.[gIdx] || [];
               const nextEx = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
-              const ExIcon = getExerciseIcon(nextEx);
+              const ExIcon = getIconForExercise(config, currentRound, gIdx, currentExerciseIndex, nextEx);
               return (
                 <div key={gIdx} className="bg-hclub-dark/60 border border-hclub-gray/40 rounded-xl p-4 text-center">
                   <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-2">
@@ -810,7 +824,7 @@ export default function LiveWorkoutPage() {
             const currentExercise = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
             const exerciseColor = getExerciseColor(currentExercise);
             const nextExercise = getNextExercise(config, groupIndex);
-            const ExerciseIcon = getExerciseIcon(currentExercise);
+            const ExerciseIcon = getIconForExercise(config, currentRound, groupIndex, currentExerciseIndex, currentExercise);
 
             return (
               <div

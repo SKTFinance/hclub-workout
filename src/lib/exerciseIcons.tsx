@@ -337,7 +337,7 @@ const GenericExercise = ({ size, color }: IconProps) => (
   </SvgWrap>
 );
 
-const exerciseIconMap: Record<string, React.FC<IconProps>> = {
+export const exerciseIconMap: Record<string, React.FC<IconProps>> = {
   // HYROX
   'skierg': SkiErg,
   'sled push': SledPush,
@@ -378,3 +378,15 @@ const exerciseIconMap: Record<string, React.FC<IconProps>> = {
 export function getExerciseIcon(exerciseName: string): React.FC<IconProps> {
   return exerciseIconMap[exerciseName.toLowerCase()] || GenericExercise;
 }
+
+// Deduplicated list of icons for the picker (one entry per unique component)
+const _seen = new Set<React.FC<IconProps>>();
+export const ICON_PICKER_OPTIONS: { key: string; label: string; Component: React.FC<IconProps> }[] = [];
+for (const [key, Component] of Object.entries(exerciseIconMap)) {
+  if (!_seen.has(Component)) {
+    _seen.add(Component);
+    ICON_PICKER_OPTIONS.push({ key, label: key.replace(/\b\w/g, (c) => c.toUpperCase()), Component });
+  }
+}
+// Also include GenericExercise as fallback option
+ICON_PICKER_OPTIONS.push({ key: '__generic__', label: 'Generic', Component: GenericExercise });

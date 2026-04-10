@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
 import type { Workout, WorkoutConfig } from '@/lib/types';
 import { HYROX_EXERCISES, TRAINING_EXERCISES } from '@/lib/exercises';
+import { ICON_PICKER_OPTIONS, exerciseIconMap, getExerciseIcon } from '@/lib/exerciseIcons';
 
 const ALL_EXERCISES = [...HYROX_EXERCISES, ...TRAINING_EXERCISES];
 
@@ -30,6 +31,7 @@ export default function WorkoutEditorPage() {
   const [saving, setSaving] = useState(false);
   const [customExercise, setCustomExercise] = useState('');
   const [expandedRoundSettings, setExpandedRoundSettings] = useState<Record<number, boolean>>({});
+  const [iconPickerOpen, setIconPickerOpen] = useState<{ round: number; group: number; ex: number } | null>(null);
 
   const loadWorkout = useCallback(async () => {
     const { data } = await supabase
@@ -128,6 +130,27 @@ export default function WorkoutEditorPage() {
 
   function toggleRoundSettings(roundIndex: number) {
     setExpandedRoundSettings((prev) => ({ ...prev, [roundIndex]: !prev[roundIndex] }));
+  }
+
+  function getIconOverrideKey(roundIndex: number, groupIndex: number, exerciseIndex: number): string | undefined {
+    return config.iconOverrides?.[roundIndex]?.[groupIndex]?.[exerciseIndex];
+  }
+
+  function setIconOverride(roundIndex: number, groupIndex: number, exerciseIndex: number, iconKey: string | null) {
+    setConfig((prev) => {
+      const overrides = JSON.parse(JSON.stringify(prev.iconOverrides || {}));
+      if (iconKey === null) {
+        // Remove override
+        if (overrides[roundIndex]?.[groupIndex]) {
+          delete overrides[roundIndex][groupIndex][exerciseIndex];
+        }
+      } else {
+        if (!overrides[roundIndex]) overrides[roundIndex] = {};
+        if (!overrides[roundIndex][groupIndex]) overrides[roundIndex][groupIndex] = {};
+        overrides[roundIndex][groupIndex][exerciseIndex] = iconKey;
+      }
+      return { ...prev, iconOverrides: overrides };
+    });
   }
 
   function randomFill() {
@@ -307,7 +330,7 @@ export default function WorkoutEditorPage() {
           <h3 className="font-oswald text-lg uppercase tracking-wider mb-4">
             Zeiteinstellungen
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">
                 Gruppen
@@ -332,36 +355,6 @@ export default function WorkoutEditorPage() {
                 max={20}
                 value={config.numRounds}
                 onChange={(e) => updateConfig({ numRounds: Math.max(1, Math.min(20, parseInt(e.target.value) || 1)) })}
-                className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
-                           text-center focus:outline-none focus:border-hclub-magenta"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">
-                Arbeitszeit (s)
-              </label>
-              <input
-                type="number"
-                min={5}
-                max={600}
-                step={5}
-                value={config.workTime}
-                onChange={(e) => updateConfig({ workTime: parseInt(e.target.value) || 60 })}
-                className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
-                           text-center focus:outline-none focus:border-hclub-magenta"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">
-                Pause (s)
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={300}
-                step={5}
-                value={config.restTime}
-                onChange={(e) => updateConfig({ restTime: parseInt(e.target.value) || 0 })}
                 className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
                            text-center focus:outline-none focus:border-hclub-magenta"
               />
@@ -507,42 +500,102 @@ export default function WorkoutEditorPage() {
                   <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400 mb-3">
                     Gruppe {groupIndex + 1}
                   </h4>
-                  {(config.rounds[roundIndex]?.[groupIndex] || []).map((exercise, exIdx) => (
-                    <div key={exIdx} className="flex gap-2 mb-2">
-                      <select
-                        value={exercise}
-                        onChange={(e) => setExercise(roundIndex, groupIndex, exIdx, e.target.value)}
-                        className="flex-1 px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg
-                                   text-white text-sm focus:outline-none focus:border-hclub-magenta"
-                      >
-                        <optgroup label="HYROX">
-                          {HYROX_EXERCISES.map((ex) => (
-                            <option key={ex.name} value={ex.name}>
-                              {ex.name}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="Training">
-                          {TRAINING_EXERCISES.map((ex) => (
-                            <option key={ex.name} value={ex.name}>
-                              {ex.name}
-                            </option>
-                          ))}
-                        </optgroup>
-                        {/* If current value is custom, show it */}
-                        {!ALL_EXERCISES.find((e) => e.name === exercise) && (
-                          <option value={exercise}>{exercise}</option>
-                        )}
-                      </select>
-                      <button
-                        onClick={() => removeExerciseFromGroup(roundIndex, groupIndex, exIdx)}
-                        className="px-2 text-red-400 hover:text-red-300 text-sm"
-                        title="Entfernen"
-                      >
-                        ✕
-                      </button>
+                  {(config.rounds[roundIndex]?.[groupIndex] || []).map((exercise, exIdx) => {
+                    const overrideKey = getIconOverrideKey(roundIndex, groupIndex, exIdx);
+                    const IconComponent = overrideKey
+                      ? (exerciseIconMap[overrideKey] || getExerciseIcon(exercise))
+                      : getExerciseIcon(exercise);
+                    const isPickerOpen =
+                      iconPickerOpen?.round === roundIndex &&
+                      iconPickerOpen?.group === groupIndex &&
+                      iconPickerOpen?.ex === exIdx;
+                    return (
+                    <div key={exIdx} className="mb-2">
+                      <div className="flex gap-2">
+                        {/* Icon preview button */}
+                        <button
+                          type="button"
+                          onClick={() => setIconPickerOpen(isPickerOpen ? null : { round: roundIndex, group: groupIndex, ex: exIdx })}
+                          title="Icon wählen"
+                          className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
+                            isPickerOpen
+                              ? 'border-hclub-magenta bg-hclub-magenta/10'
+                              : overrideKey
+                              ? 'border-hclub-magenta/50 bg-hclub-dark'
+                              : 'border-hclub-gray bg-hclub-black hover:border-gray-500'
+                          }`}
+                        >
+                          <IconComponent size={22} color={isPickerOpen ? '#e91e8c' : '#9ca3af'} />
+                        </button>
+                        <select
+                          value={exercise}
+                          onChange={(e) => setExercise(roundIndex, groupIndex, exIdx, e.target.value)}
+                          className="flex-1 px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg
+                                     text-white text-sm focus:outline-none focus:border-hclub-magenta"
+                        >
+                          <optgroup label="HYROX">
+                            {HYROX_EXERCISES.map((ex) => (
+                              <option key={ex.name} value={ex.name}>
+                                {ex.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Training">
+                            {TRAINING_EXERCISES.map((ex) => (
+                              <option key={ex.name} value={ex.name}>
+                                {ex.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                          {!ALL_EXERCISES.find((e) => e.name === exercise) && (
+                            <option value={exercise}>{exercise}</option>
+                          )}
+                        </select>
+                        <button
+                          onClick={() => removeExerciseFromGroup(roundIndex, groupIndex, exIdx)}
+                          className="px-2 text-red-400 hover:text-red-300 text-sm"
+                          title="Entfernen"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      {/* Icon picker */}
+                      {isPickerOpen && (
+                        <div className="mt-1 p-2 bg-hclub-black border border-hclub-magenta/40 rounded-lg">
+                          <div className="grid grid-cols-6 gap-1">
+                            {ICON_PICKER_OPTIONS.map(({ key, label, Component }) => (
+                              <button
+                                key={key}
+                                type="button"
+                                title={label}
+                                onClick={() => {
+                                  setIconOverride(roundIndex, groupIndex, exIdx, key === '__generic__' ? null : key);
+                                  setIconPickerOpen(null);
+                                }}
+                                className={`flex items-center justify-center w-9 h-9 rounded border transition-colors ${
+                                  (overrideKey === key) || (!overrideKey && key === '__generic__' && getExerciseIcon(exercise) === Component)
+                                    ? 'border-hclub-magenta bg-hclub-magenta/20'
+                                    : 'border-hclub-gray/40 hover:border-hclub-magenta/60 hover:bg-hclub-dark'
+                                }`}
+                              >
+                                <Component size={20} color="#9ca3af" />
+                              </button>
+                            ))}
+                          </div>
+                          {overrideKey && (
+                            <button
+                              type="button"
+                              onClick={() => { setIconOverride(roundIndex, groupIndex, exIdx, null); setIconPickerOpen(null); }}
+                              className="mt-1 text-xs text-gray-500 hover:text-red-400 font-oswald uppercase"
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                   <div className="flex gap-2 mt-2">
                     <button
                       onClick={() => addExerciseToGroup(roundIndex, groupIndex)}
