@@ -12,6 +12,7 @@ import {
   playPhaseEndSound,
   playRoundEndSound,
 } from '@/lib/sounds';
+import { getExerciseIcon } from '@/lib/exerciseIcons';
 
 type Phase = 'idle' | 'summary' | 'warmup' | 'countdown' | 'work' | 'rest' | 'roundRest' | 'finished';
 
@@ -83,6 +84,14 @@ export default function LiveWorkoutPage() {
     return exerciseColors[name] || getDefaultColor(name);
   }
 
+  function getWorkTimeForRound(config: WorkoutConfig, roundIndex: number): number {
+    return config.roundSettings?.[roundIndex]?.workTime ?? config.workTime;
+  }
+
+  function getRestTimeForRound(config: WorkoutConfig, roundIndex: number): number {
+    return config.roundSettings?.[roundIndex]?.restTime ?? config.restTime;
+  }
+
   function getMaxExercisesInRound(config: WorkoutConfig, roundIndex: number): number {
     let max = 0;
     for (let g = 0; g < config.numGroups; g++) {
@@ -106,8 +115,10 @@ export default function LiveWorkoutPage() {
         totalExInRound += exercises.length;
       }
       totalExInRound = Math.max(totalExInRound, 1);
-      total += totalExInRound * c.workTime;
-      total += (totalExInRound - 1) * c.restTime;
+      const rWorkTime = c.roundSettings?.[r]?.workTime ?? c.workTime;
+      const rRestTime = c.roundSettings?.[r]?.restTime ?? c.restTime;
+      total += totalExInRound * rWorkTime;
+      total += (totalExInRound - 1) * rRestTime;
       if (r < c.numRounds - 1) total += c.roundRestTime;
     }
     // Add countdown time (3s per work/round start)
@@ -221,33 +232,41 @@ export default function LiveWorkoutPage() {
 
   // Phase transitions
   useEffect(() => {
-    if (timeRemaining > 0 || phase === 'idle' || phase === 'summary' || phase === 'finished' || phase === 'countdown' || isPaused) return;
-    if (!workout) return;
-
-    const config = workout.config;
-
-    if (phase === 'warmup') {
+    // Warmup transitions at 3 seconds (countdown will handle 3-2-1-GO)
+    if (phase === 'warmup' && timeRemaining <= 3 && !isPaused && workout) {
+      const cfg = workout.config;
+      // Clear the warmup timer
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       startCountdown(() => {
         setPhase('work');
-        setTimeRemaining(config.workTime);
+        setTimeRemaining(getWorkTimeForRound(cfg, 0));
         setCurrentRound(0);
         setCurrentExerciseIndex(0);
       });
       return;
     }
 
+    if (timeRemaining > 0 || phase === 'idle' || phase === 'summary' || phase === 'finished' || phase === 'countdown' || isPaused) return;
+    if (!workout) return;
+
+    const config = workout.config;
+
     if (phase === 'work') {
       const maxExercises = getMaxExercisesInRound(config, currentRound);
       const nextExIndex = currentExerciseIndex + 1;
+      const roundRestTime = getRestTimeForRound(config, currentRound);
 
       if (nextExIndex < maxExercises) {
-        if (config.restTime > 0) {
+        if (roundRestTime > 0) {
           setPhase('rest');
-          setTimeRemaining(config.restTime);
+          setTimeRemaining(roundRestTime);
           setCurrentExerciseIndex(nextExIndex);
         } else {
           setCurrentExerciseIndex(nextExIndex);
-          setTimeRemaining(config.workTime);
+          setTimeRemaining(getWorkTimeForRound(config, currentRound));
         }
       } else {
         const nextRound = currentRound + 1;
@@ -262,7 +281,7 @@ export default function LiveWorkoutPage() {
               setCurrentRound(nextRound);
               setCurrentExerciseIndex(0);
               setPhase('work');
-              setTimeRemaining(config.workTime);
+              setTimeRemaining(getWorkTimeForRound(config, nextRound));
             });
           }
         } else {
@@ -274,14 +293,14 @@ export default function LiveWorkoutPage() {
 
     if (phase === 'rest') {
       setPhase('work');
-      setTimeRemaining(config.workTime);
+      setTimeRemaining(getWorkTimeForRound(config, currentRound));
       return;
     }
 
     if (phase === 'roundRest') {
       startCountdown(() => {
         setPhase('work');
-        setTimeRemaining(config.workTime);
+        setTimeRemaining(getWorkTimeForRound(config, currentRound));
       });
       return;
     }
@@ -337,7 +356,7 @@ export default function LiveWorkoutPage() {
     } else {
       startCountdown(() => {
         setPhase('work');
-        setTimeRemaining(config.workTime);
+        setTimeRemaining(getWorkTimeForRound(config, 0));
       });
     }
     setIsPaused(false);
@@ -625,7 +644,7 @@ export default function LiveWorkoutPage() {
   // WORK / REST / ROUND REST - Main display with groups
   const showPowerTimer = phase === 'work' && timeRemaining <= 10 && timeRemaining > 0;
   const showShake = phase === 'work' && timeRemaining <= 3 && timeRemaining > 0;
-  const workTimeTotal = config.workTime;
+  const workTimeTotal = getWorkTimeForRound(config, currentRound);
   const progressPercent = phase === 'work' ? (timeRemaining / workTimeTotal) * 100 : 100;
 
   return (
@@ -696,29 +715,73 @@ export default function LiveWorkoutPage() {
         </div>
       </div>
 
-      {/* Round rest display */}
+      {/* Round rest display - with next exercise info */}
       {phase === 'roundRest' && (
-        <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center px-4">
           <h2 className="font-oswald text-4xl md:text-6xl uppercase tracking-widest text-orange-400 mb-4">
             Rundenpause
           </h2>
-          <div className="font-oswald text-[8rem] md:text-[12rem] leading-none text-white">
+          <div className="font-oswald text-[6rem] md:text-[10rem] leading-none text-white mb-6">
             {formatTime(timeRemaining)}
           </div>
-          <p className="font-oswald text-2xl md:text-3xl uppercase tracking-wider text-gray-400 mt-4">
+          <p className="font-oswald text-xl md:text-2xl uppercase tracking-wider text-gray-400 mb-6">
             Nächste: Runde {currentRound + 1}
           </p>
+          {/* Next exercise per group */}
+          <div className="w-full max-w-4xl grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups, 3)}, 1fr)` }}>
+            {Array.from({ length: config.numGroups }, (_, gIdx) => {
+              const nextExercises = config.rounds[currentRound]?.[gIdx] || [];
+              const nextEx = nextExercises[0] || 'Übung';
+              const ExIcon = getExerciseIcon(nextEx);
+              return (
+                <div key={gIdx} className="bg-hclub-dark/60 border border-hclub-gray/40 rounded-xl p-4 text-center">
+                  <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-2">
+                    Gruppe {String.fromCharCode(65 + gIdx)}
+                  </div>
+                  <div className="flex justify-center mb-2 opacity-70">
+                    <ExIcon size={48} color={getExerciseColor(nextEx)} />
+                  </div>
+                  <div className="font-oswald text-lg md:text-2xl uppercase tracking-wider"
+                       style={{ color: getExerciseColor(nextEx) }}>
+                    {nextEx}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* Rest between exercises display */}
+      {/* Rest between exercises display - with next exercise info */}
       {phase === 'rest' && (
-        <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center px-4">
           <h2 className="font-oswald text-4xl md:text-6xl uppercase tracking-widest text-yellow-400 mb-4">
             Pause
           </h2>
-          <div className="font-oswald text-[8rem] md:text-[12rem] leading-none text-white">
+          <div className="font-oswald text-[6rem] md:text-[10rem] leading-none text-white mb-6">
             {formatTime(timeRemaining)}
+          </div>
+          {/* Next exercise per group */}
+          <div className="w-full max-w-4xl grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups, 3)}, 1fr)` }}>
+            {Array.from({ length: config.numGroups }, (_, gIdx) => {
+              const exercises = config.rounds[currentRound]?.[gIdx] || [];
+              const nextEx = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
+              const ExIcon = getExerciseIcon(nextEx);
+              return (
+                <div key={gIdx} className="bg-hclub-dark/60 border border-hclub-gray/40 rounded-xl p-4 text-center">
+                  <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-2">
+                    Gruppe {String.fromCharCode(65 + gIdx)}
+                  </div>
+                  <div className="flex justify-center mb-2 opacity-70">
+                    <ExIcon size={48} color={getExerciseColor(nextEx)} />
+                  </div>
+                  <div className="font-oswald text-lg md:text-2xl uppercase tracking-wider"
+                       style={{ color: getExerciseColor(nextEx) }}>
+                    {nextEx}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -747,6 +810,7 @@ export default function LiveWorkoutPage() {
             const currentExercise = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
             const exerciseColor = getExerciseColor(currentExercise);
             const nextExercise = getNextExercise(config, groupIndex);
+            const ExerciseIcon = getExerciseIcon(currentExercise);
 
             return (
               <div
@@ -772,6 +836,11 @@ export default function LiveWorkoutPage() {
                 {/* Group label */}
                 <div className="font-oswald text-xs md:text-base uppercase tracking-widest text-gray-500 mt-1 md:absolute md:top-3">
                   Gruppe {groupIndex + 1}
+                </div>
+
+                {/* Exercise icon */}
+                <div key={`icon-${exerciseAnimKey}`} className="exercise-enter mb-1 md:mb-3 opacity-80">
+                  <ExerciseIcon size={config.numGroups <= 2 ? 80 : 56} color={exerciseColor} />
                 </div>
 
                 {/* Exercise name */}

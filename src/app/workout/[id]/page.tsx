@@ -29,6 +29,7 @@ export default function WorkoutEditorPage() {
   });
   const [saving, setSaving] = useState(false);
   const [customExercise, setCustomExercise] = useState('');
+  const [expandedRoundSettings, setExpandedRoundSettings] = useState<Record<number, boolean>>({});
 
   const loadWorkout = useCallback(async () => {
     const { data } = await supabase
@@ -107,6 +108,26 @@ export default function WorkoutEditorPage() {
       return { ...prev, rounds };
     });
     setCustomExercise('');
+  }
+
+  function updateRoundSetting(roundIndex: number, field: 'workTime' | 'restTime', value: number | undefined) {
+    setConfig((prev) => {
+      const roundSettings = { ...(prev.roundSettings || {}) };
+      if (!roundSettings[roundIndex]) roundSettings[roundIndex] = {};
+      if (value === undefined) {
+        delete roundSettings[roundIndex][field];
+        if (Object.keys(roundSettings[roundIndex]).length === 0) {
+          delete roundSettings[roundIndex];
+        }
+      } else {
+        roundSettings[roundIndex] = { ...roundSettings[roundIndex], [field]: value };
+      }
+      return { ...prev, roundSettings };
+    });
+  }
+
+  function toggleRoundSettings(roundIndex: number) {
+    setExpandedRoundSettings((prev) => ({ ...prev, [roundIndex]: !prev[roundIndex] }));
   }
 
   function randomFill() {
@@ -391,11 +412,92 @@ export default function WorkoutEditorPage() {
         </div>
 
         {/* Rounds editor */}
-        {Array.from({ length: config.numRounds }, (_, roundIndex) => (
+        {Array.from({ length: config.numRounds }, (_, roundIndex) => {
+          const roundHasCustomSettings = config.roundSettings?.[roundIndex] &&
+            Object.keys(config.roundSettings[roundIndex]).length > 0;
+          const isExpanded = expandedRoundSettings[roundIndex];
+          const effectiveWorkTime = config.roundSettings?.[roundIndex]?.workTime ?? config.workTime;
+          const effectiveRestTime = config.roundSettings?.[roundIndex]?.restTime ?? config.restTime;
+
+          return (
           <div key={roundIndex} className="mb-8">
-            <h3 className="font-oswald text-xl uppercase tracking-wider mb-4 text-hclub-magenta">
-              Runde {roundIndex + 1}
-            </h3>
+            <div className="flex items-center gap-3 mb-4">
+              <h3 className="font-oswald text-xl uppercase tracking-wider text-hclub-magenta">
+                Runde {roundIndex + 1}
+              </h3>
+              <button
+                onClick={() => toggleRoundSettings(roundIndex)}
+                className={`text-xs px-3 py-1 rounded-lg font-oswald uppercase tracking-wider transition-colors border ${
+                  roundHasCustomSettings
+                    ? 'border-hclub-magenta text-hclub-magenta bg-hclub-magenta/10'
+                    : 'border-hclub-gray text-gray-400 hover:text-white hover:border-gray-500'
+                }`}
+              >
+                {isExpanded ? 'Zeiten ▲' : 'Zeiten ▼'}
+                {roundHasCustomSettings && ' ✦'}
+              </button>
+              {roundHasCustomSettings && !isExpanded && (
+                <span className="text-xs text-gray-500 font-oswald">
+                  {effectiveWorkTime}s / {effectiveRestTime}s
+                </span>
+              )}
+            </div>
+
+            {isExpanded && (
+              <div className="bg-hclub-dark/50 border border-hclub-gray/50 rounded-lg p-4 mb-4 flex flex-wrap gap-4 items-end">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">
+                    Arbeitszeit (s)
+                  </label>
+                  <input
+                    type="number"
+                    min={5}
+                    max={600}
+                    step={5}
+                    value={effectiveWorkTime}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || config.workTime;
+                      updateRoundSetting(roundIndex, 'workTime', val === config.workTime ? undefined : val);
+                    }}
+                    className="w-24 px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
+                               text-center text-sm focus:outline-none focus:border-hclub-magenta"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">
+                    Pause (s)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={300}
+                    step={5}
+                    value={effectiveRestTime}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      updateRoundSetting(roundIndex, 'restTime', val === config.restTime ? undefined : val);
+                    }}
+                    className="w-24 px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
+                               text-center text-sm focus:outline-none focus:border-hclub-magenta"
+                  />
+                </div>
+                {roundHasCustomSettings && (
+                  <button
+                    onClick={() => {
+                      setConfig((prev) => {
+                        const roundSettings = { ...(prev.roundSettings || {}) };
+                        delete roundSettings[roundIndex];
+                        return { ...prev, roundSettings };
+                      });
+                    }}
+                    className="text-xs text-red-400 hover:text-red-300 font-oswald uppercase px-3 py-2"
+                  >
+                    Zurücksetzen
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className={`grid gap-4 grid-cols-1 ${config.numGroups >= 2 ? 'sm:grid-cols-2' : ''} ${config.numGroups >= 3 ? 'lg:grid-cols-3' : ''} ${config.numGroups >= 4 ? 'xl:grid-cols-4' : ''}`}>
               {Array.from({ length: config.numGroups }, (_, groupIndex) => (
                 <div
@@ -472,7 +574,8 @@ export default function WorkoutEditorPage() {
               ))}
             </div>
           </div>
-        ))}
+          );
+        })}
       </main>
     </div>
   );

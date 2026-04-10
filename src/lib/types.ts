@@ -7,11 +7,16 @@ export interface GroupRound {
   exercises: string[]; // exercise names for this group in this round
 }
 
+export interface RoundSettings {
+  workTime?: number; // override per round
+  restTime?: number; // override per round
+}
+
 export interface WorkoutConfig {
   numGroups: number;
   numRounds: number;
-  workTime: number; // seconds
-  restTime: number; // seconds between exercises
+  workTime: number; // seconds (default for all rounds)
+  restTime: number; // seconds between exercises (default)
   roundRestTime: number; // seconds between rounds
   warmupTime: number; // seconds
   rounds: {
@@ -19,6 +24,9 @@ export interface WorkoutConfig {
     [roundIndex: number]: {
       [groupIndex: number]: string[];
     };
+  };
+  roundSettings?: {
+    [roundIndex: number]: RoundSettings;
   };
 }
 
