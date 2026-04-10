@@ -1,21 +1,108 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { ALL_DEFAULT_EXERCISES } from '@/lib/exercises';
 import type { ExerciseSetting } from '@/lib/types';
+import { ICON_PICKER_OPTIONS, getExerciseIcon } from '@/lib/exerciseIcons';
+
+const ICONS_STORAGE_KEY = 'hclub_exercise_icons';
+
+function loadIconsFromStorage(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem(ICONS_STORAGE_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function saveIconsToStorage(icons: Record<string, string>) {
+  try {
+    localStorage.setItem(ICONS_STORAGE_KEY, JSON.stringify(icons));
+  } catch {
+    // ignore
+  }
+}
 
 interface CustomExercise {
   name: string;
   color: string;
 }
 
+// Inline icon picker dropdown
+function IconPickerDropdown({
+  currentIcon,
+  exerciseColor,
+  onSelect,
+}: {
+  currentIcon: string;
+  exerciseColor: string;
+  onSelect: (key: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const IconComponent = useMemo(() => {
+    const opt = ICON_PICKER_OPTIONS.find((o) => o.key === currentIcon);
+    return opt ? opt.Component : getExerciseIcon(currentIcon);
+  }, [currentIcon]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title="Icon auswählen"
+        className="w-10 h-8 flex items-center justify-center border border-hclub-gray rounded bg-hclub-black hover:border-hclub-magenta transition-colors"
+      >
+        <IconComponent size={22} color={exerciseColor} />
+      </button>
+      {open && (
+        <div className="absolute z-50 top-10 left-0 bg-hclub-dark border border-hclub-gray rounded-lg p-2 shadow-xl"
+          style={{ width: 260 }}>
+          <p className="text-xs text-gray-400 font-oswald uppercase tracking-wider mb-2 px-1">Icon wählen</p>
+          <div className="grid grid-cols-6 gap-1 max-h-48 overflow-y-auto">
+            {ICON_PICKER_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => { onSelect(opt.key); setOpen(false); }}
+                title={opt.label}
+                className={`flex items-center justify-center w-9 h-9 rounded border transition-colors ${
+                  currentIcon === opt.key
+                    ? 'border-hclub-magenta bg-hclub-magenta/10'
+                    : 'border-transparent hover:border-hclub-gray'
+                }`}
+              >
+                <opt.Component size={24} color={exerciseColor} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [icons, setIcons] = useState<Record<string, string>>({});
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
   const [newExerciseName, setNewExerciseName] = useState('');
   const [newExerciseColor, setNewExerciseColor] = useState('#FF00FF');
+  const [newExerciseIcon, setNewExerciseIcon] = useState('__generic__');
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -29,6 +116,16 @@ export default function SettingsPage() {
     []
   );
 
+  // Load icons from localStorage on mount
+  useEffect(() => {
+    setIcons(loadIconsFromStorage());
+  }, []);
+
+  // Persist icons to localStorage whenever they change
+  useEffect(() => {
+    if (Object.keys(icons).length > 0) saveIconsToStorage(icons);
+  }, [icons]);
+
   const loadSettings = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -41,11 +138,9 @@ export default function SettingsPage() {
     const colors: Record<string, string> = {};
     const custom: CustomExercise[] = [];
 
-    // Start with defaults
     ALL_DEFAULT_EXERCISES.forEach((ex) => {
       colors[ex.name] = ex.color;
     });
-    // Override with user settings and detect custom exercises
     if (data) {
       (data as ExerciseSetting[]).forEach((s) => {
         colors[s.exercise_name] = s.color;
@@ -67,11 +162,18 @@ export default function SettingsPage() {
     setSaved(false);
   }
 
+  function updateIcon(name: string, iconKey: string) {
+    setIcons((prev) => {
+      const next = { ...prev, [name]: iconKey };
+      saveIconsToStorage(next);
+      return next;
+    });
+  }
+
   async function addCustomExercise() {
     const trimmed = newExerciseName.trim();
     if (!trimmed) return;
 
-    // Check for duplicates
     if (defaultExerciseNames.has(trimmed) || customExercises.some((e) => e.name === trimmed)) {
       alert('Diese Übung existiert bereits.');
       return;
@@ -87,10 +189,15 @@ export default function SettingsPage() {
         { onConflict: 'user_id,exercise_name' }
       );
 
+    if (newExerciseIcon && newExerciseIcon !== '__generic__') {
+      updateIcon(trimmed, newExerciseIcon);
+    }
+
     setCustomExercises((prev) => [...prev, { name: trimmed, color: newExerciseColor }]);
     setSettings((prev) => ({ ...prev, [trimmed]: newExerciseColor }));
     setNewExerciseName('');
     setNewExerciseColor('#FF00FF');
+    setNewExerciseIcon('__generic__');
   }
 
   async function deleteCustomExercise(exerciseName: string) {
@@ -109,6 +216,12 @@ export default function SettingsPage() {
     setSettings((prev) => {
       const next = { ...prev };
       delete next[exerciseName];
+      return next;
+    });
+    setIcons((prev) => {
+      const next = { ...prev };
+      delete next[exerciseName];
+      saveIconsToStorage(next);
       return next;
     });
   }
@@ -135,7 +248,6 @@ export default function SettingsPage() {
 
     const color = settings[oldName] || '#FF00FF';
 
-    // Delete old entry, insert new one
     await supabase
       .from('exercise_settings')
       .delete()
@@ -148,6 +260,17 @@ export default function SettingsPage() {
         { user_id: user.id, exercise_name: trimmed, color },
         { onConflict: 'user_id,exercise_name' }
       );
+
+    // Migrate icon to new name
+    setIcons((prev) => {
+      const next = { ...prev };
+      if (next[oldName]) {
+        next[trimmed] = next[oldName];
+        delete next[oldName];
+        saveIconsToStorage(next);
+      }
+      return next;
+    });
 
     setCustomExercises((prev) =>
       prev.map((e) => (e.name === oldName ? { name: trimmed, color } : e))
@@ -166,7 +289,6 @@ export default function SettingsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Upsert all settings
     const entries = Object.entries(settings).map(([exercise_name, color]) => ({
       user_id: user.id,
       exercise_name,
@@ -179,6 +301,7 @@ export default function SettingsPage() {
         .upsert(entry, { onConflict: 'user_id,exercise_name' });
     }
 
+    // Icons are already saved to localStorage on change
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -186,6 +309,8 @@ export default function SettingsPage() {
 
   function renderExerciseRow(exerciseName: string, defaultColor: string, isCustom: boolean) {
     const isEditing = editingExercise === exerciseName;
+    const color = settings[exerciseName] || defaultColor;
+    const iconKey = icons[exerciseName] || exerciseName.toLowerCase();
 
     return (
       <div
@@ -195,7 +320,7 @@ export default function SettingsPage() {
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <div
             className="w-4 h-4 rounded-full shrink-0"
-            style={{ backgroundColor: settings[exerciseName] || defaultColor }}
+            style={{ backgroundColor: color }}
           />
           {isEditing ? (
             <div className="flex items-center gap-2 flex-1">
@@ -229,15 +354,20 @@ export default function SettingsPage() {
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-2">
+          <IconPickerDropdown
+            currentIcon={iconKey}
+            exerciseColor={color}
+            onSelect={(key) => updateIcon(exerciseName, key)}
+          />
           <input
             type="color"
-            value={settings[exerciseName] || defaultColor}
+            value={color}
             onChange={(e) => updateColor(exerciseName, e.target.value)}
             className="w-10 h-8 bg-transparent border border-hclub-gray rounded cursor-pointer"
           />
           <input
             type="text"
-            value={settings[exerciseName] || defaultColor}
+            value={color}
             onChange={(e) => updateColor(exerciseName, e.target.value)}
             className="w-24 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-sm text-gray-300
                        focus:outline-none focus:border-hclub-magenta"
@@ -333,6 +463,16 @@ export default function SettingsPage() {
                              focus:outline-none focus:border-hclub-magenta"
                 />
               </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">
+                Icon
+              </label>
+              <IconPickerDropdown
+                currentIcon={newExerciseIcon}
+                exerciseColor={newExerciseColor}
+                onSelect={setNewExerciseIcon}
+              />
             </div>
             <button
               onClick={addCustomExercise}
