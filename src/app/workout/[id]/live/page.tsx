@@ -445,7 +445,9 @@ export default function LiveWorkoutPage() {
             <div className="text-gray-400 text-sm font-oswald uppercase">Runden</div>
           </div>
           <div className="fade-in-up" style={{ animationDelay: '0.4s' }}>
-            <div className="font-oswald text-4xl text-hclub-magenta">{config.workTime}s</div>
+            <div className="font-oswald text-4xl text-hclub-magenta">
+              {config.roundSettings && Object.keys(config.roundSettings).length > 0 ? '~' : ''}{config.workTime}s
+            </div>
             <div className="text-gray-400 text-sm font-oswald uppercase">Arbeit</div>
           </div>
         </div>
@@ -489,9 +491,15 @@ export default function LiveWorkoutPage() {
               className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 fade-in-up"
               style={{ animationDelay: `${0.2 + roundIdx * 0.1}s`, opacity: 0 }}
             >
-              <h3 className="font-oswald text-lg uppercase tracking-wider text-hclub-magenta mb-3">
-                Runde {roundIdx + 1}
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-oswald text-lg uppercase tracking-wider text-hclub-magenta">
+                  Runde {roundIdx + 1}
+                </h3>
+                <div className="flex gap-3 text-xs font-oswald uppercase">
+                  <span className="text-green-400">{getWorkTimeForRound(config, roundIdx)}s Arbeit</span>
+                  <span className="text-blue-400">{getRestTimeForRound(config, roundIdx)}s Pause</span>
+                </div>
+              </div>
               <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${config.numGroups}, 1fr)` }}>
                 {Array.from({ length: config.numGroups }, (_, gIdx) => {
                   const exercises = config.rounds[roundIdx]?.[gIdx] || [];
