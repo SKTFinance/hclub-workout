@@ -337,10 +337,19 @@ export default function WorkoutEditorPage() {
               </label>
               <input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 min={1}
                 max={6}
                 value={config.numGroups}
-                onChange={(e) => updateConfig({ numGroups: Math.max(1, Math.min(6, parseInt(e.target.value) || 1)) })}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val)) updateConfig({ numGroups: Math.max(1, Math.min(6, val)) });
+                }}
+                onBlur={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (isNaN(val) || val < 1) updateConfig({ numGroups: 1 });
+                }}
                 className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
                            text-center focus:outline-none focus:border-hclub-magenta"
               />
@@ -351,10 +360,19 @@ export default function WorkoutEditorPage() {
               </label>
               <input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 min={1}
                 max={20}
                 value={config.numRounds}
-                onChange={(e) => updateConfig({ numRounds: Math.max(1, Math.min(20, parseInt(e.target.value) || 1)) })}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val)) updateConfig({ numRounds: Math.max(1, Math.min(20, val)) });
+                }}
+                onBlur={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (isNaN(val) || val < 1) updateConfig({ numRounds: 1 });
+                }}
                 className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
                            text-center focus:outline-none focus:border-hclub-magenta"
               />
@@ -365,11 +383,19 @@ export default function WorkoutEditorPage() {
               </label>
               <input
                 type="number"
+                inputMode="numeric"
                 min={0}
                 max={600}
                 step={5}
                 value={config.roundRestTime}
-                onChange={(e) => updateConfig({ roundRestTime: parseInt(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val)) updateConfig({ roundRestTime: Math.max(0, Math.min(600, val)) });
+                }}
+                onBlur={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (isNaN(val)) updateConfig({ roundRestTime: 0 });
+                }}
                 className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
                            text-center focus:outline-none focus:border-hclub-magenta"
               />
@@ -380,11 +406,19 @@ export default function WorkoutEditorPage() {
               </label>
               <input
                 type="number"
+                inputMode="numeric"
                 min={0}
                 max={300}
                 step={5}
                 value={config.warmupTime}
-                onChange={(e) => updateConfig({ warmupTime: parseInt(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val)) updateConfig({ warmupTime: Math.max(0, Math.min(300, val)) });
+                }}
+                onBlur={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (isNaN(val)) updateConfig({ warmupTime: 0 });
+                }}
                 className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
                            text-center focus:outline-none focus:border-hclub-magenta"
               />
