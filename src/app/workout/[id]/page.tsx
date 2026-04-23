@@ -31,6 +31,11 @@ export default function WorkoutEditorPage() {
   const [saving, setSaving] = useState(false);
   const [customExercise, setCustomExercise] = useState('');
   const [expandedRoundSettings, setExpandedRoundSettings] = useState<Record<number, boolean>>({});
+  // Local string states for number inputs (allows clearing field on mobile)
+  const [groupsInput, setGroupsInput] = useState(String(config.numGroups));
+  const [roundsInput, setRoundsInput] = useState(String(config.numRounds));
+  const [roundRestInput, setRoundRestInput] = useState(String(config.roundRestTime));
+  const [warmupInput, setWarmupInput] = useState(String(config.warmupTime));
   const [iconPickerOpen, setIconPickerOpen] = useState<{ round: number; group: number; ex: number } | null>(null);
 
   const loadWorkout = useCallback(async () => {
@@ -46,6 +51,10 @@ export default function WorkoutEditorPage() {
       setName(w.name);
       setTrainerName(w.trainer_name);
       setConfig(w.config);
+      setGroupsInput(String(w.config.numGroups));
+      setRoundsInput(String(w.config.numRounds));
+      setRoundRestInput(String(w.config.roundRestTime));
+      setWarmupInput(String(w.config.warmupTime));
     }
   }, [supabase, id]);
 
@@ -336,19 +345,20 @@ export default function WorkoutEditorPage() {
                 Gruppen
               </label>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                min={1}
-                max={6}
-                value={config.numGroups}
+                value={groupsInput}
                 onChange={(e) => {
+                  setGroupsInput(e.target.value);
                   const val = parseInt(e.target.value);
-                  if (!isNaN(val)) updateConfig({ numGroups: Math.max(1, Math.min(6, val)) });
+                  if (!isNaN(val) && val >= 1 && val <= 6) updateConfig({ numGroups: val });
                 }}
-                onBlur={(e) => {
-                  const val = parseInt(e.target.value);
-                  if (isNaN(val) || val < 1) updateConfig({ numGroups: 1 });
+                onBlur={() => {
+                  const val = parseInt(groupsInput);
+                  const clamped = isNaN(val) || val < 1 ? 1 : Math.min(6, val);
+                  setGroupsInput(String(clamped));
+                  updateConfig({ numGroups: clamped });
                 }}
                 className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
                            text-center focus:outline-none focus:border-hclub-magenta"
@@ -359,19 +369,20 @@ export default function WorkoutEditorPage() {
                 Runden
               </label>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                min={1}
-                max={20}
-                value={config.numRounds}
+                value={roundsInput}
                 onChange={(e) => {
+                  setRoundsInput(e.target.value);
                   const val = parseInt(e.target.value);
-                  if (!isNaN(val)) updateConfig({ numRounds: Math.max(1, Math.min(20, val)) });
+                  if (!isNaN(val) && val >= 1 && val <= 20) updateConfig({ numRounds: val });
                 }}
-                onBlur={(e) => {
-                  const val = parseInt(e.target.value);
-                  if (isNaN(val) || val < 1) updateConfig({ numRounds: 1 });
+                onBlur={() => {
+                  const val = parseInt(roundsInput);
+                  const clamped = isNaN(val) || val < 1 ? 1 : Math.min(20, val);
+                  setRoundsInput(String(clamped));
+                  updateConfig({ numRounds: clamped });
                 }}
                 className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
                            text-center focus:outline-none focus:border-hclub-magenta"
@@ -382,19 +393,20 @@ export default function WorkoutEditorPage() {
                 Rundenpause (s)
               </label>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
-                min={0}
-                max={600}
-                step={5}
-                value={config.roundRestTime}
+                pattern="[0-9]*"
+                value={roundRestInput}
                 onChange={(e) => {
+                  setRoundRestInput(e.target.value);
                   const val = parseInt(e.target.value);
-                  if (!isNaN(val)) updateConfig({ roundRestTime: Math.max(0, Math.min(600, val)) });
+                  if (!isNaN(val) && val >= 0) updateConfig({ roundRestTime: Math.min(600, val) });
                 }}
-                onBlur={(e) => {
-                  const val = parseInt(e.target.value);
-                  if (isNaN(val)) updateConfig({ roundRestTime: 0 });
+                onBlur={() => {
+                  const val = parseInt(roundRestInput);
+                  const clamped = isNaN(val) || val < 0 ? 0 : Math.min(600, val);
+                  setRoundRestInput(String(clamped));
+                  updateConfig({ roundRestTime: clamped });
                 }}
                 className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
                            text-center focus:outline-none focus:border-hclub-magenta"
@@ -405,19 +417,20 @@ export default function WorkoutEditorPage() {
                 Warmup (s)
               </label>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
-                min={0}
-                max={300}
-                step={5}
-                value={config.warmupTime}
+                pattern="[0-9]*"
+                value={warmupInput}
                 onChange={(e) => {
+                  setWarmupInput(e.target.value);
                   const val = parseInt(e.target.value);
-                  if (!isNaN(val)) updateConfig({ warmupTime: Math.max(0, Math.min(300, val)) });
+                  if (!isNaN(val) && val >= 0) updateConfig({ warmupTime: Math.min(300, val) });
                 }}
-                onBlur={(e) => {
-                  const val = parseInt(e.target.value);
-                  if (isNaN(val)) updateConfig({ warmupTime: 0 });
+                onBlur={() => {
+                  const val = parseInt(warmupInput);
+                  const clamped = isNaN(val) || val < 0 ? 0 : Math.min(300, val);
+                  setWarmupInput(String(clamped));
+                  updateConfig({ warmupTime: clamped });
                 }}
                 className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
                            text-center focus:outline-none focus:border-hclub-magenta"
