@@ -426,7 +426,7 @@ export default function LiveWorkoutPage() {
   // IDLE state
   if (phase === 'idle') {
     return (
-      <div className="workout-fullscreen flex flex-col items-center justify-center">
+      <div className="workout-fullscreen flex flex-col items-center justify-center" style={{ paddingBottom: "15vh" }}>
         <h1 className="font-oswald text-6xl md:text-8xl font-bold tracking-wider mb-4 logo-glow">
           H-<span className="text-hclub-magenta">CLUB</span>
         </h1>
@@ -631,7 +631,7 @@ export default function LiveWorkoutPage() {
   // WARMUP state
   if (phase === 'warmup') {
     return (
-      <div className="workout-fullscreen flex flex-col items-center justify-center">
+      <div className="workout-fullscreen flex flex-col items-center justify-center" style={{ paddingBottom: "15vh" }}>
         {isPaused && (
           <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50">
             <span className="font-oswald text-6xl uppercase tracking-wider text-yellow-400">
