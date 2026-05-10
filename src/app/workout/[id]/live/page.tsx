@@ -633,9 +633,12 @@ export default function LiveWorkoutPage() {
     return (
       <div className="workout-fullscreen flex flex-col items-center justify-center" style={{ paddingBottom: "15vh" }}>
         {isPaused && (
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50 cursor-pointer" onClick={() => setIsPaused(false)}>
             <span className="font-oswald text-6xl uppercase tracking-wider text-yellow-400">
               Pausiert
+            </span>
+            <span className="absolute bottom-24 text-gray-400 font-oswald text-lg uppercase tracking-wider">
+              Tippe zum Fortsetzen
             </span>
           </div>
         )}
@@ -650,6 +653,28 @@ export default function LiveWorkoutPage() {
         <p className="text-gray-400 text-xl mt-8 font-oswald uppercase tracking-wider">
           Mach dich bereit!
         </p>
+        {/* Pause button */}
+        <button
+          onClick={() => setIsPaused(p => !p)}
+          className="absolute bottom-16 left-4 z-50 w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90"
+          style={{
+            backgroundColor: isPaused ? '#FFD700' : 'rgba(255,255,255,0.15)',
+            backdropFilter: 'blur(8px)',
+            border: isPaused ? '2px solid #FFD700' : '2px solid rgba(255,255,255,0.2)',
+          }}
+          title={isPaused ? 'Fortsetzen' : 'Pausieren'}
+        >
+          {isPaused ? (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="black">
+              <polygon points="6,4 20,12 6,20" />
+            </svg>
+          ) : (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+              <rect x="5" y="4" width="5" height="16" rx="1" />
+              <rect x="14" y="4" width="5" height="16" rx="1" />
+            </svg>
+          )}
+        </button>
         {/* Bottom branding */}
         <div className="absolute bottom-6 right-6">
           <span className="font-oswald text-xl tracking-wider text-gray-500">
@@ -911,6 +936,29 @@ export default function LiveWorkoutPage() {
           </div>
         </>
       )}
+
+      {/* Pause button (bottom left, always visible during active phases) */}
+      <button
+        onClick={() => setIsPaused(p => !p)}
+        className="absolute bottom-16 left-4 z-50 w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90"
+        style={{
+          backgroundColor: isPaused ? '#FFD700' : 'rgba(255,255,255,0.15)',
+          backdropFilter: 'blur(8px)',
+          border: isPaused ? '2px solid #FFD700' : '2px solid rgba(255,255,255,0.2)',
+        }}
+        title={isPaused ? 'Fortsetzen' : 'Pausieren'}
+      >
+        {isPaused ? (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="black">
+            <polygon points="6,4 20,12 6,20" />
+          </svg>
+        ) : (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+            <rect x="5" y="4" width="5" height="16" rx="1" />
+            <rect x="14" y="4" width="5" height="16" rx="1" />
+          </svg>
+        )}
+      </button>
 
       {/* Bottom bar */}
       <div className="flex items-center justify-between px-4 py-2 bg-hclub-dark/80 border-t border-hclub-gray/50 shrink-0">
