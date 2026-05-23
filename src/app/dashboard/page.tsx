@@ -165,7 +165,7 @@ export default function DashboardPage() {
   }
 
   async function deleteWorkout(id: string) {
-    if (!confirm('Workout wirklich loeschen?')) return;
+    if (!confirm('Workout wirklich löschen?')) return;
     await supabase.from('workouts').delete().eq('id', id);
     loadWorkouts();
   }
@@ -258,7 +258,7 @@ export default function DashboardPage() {
         )}
         <div className="flex items-center gap-2 mb-3">
           {workout.is_public && (
-            <span className="text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded font-oswald uppercase">Oeffentlich</span>
+            <span className="text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded font-oswald uppercase">Öffentlich</span>
           )}
           <span className="text-gray-500 text-xs">
             {new Date(workout.updated_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -321,18 +321,20 @@ export default function DashboardPage() {
 
           {/* Type filter */}
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as WorkoutMode | 'all')}
-            className="px-3 py-2 bg-hclub-dark border border-hclub-gray rounded-lg text-xs text-gray-300 font-oswald uppercase focus:outline-none focus:border-hclub-magenta">
+            className="px-4 py-2.5 bg-hclub-dark border border-hclub-gray rounded-xl text-sm text-white font-oswald uppercase tracking-wider focus:outline-none focus:border-hclub-magenta hover:border-hclub-magenta/50 transition-colors appearance-none cursor-pointer"
+            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%239ca3af\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '36px' }}>
             <option value="all">Alle Typen</option>
-            <option value="timed">Zeitbasiert</option>
-            <option value="amrap">AMRAP</option>
-            <option value="fortime">For Time</option>
+            <option value="timed">⏱ Zeitbasiert</option>
+            <option value="amrap">🔁 AMRAP</option>
+            <option value="fortime">🏁 For Time</option>
           </select>
 
           {/* Sort */}
           <select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)}
-            className="px-3 py-2 bg-hclub-dark border border-hclub-gray rounded-lg text-xs text-gray-300 font-oswald uppercase focus:outline-none focus:border-hclub-magenta">
-            <option value="date">Neueste</option>
-            <option value="name">Name A-Z</option>
+            className="px-4 py-2.5 bg-hclub-dark border border-hclub-gray rounded-xl text-sm text-white font-oswald uppercase tracking-wider focus:outline-none focus:border-hclub-magenta hover:border-hclub-magenta/50 transition-colors appearance-none cursor-pointer"
+            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%239ca3af\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '36px' }}>
+            <option value="date">📅 Neueste</option>
+            <option value="name">🔤 Name A-Z</option>
           </select>
 
           {/* View toggle */}

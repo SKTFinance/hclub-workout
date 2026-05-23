@@ -18,7 +18,6 @@ export default function WorkoutEditorPage() {
 
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [name, setName] = useState('');
-  const [trainerName, setTrainerName] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [workoutMode, setWorkoutMode] = useState<WorkoutMode>('timed');
   const [config, setConfig] = useState<WorkoutConfig>({
@@ -54,7 +53,6 @@ export default function WorkoutEditorPage() {
       const w = data as Workout;
       setWorkout(w);
       setName(w.name);
-      setTrainerName(w.trainer_name);
       setIsPublic(w.is_public || false);
       setWorkoutMode(w.workout_mode || 'timed');
       setConfig(w.config);
@@ -373,7 +371,7 @@ export default function WorkoutEditorPage() {
       .from('workouts')
       .update({
         name,
-        trainer_name: trainerName,
+        trainer_name: localStorage.getItem('hclub_trainer_name') || '',
         config,
         is_public: isPublic,
         workout_mode: workoutMode,
@@ -461,7 +459,7 @@ export default function WorkoutEditorPage() {
               onClick={() => router.push('/dashboard')}
               className="text-gray-400 hover:text-white transition-colors font-oswald uppercase tracking-wider text-sm"
             >
-              &larr; Zurueck
+              &larr; Zurück
             </button>
             <h1 className="font-oswald text-2xl font-bold tracking-wider">
               H-<span className="text-hclub-magenta">CLUB</span>
@@ -502,18 +500,6 @@ export default function WorkoutEditorPage() {
                          focus:outline-none focus:border-hclub-magenta transition-colors"
             />
           </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1 font-oswald uppercase tracking-wider">
-              Trainer Name
-            </label>
-            <input
-              type="text"
-              value={trainerName}
-              onChange={(e) => setTrainerName(e.target.value)}
-              className="w-full px-4 py-2 bg-hclub-dark border border-hclub-gray rounded-lg text-white
-                         focus:outline-none focus:border-hclub-magenta transition-colors"
-            />
-          </div>
         </div>
 
         {/* Mode & visibility */}
@@ -542,7 +528,7 @@ export default function WorkoutEditorPage() {
                 className="w-5 h-5 accent-hclub-magenta rounded"
               />
               <span className="text-sm font-oswald uppercase tracking-wider text-gray-300">
-                Oeffentlich (andere Trainer sehen es)
+                Öffentlich (andere Trainer sehen es)
               </span>
             </label>
           </div>
@@ -593,7 +579,7 @@ export default function WorkoutEditorPage() {
               <button onClick={randomFill}
                 className="px-8 py-3 bg-purple-900/40 hover:bg-hclub-magenta border border-purple-500/50 hover:border-hclub-magenta
                            text-purple-300 hover:text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-all duration-300">
-                Zufaellig befuellen
+                Zufällig befüllen
               </button>
             </div>
 
@@ -653,7 +639,7 @@ export default function WorkoutEditorPage() {
                     </div>
                     {roundHasCustomSettings && (
                       <button onClick={() => { setConfig((prev) => { const rs = { ...(prev.roundSettings || {}) }; delete rs[roundIndex]; return { ...prev, roundSettings: rs }; }); }}
-                        className="text-xs text-red-400 hover:text-red-300 font-oswald uppercase px-3 py-2">Zuruecksetzen</button>
+                        className="text-xs text-red-400 hover:text-red-300 font-oswald uppercase px-3 py-2">Zurücksetzen</button>
                     )}
                   </div>
                 )}
@@ -758,12 +744,12 @@ export default function WorkoutEditorPage() {
                       })}
                       <div className="flex gap-2 mt-2">
                         <button onClick={() => addExerciseToGroup(roundIndex, groupIndex)}
-                          className="text-xs text-hclub-magenta hover:text-white transition-colors font-oswald uppercase">+ Uebung</button>
+                          className="text-xs text-hclub-magenta hover:text-white transition-colors font-oswald uppercase">+ Übung</button>
                       </div>
                       <div className="flex gap-2 mt-2">
                         <input type="text" value={customExercise}
                           onChange={(e) => setCustomExercise(e.target.value)}
-                          placeholder="Eigene Uebung..."
+                          placeholder="Eigene Übung..."
                           className="flex-1 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-hclub-magenta"
                           onKeyDown={(e) => { if (e.key === 'Enter') addCustomExercise(roundIndex, groupIndex); }} />
                         <button onClick={() => addCustomExercise(roundIndex, groupIndex)}
@@ -833,7 +819,7 @@ export default function WorkoutEditorPage() {
                       </div>
                     ))}
                     <button onClick={() => addAmrapExercise(gIdx)}
-                      className="text-xs text-orange-400 hover:text-white transition-colors font-oswald uppercase mt-2">+ Uebung</button>
+                      className="text-xs text-orange-400 hover:text-white transition-colors font-oswald uppercase mt-2">+ Übung</button>
                   </div>
                 );
               })}
@@ -895,7 +881,7 @@ export default function WorkoutEditorPage() {
                       </div>
                     ))}
                     <button onClick={() => addForTimeExercise(gIdx)}
-                      className="text-xs text-cyan-400 hover:text-white transition-colors font-oswald uppercase mt-2">+ Uebung</button>
+                      className="text-xs text-cyan-400 hover:text-white transition-colors font-oswald uppercase mt-2">+ Übung</button>
                   </div>
                 );
               })}

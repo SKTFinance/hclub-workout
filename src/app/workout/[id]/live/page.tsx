@@ -691,7 +691,7 @@ export default function LiveWorkoutPage() {
                 <div className="font-oswald text-4xl text-hclub-magenta">
                   {Object.values(config.forTimeExercises || {}).reduce((sum, exs) => sum + (exs?.length || 0), 0)}
                 </div>
-                <div className="text-gray-400 text-sm font-oswald uppercase">Uebungen</div>
+                <div className="text-gray-400 text-sm font-oswald uppercase">Übungen</div>
               </div>
               <div className="fade-in-up" style={{ animationDelay: '0.4s' }}>
                 <div className="font-oswald text-4xl text-cyan-400">FT</div>
@@ -712,7 +712,7 @@ export default function LiveWorkoutPage() {
           <span>LEERTASTE = Start/Pause</span>
           <span>F = Vollbild</span>
           <span>ESC = Beenden</span>
-          {workoutMode === 'timed' && <span>N = Ueberspringen</span>}
+          {workoutMode === 'timed' && <span>N = Überspringen</span>}
           {workoutMode === 'fortime' && <span>1-{config.numGroups} = Gruppe weiter</span>}
         </div>
       </div>
@@ -816,7 +816,7 @@ export default function LiveWorkoutPage() {
         <div className="flex gap-4 fade-in-up" style={{ animationDelay: '0.6s', opacity: 0 }}>
           <button onClick={() => setPhase('idle')}
             className="px-8 py-3 bg-hclub-gray hover:bg-hclub-magenta/30 text-white font-oswald text-xl uppercase tracking-wider rounded-xl transition-colors">
-            Zurueck
+            Zurück
           </button>
           <button onClick={startWorkout}
             className="px-12 py-3 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald text-xl uppercase tracking-widest rounded-xl transition-colors glow-pulse">
@@ -873,7 +873,7 @@ export default function LiveWorkoutPage() {
         <p className="text-gray-400 text-lg mb-12 relative z-10">Gut gemacht!</p>
         <button onClick={() => setPhase('idle')}
           className="px-8 py-3 bg-hclub-gray hover:bg-hclub-magenta text-white font-oswald text-xl uppercase tracking-wider rounded-xl transition-colors relative z-10">
-          Zurueck
+          Zurück
         </button>
         <div className="absolute bottom-6 right-6">
           <span className="font-oswald text-xl tracking-wider text-gray-500">H-<span className="text-hclub-magenta">CLUB</span></span>
@@ -956,7 +956,7 @@ export default function LiveWorkoutPage() {
                 </div>
                 {nextEx && (
                   <div className="text-gray-500 text-sm font-oswald uppercase tracking-wider">
-                    Naechste: <span style={{ color: getExerciseColor(nextEx.name), opacity: 0.7 }}>{nextEx.reps}x {nextEx.name}</span>
+                    Nächste: <span style={{ color: getExerciseColor(nextEx.name), opacity: 0.7 }}>{nextEx.reps}x {nextEx.name}</span>
                   </div>
                 )}
                 <div className="absolute bottom-4 text-gray-600 text-xs font-oswald uppercase">Klick = Weiter</div>
@@ -1042,7 +1042,7 @@ export default function LiveWorkoutPage() {
 
                     {nextEx && (
                       <div className="text-gray-500 text-lg font-oswald uppercase tracking-wider mt-4">
-                        Naechste: <span style={{ color: getExerciseColor(nextEx.name), opacity: 0.7 }}>{formatExerciseLabel(nextEx)}</span>
+                        Nächste: <span style={{ color: getExerciseColor(nextEx.name), opacity: 0.7 }}>{formatExerciseLabel(nextEx)}</span>
                       </div>
                     )}
                     <div className="absolute bottom-4 text-gray-600 text-xs font-oswald uppercase">Klick oder Taste {gIdx + 1} = Weiter</div>
@@ -1146,7 +1146,7 @@ export default function LiveWorkoutPage() {
             <button onClick={skipToNext}
               className="px-3 py-1 bg-hclub-gray hover:bg-orange-900/60 text-gray-300 hover:text-orange-300 text-xs
                          font-oswald uppercase rounded-lg transition-colors border border-hclub-gray hover:border-orange-500/50"
-              title="Ueberspringen (N)">
+              title="Überspringen (N)">
               Weiter &rarr;
             </button>
           )}
@@ -1160,11 +1160,11 @@ export default function LiveWorkoutPage() {
           <div className="font-oswald leading-none text-white mb-6" style={{ fontSize: 'min(40vw, 25vh)' }}>
             {formatTime(timeRemaining)}
           </div>
-          <p className="font-oswald text-xl md:text-2xl uppercase tracking-wider text-gray-400 mb-6">Naechste: Runde {currentRound + 1}</p>
+          <p className="font-oswald text-xl md:text-2xl uppercase tracking-wider text-gray-400 mb-6">Nächste: Runde {currentRound + 1}</p>
           <div className="w-full max-w-4xl grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups, 3)}, 1fr)` }}>
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const nextExercises = config.rounds[currentRound]?.[gIdx] || [];
-              const nextEx = nextExercises[0] || 'Uebung';
+              const nextEx = nextExercises[0] || 'Übung';
               const ExIcon = getIconForExercise(config, currentRound, gIdx, 0, nextEx);
               return (
                 <div key={gIdx} className="bg-hclub-dark/60 border border-hclub-gray/40 rounded-xl p-4 text-center">
@@ -1188,7 +1188,7 @@ export default function LiveWorkoutPage() {
           <div className="w-full max-w-4xl grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups, 3)}, 1fr)` }}>
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const exercises = config.rounds[currentRound]?.[gIdx] || [];
-              const nextEx = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Uebung';
+              const nextEx = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
               const ExIcon = getIconForExercise(config, currentRound, gIdx, currentExerciseIndex, nextEx);
               return (
                 <div key={gIdx} className="bg-hclub-dark/60 border border-hclub-gray/40 rounded-xl p-4 text-center">
@@ -1223,7 +1223,7 @@ export default function LiveWorkoutPage() {
           <div className="work-groups-grid">
           {Array.from({ length: config.numGroups }, (_, groupIndex) => {
             const exercises = config.rounds[currentRound]?.[groupIndex] || [];
-            const currentExercise = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Uebung';
+            const currentExercise = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
             const exerciseColor = getExerciseColor(currentExercise);
             const nextExercise = getNextExercise(config, groupIndex);
             const ExerciseIcon = getIconForExercise(config, currentRound, groupIndex, currentExerciseIndex, currentExercise);
@@ -1277,7 +1277,7 @@ export default function LiveWorkoutPage() {
                 {nextExercise && (
                   <div className="font-oswald text-sm md:text-lg uppercase tracking-wider mt-1 md:mt-2 px-3 py-1 rounded-lg"
                     style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                    <span className="text-gray-500">Naechste: </span>
+                    <span className="text-gray-500">Nächste: </span>
                     <span style={{ color: getExerciseColor(nextExercise) }}>{nextExercise}</span>
                   </div>
                 )}
@@ -1306,7 +1306,7 @@ export default function LiveWorkoutPage() {
         </div>
         {phase === 'work' && (
           <div className="text-gray-500 text-sm font-oswald uppercase">
-            Uebung {currentExerciseIndex + 1}/{getMaxExercisesInRound(config, currentRound)}
+            Übung {currentExerciseIndex + 1}/{getMaxExercisesInRound(config, currentRound)}
           </div>
         )}
         <span className="font-oswald text-lg tracking-wider text-gray-500">H-<span className="text-hclub-magenta">CLUB</span></span>

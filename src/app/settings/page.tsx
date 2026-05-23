@@ -105,6 +105,8 @@ export default function SettingsPage() {
   const [newExerciseIcon, setNewExerciseIcon] = useState('__generic__');
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [trainerName, setTrainerName] = useState('');
+  const [trainerNameSaved, setTrainerNameSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const router = useRouter();
@@ -125,6 +127,27 @@ export default function SettingsPage() {
   useEffect(() => {
     if (Object.keys(icons).length > 0) saveIconsToStorage(icons);
   }, [icons]);
+
+  const loadTrainerName = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const stored = localStorage.getItem('hclub_trainer_name');
+    if (stored) { setTrainerName(stored); return; }
+    // Fallback: load from user_metadata or email
+    setTrainerName(user.user_metadata?.trainer_name || '');
+  }, [supabase]);
+
+  const saveTrainerName = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    localStorage.setItem('hclub_trainer_name', trainerName);
+    // Also save to user_metadata so it persists across devices
+    await supabase.auth.updateUser({ data: { trainer_name: trainerName } });
+    // Update all own workouts with the new trainer name
+    await supabase.from('workouts').update({ trainer_name: trainerName }).eq('user_id', user.id);
+    setTrainerNameSaved(true);
+    setTimeout(() => setTrainerNameSaved(false), 2000);
+  }, [supabase, trainerName]);
 
   const loadSettings = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -155,7 +178,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadSettings();
-  }, [loadSettings]);
+    loadTrainerName();
+  }, [loadSettings, loadTrainerName]);
 
   function updateColor(name: string, color: string) {
     setSettings((prev) => ({ ...prev, [name]: color }));
@@ -422,6 +446,33 @@ export default function SettingsPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Trainer Name */}
+        <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8">
+          <h2 className="font-oswald text-xl uppercase tracking-wider mb-4">
+            Trainer-Name
+          </h2>
+          <p className="text-sm text-gray-400 mb-3">Dieser Name wird bei deinen Workouts in der Bibliothek angezeigt.</p>
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={trainerName}
+                onChange={(e) => { setTrainerName(e.target.value); setTrainerNameSaved(false); }}
+                placeholder="Dein Name als Trainer"
+                className="w-full bg-hclub-black border border-hclub-gray rounded-lg px-3 py-2 text-white
+                           placeholder:text-gray-600 focus:border-hclub-magenta focus:outline-none font-oswald tracking-wider"
+              />
+            </div>
+            <button
+              onClick={saveTrainerName}
+              className="px-4 py-2 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald
+                         uppercase tracking-wider rounded-lg transition-colors text-sm"
+            >
+              {trainerNameSaved ? '✓ Gespeichert' : 'Speichern'}
+            </button>
+          </div>
+        </div>
+
         {/* Add custom exercise */}
         <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8">
           <h2 className="font-oswald text-xl uppercase tracking-wider mb-4">
