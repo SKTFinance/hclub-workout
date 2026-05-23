@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useParams } from 'next/navigation';
-import type { Workout, WorkoutConfig, ExerciseSetting, WorkoutMode, ExerciseEntry } from '@/lib/types';
+import type { Workout, WorkoutConfig, ExerciseSetting, WorkoutMode, ExerciseEntry, AmrapBlock, ForTimeBlock } from '@/lib/types';
 import { getDefaultColor } from '@/lib/exercises';
 import {
   playCountdownBeep,
@@ -55,13 +55,15 @@ export default function LiveWorkoutPage() {
   const [numberPopKey, setNumberPopKey] = useState(0);
 
   // AMRAP state
-  const [amrapRoundsCompleted, setAmrapRoundsCompleted] = useState(0);
+  const [amrapRoundsCompleted, setAmrapRoundsCompleted] = useState<Record<number, number>>({});
   const [amrapCurrentExIndex, setAmrapCurrentExIndex] = useState<Record<number, number>>({});
+  const [amrapCurrentBlock, setAmrapCurrentBlock] = useState(0);
 
   // ForTime state
   const [forTimeCurrentExIndex, setForTimeCurrentExIndex] = useState<Record<number, number>>({});
   const [forTimeGroupFinished, setForTimeGroupFinished] = useState<Record<number, boolean>>({});
   const [forTimeElapsed, setForTimeElapsed] = useState(0);
+  const [forTimeCurrentBlock, setForTimeCurrentBlock] = useState(0);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTickRef = useRef<number>(0);
@@ -71,6 +73,17 @@ export default function LiveWorkoutPage() {
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const workoutMode: WorkoutMode = workout?.workout_mode || 'timed';
+
+  // Block helpers
+  function getAmrapBlocks(c: WorkoutConfig): AmrapBlock[] {
+    if (c.amrapBlocks && c.amrapBlocks.length > 0) return c.amrapBlocks;
+    return [{ totalTime: c.amrapTotalTime || 1200, exercises: c.amrapExercises || {} }];
+  }
+
+  function getForTimeBlocks(c: WorkoutConfig): ForTimeBlock[] {
+    if (c.forTimeBlocks && c.forTimeBlocks.length > 0) return c.forTimeBlocks;
+    return [{ exercises: c.forTimeExercises || {} }];
+  }
 
   // Load workout and exercise colors
   const loadData = useCallback(async () => {
@@ -389,24 +402,55 @@ export default function LiveWorkoutPage() {
 
     if (phase === 'warmup' && timeRemaining <= 3 && !isPaused && workout) {
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+      const blocks = getAmrapBlocks(workout.config);
+      const firstBlock = blocks[0];
       startCountdown(() => {
         setPhase('work');
-        setTimeRemaining(workout.config.amrapTotalTime || 1200);
+        setAmrapCurrentBlock(0);
+        setTimeRemaining(firstBlock.totalTime);
         const initIdx: Record<number, number> = {};
-        for (let g = 0; g < workout.config.numGroups; g++) initIdx[g] = 0;
+        const initRounds: Record<number, number> = {};
+        for (let g = 0; g < workout.config.numGroups; g++) { initIdx[g] = 0; initRounds[g] = 0; }
         setAmrapCurrentExIndex(initIdx);
-        setAmrapRoundsCompleted(0);
+        setAmrapRoundsCompleted(initRounds);
       });
       return;
     }
 
-    if (phase === 'work' && timeRemaining === 0 && prevTimeRef.current !== 0) {
-      setPhase('finished');
+    if (phase === 'work' && timeRemaining === 0 && prevTimeRef.current !== 0 && workout) {
+      const blocks = getAmrapBlocks(workout.config);
+      const nextBlock = amrapCurrentBlock + 1;
+      if (nextBlock < blocks.length) {
+        // Transition to next AMRAP block with a rest/countdown
+        playRoundEndSound();
+        setPhase('roundRest');
+        setTimeRemaining(workout.config.roundRestTime || 60);
+        setAmrapCurrentBlock(nextBlock);
+      } else {
+        setPhase('finished');
+      }
+    }
+
+    // After roundRest in AMRAP, start next block
+    if (phase === 'roundRest' && timeRemaining === 0 && prevTimeRef.current !== 0 && workout) {
+      const blocks = getAmrapBlocks(workout.config);
+      const block = blocks[amrapCurrentBlock];
+      if (block) {
+        startCountdown(() => {
+          setPhase('work');
+          setTimeRemaining(block.totalTime);
+          const initIdx: Record<number, number> = {};
+          const initRounds: Record<number, number> = {};
+          for (let g = 0; g < workout.config.numGroups; g++) { initIdx[g] = 0; initRounds[g] = 0; }
+          setAmrapCurrentExIndex(initIdx);
+          setAmrapRoundsCompleted(initRounds);
+        });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRemaining, phase, isPaused, workout, workoutMode]);
 
-  // ForTime warmup transition
+  // ForTime warmup transition and block transitions
   useEffect(() => {
     if (workoutMode !== 'fortime') return;
 
@@ -415,6 +459,7 @@ export default function LiveWorkoutPage() {
       startCountdown(() => {
         setPhase('work');
         setForTimeElapsed(0);
+        setForTimeCurrentBlock(0);
         const initIdx: Record<number, number> = {};
         const initFinished: Record<number, boolean> = {};
         for (let g = 0; g < workout.config.numGroups; g++) {
@@ -426,13 +471,31 @@ export default function LiveWorkoutPage() {
       });
       return;
     }
+
+    // After roundRest in ForTime, start next block
+    if (phase === 'roundRest' && timeRemaining === 0 && prevTimeRef.current !== 0 && workout) {
+      startCountdown(() => {
+        setPhase('work');
+        const initIdx: Record<number, number> = {};
+        const initFinished: Record<number, boolean> = {};
+        for (let g = 0; g < workout.config.numGroups; g++) {
+          initIdx[g] = 0;
+          initFinished[g] = false;
+        }
+        setForTimeCurrentExIndex(initIdx);
+        setForTimeGroupFinished(initFinished);
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRemaining, phase, isPaused, workout, workoutMode]);
 
   // AMRAP next exercise for a group
   function amrapNextExercise(groupIndex?: number) {
     if (!workout) return;
-    const exercises = workout.config.amrapExercises;
+    const blocks = getAmrapBlocks(workout.config);
+    const currentBlock = blocks[amrapCurrentBlock];
+    if (!currentBlock) return;
+    const exercises = currentBlock.exercises;
     if (!exercises) return;
 
     // If no group specified, advance all groups
@@ -440,19 +503,26 @@ export default function LiveWorkoutPage() {
 
     setAmrapCurrentExIndex(prev => {
       const next = { ...prev };
-      let allWrapped = true;
+      const groupsWrapped: number[] = [];
       for (const g of groups) {
         const exList = exercises[g] || [];
         const nextIdx = (next[g] || 0) + 1;
         if (nextIdx >= exList.length) {
           next[g] = 0;
+          groupsWrapped.push(g);
         } else {
           next[g] = nextIdx;
-          allWrapped = false;
         }
       }
-      if (allWrapped && groupIndex === undefined) {
-        setAmrapRoundsCompleted(r => r + 1);
+      // Increment round counter for each group that completed a full cycle
+      if (groupsWrapped.length > 0) {
+        setAmrapRoundsCompleted(prev => {
+          const updated = { ...prev };
+          for (const g of groupsWrapped) {
+            updated[g] = (updated[g] || 0) + 1;
+          }
+          return updated;
+        });
       }
       return next;
     });
@@ -462,7 +532,10 @@ export default function LiveWorkoutPage() {
   // ForTime advance group
   function forTimeAdvanceGroup(groupIndex: number) {
     if (!workout) return;
-    const exercises = workout.config.forTimeExercises?.[groupIndex] || [];
+    const blocks = getForTimeBlocks(workout.config);
+    const currentBlock = blocks[forTimeCurrentBlock];
+    if (!currentBlock) return;
+    const exercises = currentBlock.exercises?.[groupIndex] || [];
 
     setForTimeCurrentExIndex(prev => {
       const nextIdx = (prev[groupIndex] || 0) + 1;
@@ -481,9 +554,19 @@ export default function LiveWorkoutPage() {
     if (workoutMode !== 'fortime' || phase !== 'work' || !workout) return;
     const allDone = Array.from({ length: workout.config.numGroups }, (_, g) => forTimeGroupFinished[g]).every(Boolean);
     if (allDone) {
-      setPhase('finished');
+      const blocks = getForTimeBlocks(workout.config);
+      const nextBlock = forTimeCurrentBlock + 1;
+      if (nextBlock < blocks.length) {
+        // Move to next ForTime block with a rest period
+        playRoundEndSound();
+        setPhase('roundRest');
+        setTimeRemaining(workout.config.roundRestTime || 60);
+        setForTimeCurrentBlock(nextBlock);
+      } else {
+        setPhase('finished');
+      }
     }
-  }, [forTimeGroupFinished, phase, workout, workoutMode]);
+  }, [forTimeGroupFinished, phase, workout, workoutMode, forTimeCurrentBlock]);
 
   // Keyboard controls
   useEffect(() => {
@@ -559,18 +642,22 @@ export default function LiveWorkoutPage() {
           setTimeRemaining(getWorkTimeForRound(config, 0));
         });
       } else if (workoutMode === 'amrap') {
+        const blocks = getAmrapBlocks(config);
         startCountdown(() => {
           setPhase('work');
-          setTimeRemaining(config.amrapTotalTime || 1200);
+          setAmrapCurrentBlock(0);
+          setTimeRemaining(blocks[0].totalTime);
           const initIdx: Record<number, number> = {};
-          for (let g = 0; g < config.numGroups; g++) initIdx[g] = 0;
+          const initRounds: Record<number, number> = {};
+          for (let g = 0; g < config.numGroups; g++) { initIdx[g] = 0; initRounds[g] = 0; }
           setAmrapCurrentExIndex(initIdx);
-          setAmrapRoundsCompleted(0);
+          setAmrapRoundsCompleted(initRounds);
         });
       } else {
         startCountdown(() => {
           setPhase('work');
           setForTimeElapsed(0);
+          setForTimeCurrentBlock(0);
           const initIdx: Record<number, number> = {};
           const initFinished: Record<number, boolean> = {};
           for (let g = 0; g < config.numGroups; g++) {
@@ -766,50 +853,56 @@ export default function LiveWorkoutPage() {
         )}
 
         {workoutMode === 'amrap' && (
-          <div className="w-full max-w-3xl mb-8">
-            <div className="bg-hclub-dark border border-orange-500/30 rounded-xl p-5 fade-in-up" style={{ animationDelay: '0.2s', opacity: 0 }}>
-              <h3 className="font-oswald text-lg uppercase tracking-wider text-orange-400 mb-3">
-                {Math.floor((config.amrapTotalTime || 1200) / 60)} Min AMRAP
-              </h3>
-              <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${config.numGroups}, 1fr)` }}>
-                {Array.from({ length: config.numGroups }, (_, gIdx) => {
-                  const exercises = config.amrapExercises?.[gIdx] || [];
-                  return (
-                    <div key={gIdx}>
-                      <div className="text-gray-500 text-xs font-oswald uppercase mb-2">Gruppe {gIdx + 1}</div>
-                      {exercises.map((ex, eIdx) => (
-                        <div key={eIdx} className="text-sm mb-1" style={{ color: getExerciseColor(ex.name) }}>
-                          {ex.reps}x {ex.name}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
+          <div className="w-full max-w-3xl mb-8 space-y-4">
+            {getAmrapBlocks(config).map((block, bIdx) => (
+              <div key={bIdx} className="bg-hclub-dark border border-orange-500/30 rounded-xl p-5 fade-in-up" style={{ animationDelay: `${0.2 + bIdx * 0.1}s`, opacity: 0 }}>
+                <h3 className="font-oswald text-lg uppercase tracking-wider text-orange-400 mb-3">
+                  {getAmrapBlocks(config).length > 1 ? `Block ${bIdx + 1}: ` : ''}{Math.floor(block.totalTime / 60)} Min AMRAP
+                </h3>
+                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${config.numGroups}, 1fr)` }}>
+                  {Array.from({ length: config.numGroups }, (_, gIdx) => {
+                    const exercises = block.exercises?.[gIdx] || [];
+                    return (
+                      <div key={gIdx}>
+                        <div className="text-gray-500 text-xs font-oswald uppercase mb-2">Gruppe {gIdx + 1}</div>
+                        {exercises.map((ex, eIdx) => (
+                          <div key={eIdx} className="text-sm mb-1" style={{ color: getExerciseColor(ex.name) }}>
+                            {ex.reps}x {ex.name}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         )}
 
         {workoutMode === 'fortime' && (
-          <div className="w-full max-w-3xl mb-8">
-            <div className="bg-hclub-dark border border-cyan-500/30 rounded-xl p-5 fade-in-up" style={{ animationDelay: '0.2s', opacity: 0 }}>
-              <h3 className="font-oswald text-lg uppercase tracking-wider text-cyan-400 mb-3">For Time</h3>
-              <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${config.numGroups}, 1fr)` }}>
-                {Array.from({ length: config.numGroups }, (_, gIdx) => {
-                  const exercises = config.forTimeExercises?.[gIdx] || [];
-                  return (
-                    <div key={gIdx}>
-                      <div className="text-gray-500 text-xs font-oswald uppercase mb-2">Gruppe {gIdx + 1} (Taste {gIdx + 1})</div>
-                      {exercises.map((ex, eIdx) => (
-                        <div key={eIdx} className="text-sm mb-1" style={{ color: getExerciseColor(ex.name) }}>
-                          {formatExerciseLabel(ex)}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
+          <div className="w-full max-w-3xl mb-8 space-y-4">
+            {getForTimeBlocks(config).map((block, bIdx) => (
+              <div key={bIdx} className="bg-hclub-dark border border-cyan-500/30 rounded-xl p-5 fade-in-up" style={{ animationDelay: `${0.2 + bIdx * 0.1}s`, opacity: 0 }}>
+                <h3 className="font-oswald text-lg uppercase tracking-wider text-cyan-400 mb-3">
+                  {getForTimeBlocks(config).length > 1 ? `Runde ${bIdx + 1}` : 'For Time'}
+                </h3>
+                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${config.numGroups}, 1fr)` }}>
+                  {Array.from({ length: config.numGroups }, (_, gIdx) => {
+                    const exercises = block.exercises?.[gIdx] || [];
+                    return (
+                      <div key={gIdx}>
+                        <div className="text-gray-500 text-xs font-oswald uppercase mb-2">Gruppe {gIdx + 1} (Taste {gIdx + 1})</div>
+                        {exercises.map((ex, eIdx) => (
+                          <div key={eIdx} className="text-sm mb-1" style={{ color: getExerciseColor(ex.name) }}>
+                            {formatExerciseLabel(ex)}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         )}
 
@@ -865,7 +958,13 @@ export default function LiveWorkoutPage() {
         <h1 className="font-oswald text-7xl md:text-9xl font-bold text-hclub-magenta uppercase tracking-wider mb-8 power-pulse relative z-10">Fertig!</h1>
         <h2 className="font-oswald text-3xl uppercase tracking-wider text-gray-300 mb-4 relative z-10">{workout.name}</h2>
         {workoutMode === 'amrap' && (
-          <p className="font-oswald text-2xl text-orange-400 mb-4 relative z-10">{amrapRoundsCompleted} Runden geschafft!</p>
+          <div className="flex gap-6 mb-4 relative z-10">
+            {Array.from({ length: config.numGroups }, (_, g) => (
+              <p key={g} className="font-oswald text-2xl text-orange-400">
+                Gruppe {g + 1}: {amrapRoundsCompleted[g] || 0} Runden
+              </p>
+            ))}
+          </div>
         )}
         {workoutMode === 'fortime' && (
           <p className="font-oswald text-2xl text-cyan-400 mb-4 relative z-10">Zeit: {formatTime(forTimeElapsed)}</p>
@@ -892,11 +991,11 @@ export default function LiveWorkoutPage() {
             <span className="absolute bottom-24 text-gray-400 font-oswald text-lg uppercase tracking-wider">Tippe zum Fortsetzen</span>
           </div>
         )}
-        <div className="breathe">
-          <h1 className="font-oswald text-5xl md:text-7xl uppercase tracking-widest text-hclub-magenta mb-8">Warmup</h1>
+        <div className="breathe text-center">
+          <h1 className="font-oswald text-5xl md:text-7xl uppercase tracking-widest text-hclub-magenta mb-8 text-center">Warmup</h1>
           <div className="font-oswald text-[10rem] md:text-[14rem] leading-none text-white text-center">{formatTime(timeRemaining)}</div>
         </div>
-        <p className="text-gray-400 text-xl mt-8 font-oswald uppercase tracking-wider">Mach dich bereit!</p>
+        <p className="text-gray-400 text-xl mt-8 font-oswald uppercase tracking-wider text-center">Mach dich bereit!</p>
         <button onClick={() => setIsPaused(p => !p)}
           className="absolute bottom-16 left-4 z-50 w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90"
           style={{ backgroundColor: isPaused ? '#FFD700' : 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', border: isPaused ? '2px solid #FFD700' : '2px solid rgba(255,255,255,0.2)' }}
@@ -925,18 +1024,27 @@ export default function LiveWorkoutPage() {
 
         {/* Big timer at top */}
         <div className="flex flex-col items-center justify-center py-4 md:py-8 shrink-0 bg-gradient-to-b from-black/80 to-transparent relative z-10">
-          <div className="text-gray-500 text-sm font-oswald uppercase tracking-wider mb-1">AMRAP</div>
+          <div className="text-gray-500 text-sm font-oswald uppercase tracking-wider mb-1">
+            AMRAP{getAmrapBlocks(config).length > 1 ? ` Block ${amrapCurrentBlock + 1}/${getAmrapBlocks(config).length}` : ''}
+          </div>
           <div className={`font-oswald leading-none text-white ${timeRemaining <= 10 ? 'text-hclub-magenta heartbeat' : ''}`}
             style={{ fontSize: 'min(30vw, 20vh)', textShadow: timeRemaining <= 10 ? '0 0 60px #FF00FF' : 'none' }}>
             {formatTime(timeRemaining)}
           </div>
-          <div className="text-orange-400 font-oswald text-2xl mt-2">{amrapRoundsCompleted} Runden</div>
+          <div className="flex gap-4 mt-2">
+            {Array.from({ length: config.numGroups }, (_, g) => (
+              <div key={g} className="text-orange-400 font-oswald text-xl">
+                G{g + 1}: {amrapRoundsCompleted[g] || 0} Runden
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Group columns */}
         <div className="flex-1 flex">
           {Array.from({ length: config.numGroups }, (_, gIdx) => {
-            const exercises = config.amrapExercises?.[gIdx] || [];
+            const currentBlockData = getAmrapBlocks(config)[amrapCurrentBlock];
+            const exercises = currentBlockData?.exercises?.[gIdx] || [];
             const currentIdx = amrapCurrentExIndex[gIdx] || 0;
             const currentEx = exercises[currentIdx];
             const nextEx = exercises[(currentIdx + 1) % exercises.length];
@@ -947,7 +1055,7 @@ export default function LiveWorkoutPage() {
                 style={{ backgroundColor: GROUP_BG_SHADES[gIdx % GROUP_BG_SHADES.length], borderRight: gIdx < config.numGroups - 1 ? '1px solid #333' : 'none' }}
                 onClick={() => amrapNextExercise(gIdx)}>
                 <div className="font-oswald text-xs md:text-base uppercase tracking-widest text-gray-500 absolute top-3">
-                  Gruppe {gIdx + 1}
+                  Gruppe {gIdx + 1} <span className="text-orange-400 ml-2">{amrapRoundsCompleted[gIdx] || 0} Runden</span>
                 </div>
                 <div className="text-gray-500 text-sm font-oswald mb-2">{currentEx.reps}x</div>
                 <div className="font-oswald text-2xl md:text-5xl uppercase tracking-wider text-center px-4 mb-4"
@@ -955,8 +1063,8 @@ export default function LiveWorkoutPage() {
                   {currentEx.name}
                 </div>
                 {nextEx && (
-                  <div className="text-gray-500 text-sm font-oswald uppercase tracking-wider">
-                    Nächste: <span style={{ color: getExerciseColor(nextEx.name), opacity: 0.7 }}>{nextEx.reps}x {nextEx.name}</span>
+                  <div className="text-gray-400 text-2xl md:text-3xl font-oswald uppercase tracking-wider">
+                    Nächste: <span style={{ color: getExerciseColor(nextEx.name), opacity: 0.8 }}>{nextEx.reps}x {nextEx.name}</span>
                   </div>
                 )}
                 <div className="absolute bottom-4 text-gray-600 text-xs font-oswald uppercase">Klick = Weiter</div>
@@ -980,7 +1088,7 @@ export default function LiveWorkoutPage() {
             </button>
             <span className="text-gray-400 text-sm">{workout.trainer_name}</span>
           </div>
-          <span className="text-gray-500 text-xs">LEERTASTE = Alle weiter | 1-{config.numGroups} = Gruppe weiter</span>
+          <span className="text-gray-500 text-xs">LEERTASTE = Alle weiter | Mit Tasten 1-{config.numGroups} die jeweilige Gruppe weiter</span>
           <span className="font-oswald text-lg tracking-wider text-gray-500">H-<span className="text-hclub-magenta">CLUB</span></span>
         </div>
       </div>
@@ -999,7 +1107,9 @@ export default function LiveWorkoutPage() {
 
         {/* Elapsed timer */}
         <div className="flex flex-col items-center justify-center py-3 shrink-0 bg-gradient-to-b from-black/80 to-transparent relative z-10">
-          <div className="text-gray-500 text-sm font-oswald uppercase tracking-wider mb-1">For Time</div>
+          <div className="text-gray-500 text-sm font-oswald uppercase tracking-wider mb-1">
+            For Time{getForTimeBlocks(config).length > 1 ? ` Runde ${forTimeCurrentBlock + 1}/${getForTimeBlocks(config).length}` : ''}
+          </div>
           <div className="font-oswald leading-none text-white" style={{ fontSize: 'min(20vw, 12vh)' }}>
             {formatTime(forTimeElapsed)}
           </div>
@@ -1008,7 +1118,8 @@ export default function LiveWorkoutPage() {
         {/* Group columns */}
         <div className="flex-1 flex">
           {Array.from({ length: config.numGroups }, (_, gIdx) => {
-            const exercises = config.forTimeExercises?.[gIdx] || [];
+            const currentBlockData = getForTimeBlocks(config)[forTimeCurrentBlock];
+            const exercises = currentBlockData?.exercises?.[gIdx] || [];
             const currentIdx = forTimeCurrentExIndex[gIdx] || 0;
             const isFinished = forTimeGroupFinished[gIdx];
             const currentEx = exercises[currentIdx];
@@ -1041,8 +1152,8 @@ export default function LiveWorkoutPage() {
                     </div>
 
                     {nextEx && (
-                      <div className="text-gray-500 text-lg font-oswald uppercase tracking-wider mt-4">
-                        Nächste: <span style={{ color: getExerciseColor(nextEx.name), opacity: 0.7 }}>{formatExerciseLabel(nextEx)}</span>
+                      <div className="text-gray-400 text-2xl md:text-3xl font-oswald uppercase tracking-wider mt-4">
+                        Nächste: <span style={{ color: getExerciseColor(nextEx.name), opacity: 0.8 }}>{formatExerciseLabel(nextEx)}</span>
                       </div>
                     )}
                     <div className="absolute bottom-4 text-gray-600 text-xs font-oswald uppercase">Klick oder Taste {gIdx + 1} = Weiter</div>
@@ -1123,7 +1234,7 @@ export default function LiveWorkoutPage() {
       )}
 
       {/* Redesigned top bar: Timer prominent, phase + round info smaller */}
-      <div className="flex items-center justify-between px-4 py-2 bg-hclub-dark/80 border-b border-hclub-gray/50 shrink-0">
+      <div className="grid grid-cols-3 items-center px-4 py-2 bg-hclub-dark/80 border-b border-hclub-gray/50 shrink-0">
         <div className="flex items-center gap-3">
           <div className="font-oswald text-sm uppercase tracking-wider">
             {phase === 'rest' && <span className="text-yellow-400">Pause</span>}
@@ -1135,13 +1246,15 @@ export default function LiveWorkoutPage() {
           </div>
         </div>
 
-        {/* GIANT TIMER */}
-        <div className={`font-oswald tracking-wider text-white ${phase === 'work' && timeRemaining <= 10 ? 'heartbeat text-hclub-magenta' : ''}`}
-             style={{ fontSize: 'min(8vw, 4rem)', lineHeight: 1 }}>
-          {formatTime(timeRemaining)}
+        {/* GIANT TIMER - centered */}
+        <div className="flex justify-center">
+          <div className={`font-oswald tracking-wider text-white ${phase === 'work' && timeRemaining <= 10 ? 'heartbeat text-hclub-magenta' : ''}`}
+               style={{ fontSize: 'min(8vw, 4rem)', lineHeight: 1 }}>
+            {formatTime(timeRemaining)}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-end">
           {phase === 'work' && (
             <button onClick={skipToNext}
               className="px-3 py-1 bg-hclub-gray hover:bg-orange-900/60 text-gray-300 hover:text-orange-300 text-xs
@@ -1161,7 +1274,7 @@ export default function LiveWorkoutPage() {
             {formatTime(timeRemaining)}
           </div>
           <p className="font-oswald text-xl md:text-2xl uppercase tracking-wider text-gray-400 mb-6">Nächste: Runde {currentRound + 1}</p>
-          <div className="w-full max-w-4xl grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups, 3)}, 1fr)` }}>
+          <div className="w-full max-w-4xl grid gap-3 mb-6" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups, 3)}, 1fr)` }}>
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const nextExercises = config.rounds[currentRound]?.[gIdx] || [];
               const nextEx = nextExercises[0] || 'Übung';
@@ -1175,6 +1288,10 @@ export default function LiveWorkoutPage() {
               );
             })}
           </div>
+          <button onClick={() => setTimeRemaining(0)}
+            className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-oswald text-xl uppercase tracking-wider rounded-xl transition-colors">
+            Weiter &rarr;
+          </button>
         </div>
       )}
 
@@ -1275,9 +1392,9 @@ export default function LiveWorkoutPage() {
 
                 {/* Next exercise preview - BIGGER */}
                 {nextExercise && (
-                  <div className="font-oswald text-sm md:text-lg uppercase tracking-wider mt-1 md:mt-2 px-3 py-1 rounded-lg"
+                  <div className="font-oswald text-xl md:text-3xl uppercase tracking-wider mt-1 md:mt-2 px-3 py-1 rounded-lg"
                     style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                    <span className="text-gray-500">Nächste: </span>
+                    <span className="text-gray-400">Nächste: </span>
                     <span style={{ color: getExerciseColor(nextExercise) }}>{nextExercise}</span>
                   </div>
                 )}

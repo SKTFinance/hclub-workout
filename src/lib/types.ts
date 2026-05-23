@@ -28,6 +28,19 @@ export interface ExerciseEntry {
   duration?: number;   // seconds (for timed holds like planks in fortime mode)
 }
 
+export interface AmrapBlock {
+  totalTime: number; // seconds
+  exercises: {
+    [groupIndex: number]: ExerciseEntry[];
+  };
+}
+
+export interface ForTimeBlock {
+  exercises: {
+    [groupIndex: number]: ExerciseEntry[];
+  };
+}
+
 export interface WorkoutConfig {
   numGroups: number;
   numRounds: number;
@@ -59,16 +72,20 @@ export interface WorkoutConfig {
     };
   };
   // AMRAP mode settings
-  amrapTotalTime?: number; // total time in seconds for AMRAP
+  amrapTotalTime?: number; // total time in seconds for AMRAP (legacy single block)
   amrapExercises?: {
     // amrapExercises[groupIndex] = list of exercises with reps
     [groupIndex: number]: ExerciseEntry[];
   };
+  // AMRAP blocks (multiple rounds/blocks)
+  amrapBlocks?: AmrapBlock[];
   // ForTime mode settings
   forTimeExercises?: {
-    // forTimeExercises[groupIndex] = list of exercises with distance/reps
+    // forTimeExercises[groupIndex] = list of exercises with distance/reps (legacy single block)
     [groupIndex: number]: ExerciseEntry[];
   };
+  // ForTime blocks (multiple rounds/blocks)
+  forTimeBlocks?: ForTimeBlock[];
 }
 
 export interface Workout {

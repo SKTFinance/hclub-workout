@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
-import type { Workout, WorkoutConfig, WorkoutMode, ExerciseEntry, LibraryExercise } from '@/lib/types';
+import type { Workout, WorkoutConfig, WorkoutMode, ExerciseEntry, LibraryExercise, AmrapBlock, ForTimeBlock } from '@/lib/types';
 import { HYROX_EXERCISES, TRAINING_EXERCISES } from '@/lib/exercises';
 import { ICON_PICKER_OPTIONS, exerciseIconMap, getExerciseIcon } from '@/lib/exerciseIcons';
 
@@ -18,7 +18,7 @@ export default function WorkoutEditorPage() {
 
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [name, setName] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
+  const [isPublic, setIsPublic] = useState(true);
   const [workoutMode, setWorkoutMode] = useState<WorkoutMode>('timed');
   const [config, setConfig] = useState<WorkoutConfig>({
     numGroups: 2,
@@ -334,6 +334,129 @@ export default function WorkoutEditorPage() {
       }
       return { ...prev, amrapExercises };
     });
+  }
+
+  // AMRAP Block helpers
+  function getAmrapBlocks(): AmrapBlock[] {
+    if (config.amrapBlocks && config.amrapBlocks.length > 0) return config.amrapBlocks;
+    // Legacy: convert single block to array
+    return [{
+      totalTime: config.amrapTotalTime || 1200,
+      exercises: config.amrapExercises || {},
+    }];
+  }
+
+  function setAmrapBlocks(blocks: AmrapBlock[]) {
+    // Also keep legacy fields in sync for backward compat
+    setConfig(prev => ({
+      ...prev,
+      amrapBlocks: blocks,
+      amrapTotalTime: blocks[0]?.totalTime || 1200,
+      amrapExercises: blocks[0]?.exercises || {},
+    }));
+  }
+
+  function addAmrapBlock() {
+    const blocks = getAmrapBlocks();
+    const newBlock: AmrapBlock = {
+      totalTime: 1200,
+      exercises: {},
+    };
+    // Initialize with one exercise per group
+    for (let g = 0; g < config.numGroups; g++) {
+      newBlock.exercises[g] = [{ name: 'Wall Balls', reps: 10 }];
+    }
+    setAmrapBlocks([...blocks, newBlock]);
+  }
+
+  function removeAmrapBlock(blockIndex: number) {
+    const blocks = getAmrapBlocks();
+    if (blocks.length <= 1) return;
+    const updated = blocks.filter((_, i) => i !== blockIndex);
+    setAmrapBlocks(updated);
+  }
+
+  function updateAmrapBlockTime(blockIndex: number, totalTime: number) {
+    const blocks = [...getAmrapBlocks()];
+    blocks[blockIndex] = { ...blocks[blockIndex], totalTime };
+    setAmrapBlocks(blocks);
+  }
+
+  function updateAmrapBlockExercise(blockIndex: number, groupIndex: number, exIndex: number, updates: Partial<ExerciseEntry>) {
+    const blocks = JSON.parse(JSON.stringify(getAmrapBlocks()));
+    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
+    blocks[blockIndex].exercises[groupIndex][exIndex] = { ...blocks[blockIndex].exercises[groupIndex][exIndex], ...updates };
+    setAmrapBlocks(blocks);
+  }
+
+  function addAmrapBlockExercise(blockIndex: number, groupIndex: number) {
+    const blocks = JSON.parse(JSON.stringify(getAmrapBlocks()));
+    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
+    blocks[blockIndex].exercises[groupIndex].push({ name: 'Wall Balls', reps: 10 });
+    setAmrapBlocks(blocks);
+  }
+
+  function removeAmrapBlockExercise(blockIndex: number, groupIndex: number, exIndex: number) {
+    const blocks = JSON.parse(JSON.stringify(getAmrapBlocks()));
+    if (blocks[blockIndex].exercises[groupIndex]?.length > 1) {
+      blocks[blockIndex].exercises[groupIndex].splice(exIndex, 1);
+    }
+    setAmrapBlocks(blocks);
+  }
+
+  // ForTime Block helpers
+  function getForTimeBlocks(): ForTimeBlock[] {
+    if (config.forTimeBlocks && config.forTimeBlocks.length > 0) return config.forTimeBlocks;
+    // Legacy: convert single block to array
+    return [{
+      exercises: config.forTimeExercises || {},
+    }];
+  }
+
+  function setForTimeBlocks(blocks: ForTimeBlock[]) {
+    setConfig(prev => ({
+      ...prev,
+      forTimeBlocks: blocks,
+      forTimeExercises: blocks[0]?.exercises || {},
+    }));
+  }
+
+  function addForTimeBlock() {
+    const blocks = getForTimeBlocks();
+    const newBlock: ForTimeBlock = { exercises: {} };
+    for (let g = 0; g < config.numGroups; g++) {
+      newBlock.exercises[g] = [{ name: 'Wall Balls', reps: 10 }];
+    }
+    setForTimeBlocks([...blocks, newBlock]);
+  }
+
+  function removeForTimeBlock(blockIndex: number) {
+    const blocks = getForTimeBlocks();
+    if (blocks.length <= 1) return;
+    const updated = blocks.filter((_, i) => i !== blockIndex);
+    setForTimeBlocks(updated);
+  }
+
+  function updateForTimeBlockExercise(blockIndex: number, groupIndex: number, exIndex: number, updates: Partial<ExerciseEntry>) {
+    const blocks = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
+    blocks[blockIndex].exercises[groupIndex][exIndex] = { ...blocks[blockIndex].exercises[groupIndex][exIndex], ...updates };
+    setForTimeBlocks(blocks);
+  }
+
+  function addForTimeBlockExercise(blockIndex: number, groupIndex: number) {
+    const blocks = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
+    blocks[blockIndex].exercises[groupIndex].push({ name: 'Wall Balls', reps: 10 });
+    setForTimeBlocks(blocks);
+  }
+
+  function removeForTimeBlockExercise(blockIndex: number, groupIndex: number, exIndex: number) {
+    const blocks = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    if (blocks[blockIndex].exercises[groupIndex]?.length > 1) {
+      blocks[blockIndex].exercises[groupIndex].splice(exIndex, 1);
+    }
+    setForTimeBlocks(blocks);
   }
 
   // ForTime exercise helpers
@@ -772,14 +895,7 @@ export default function WorkoutEditorPage() {
               <h3 className="font-oswald text-lg uppercase tracking-wider mb-4 text-orange-400">
                 AMRAP Einstellungen
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Gesamtzeit (Min)</label>
-                  <input type="number" min={1} max={120}
-                    value={Math.floor((config.amrapTotalTime || 1200) / 60)}
-                    onChange={(e) => { const val = Math.max(1, Math.min(120, parseInt(e.target.value) || 20)); setConfig(p => ({ ...p, amrapTotalTime: val * 60 })); }}
-                    className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-orange-400" />
-                </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Gruppen</label>
                   <input type="number" min={1} max={6}
@@ -797,32 +913,63 @@ export default function WorkoutEditorPage() {
               </div>
             </div>
 
-            {/* AMRAP exercises per group */}
-            <div className={`grid gap-4 ${config.numGroups >= 2 ? 'md:grid-cols-2' : ''} ${config.numGroups >= 3 ? 'lg:grid-cols-3' : ''}`}>
-              {Array.from({ length: config.numGroups }, (_, gIdx) => {
-                const exercises = config.amrapExercises?.[gIdx] || [];
-                return (
-                  <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4">
-                    <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400 mb-3">
-                      Gruppe {gIdx + 1}
-                    </h4>
-                    {exercises.map((ex, eIdx) => (
-                      <div key={eIdx} className="flex gap-2 mb-2 items-center">
-                        {renderExerciseSelect(ex.name, (v) => updateAmrapExercise(gIdx, eIdx, { name: v }))}
-                        <input type="number" min={1} max={999} value={ex.reps || ''}
-                          onChange={(e) => updateAmrapExercise(gIdx, eIdx, { reps: parseInt(e.target.value) || undefined })}
-                          placeholder="Reps"
-                          className="w-16 px-2 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-xs text-center focus:outline-none focus:border-orange-400" />
-                        <span className="text-gray-500 text-xs">x</span>
-                        <button onClick={() => removeAmrapExercise(gIdx, eIdx)}
-                          className="text-red-400 hover:text-red-300 text-sm px-1">x</button>
-                      </div>
-                    ))}
-                    <button onClick={() => addAmrapExercise(gIdx)}
-                      className="text-xs text-orange-400 hover:text-white transition-colors font-oswald uppercase mt-2">+ Übung</button>
+            {/* AMRAP Blocks */}
+            {getAmrapBlocks().map((block, bIdx) => (
+              <div key={bIdx} className="mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <h3 className="font-oswald text-xl uppercase tracking-wider text-orange-400">
+                    Block {bIdx + 1}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-400 font-oswald uppercase">Zeit (Min):</label>
+                    <input type="number" min={1} max={120}
+                      value={Math.floor(block.totalTime / 60)}
+                      onChange={(e) => { const val = Math.max(1, Math.min(120, parseInt(e.target.value) || 20)); updateAmrapBlockTime(bIdx, val * 60); }}
+                      className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded-lg text-white text-xs text-center focus:outline-none focus:border-orange-400" />
                   </div>
-                );
-              })}
+                  {getAmrapBlocks().length > 1 && (
+                    <button onClick={() => removeAmrapBlock(bIdx)}
+                      className="text-xs text-red-400 hover:text-red-300 font-oswald uppercase px-2 py-1 border border-red-400/30 rounded-lg">
+                      Block entfernen
+                    </button>
+                  )}
+                </div>
+
+                <div className={`grid gap-4 ${config.numGroups >= 2 ? 'md:grid-cols-2' : ''} ${config.numGroups >= 3 ? 'lg:grid-cols-3' : ''}`}>
+                  {Array.from({ length: config.numGroups }, (_, gIdx) => {
+                    const exercises = block.exercises?.[gIdx] || [];
+                    return (
+                      <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4">
+                        <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400 mb-3">
+                          Gruppe {gIdx + 1}
+                        </h4>
+                        {exercises.map((ex, eIdx) => (
+                          <div key={eIdx} className="flex gap-2 mb-2 items-center">
+                            {renderExerciseSelect(ex.name, (v) => updateAmrapBlockExercise(bIdx, gIdx, eIdx, { name: v }))}
+                            <input type="number" min={1} max={999} value={ex.reps || ''}
+                              onChange={(e) => updateAmrapBlockExercise(bIdx, gIdx, eIdx, { reps: parseInt(e.target.value) || undefined })}
+                              placeholder="Reps"
+                              className="w-16 px-2 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-xs text-center focus:outline-none focus:border-orange-400" />
+                            <span className="text-gray-500 text-xs">x</span>
+                            <button onClick={() => removeAmrapBlockExercise(bIdx, gIdx, eIdx)}
+                              className="text-red-400 hover:text-red-300 text-sm px-1">x</button>
+                          </div>
+                        ))}
+                        <button onClick={() => addAmrapBlockExercise(bIdx, gIdx)}
+                          className="text-xs text-orange-400 hover:text-white transition-colors font-oswald uppercase mt-2">+ Übung</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            <div className="flex justify-center mb-8">
+              <button onClick={addAmrapBlock}
+                className="px-8 py-3 bg-orange-900/30 hover:bg-orange-600 border border-orange-500/50 hover:border-orange-400
+                           text-orange-300 hover:text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-all duration-300">
+                + Block hinzufügen
+              </button>
             </div>
           </>
         )}
@@ -855,36 +1002,85 @@ export default function WorkoutEditorPage() {
               </p>
             </div>
 
-            {/* ForTime exercises per group */}
-            <div className={`grid gap-4 ${config.numGroups >= 2 ? 'md:grid-cols-2' : ''} ${config.numGroups >= 3 ? 'lg:grid-cols-3' : ''}`}>
-              {Array.from({ length: config.numGroups }, (_, gIdx) => {
-                const exercises = config.forTimeExercises?.[gIdx] || [];
-                return (
-                  <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4">
-                    <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400 mb-3">
-                      Gruppe {gIdx + 1} <span className="text-cyan-400 text-xs">(Taste {gIdx + 1})</span>
-                    </h4>
-                    {exercises.map((ex, eIdx) => (
-                      <div key={eIdx} className="flex gap-2 mb-2 items-center flex-wrap">
-                        {renderExerciseSelect(ex.name, (v) => updateForTimeExercise(gIdx, eIdx, { name: v }))}
-                        <input type="text" value={ex.distance || ''} placeholder="z.B. 500m"
-                          onChange={(e) => updateForTimeExercise(gIdx, eIdx, { distance: e.target.value || undefined })}
-                          className="w-20 px-2 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
-                        <input type="number" min={0} value={ex.reps || ''} placeholder="Reps"
-                          onChange={(e) => updateForTimeExercise(gIdx, eIdx, { reps: parseInt(e.target.value) || undefined })}
-                          className="w-16 px-2 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
-                        <input type="number" min={0} value={ex.duration || ''} placeholder="Sek"
-                          onChange={(e) => updateForTimeExercise(gIdx, eIdx, { duration: parseInt(e.target.value) || undefined })}
-                          className="w-16 px-2 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
-                        <button onClick={() => removeForTimeExercise(gIdx, eIdx)}
-                          className="text-red-400 hover:text-red-300 text-sm px-1">x</button>
+            {/* ForTime Blocks */}
+            {getForTimeBlocks().map((block, bIdx) => (
+              <div key={bIdx} className="mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <h3 className="font-oswald text-xl uppercase tracking-wider text-cyan-400">
+                    Runde {bIdx + 1}
+                  </h3>
+                  {getForTimeBlocks().length > 1 && (
+                    <button onClick={() => removeForTimeBlock(bIdx)}
+                      className="text-xs text-red-400 hover:text-red-300 font-oswald uppercase px-2 py-1 border border-red-400/30 rounded-lg">
+                      Runde entfernen
+                    </button>
+                  )}
+                </div>
+
+                <div className={`grid gap-4 ${config.numGroups >= 2 ? 'md:grid-cols-2' : ''} ${config.numGroups >= 3 ? 'lg:grid-cols-3' : ''}`}>
+                  {Array.from({ length: config.numGroups }, (_, gIdx) => {
+                    const exercises = block.exercises?.[gIdx] || [];
+                    return (
+                      <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4">
+                        <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400 mb-3">
+                          Gruppe {gIdx + 1} <span className="text-cyan-400 text-xs">(Taste {gIdx + 1})</span>
+                        </h4>
+                        {exercises.map((ex, eIdx) => {
+                          const measureType = ex.distance ? 'distance' : ex.duration ? 'duration' : 'reps';
+                          return (
+                            <div key={eIdx} className="mb-3 p-2 bg-hclub-black/50 rounded-lg border border-hclub-gray/30">
+                              <div className="flex gap-2 mb-2 items-center">
+                                {renderExerciseSelect(ex.name, (v) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { name: v }))}
+                                <button onClick={() => removeForTimeBlockExercise(bIdx, gIdx, eIdx)}
+                                  className="text-red-400 hover:text-red-300 text-sm px-1">x</button>
+                              </div>
+                              <div className="flex gap-2 items-center">
+                                <select value={measureType}
+                                  onChange={(e) => {
+                                    const t = e.target.value;
+                                    if (t === 'distance') updateForTimeBlockExercise(bIdx, gIdx, eIdx, { distance: '500m', reps: undefined, duration: undefined });
+                                    else if (t === 'reps') updateForTimeBlockExercise(bIdx, gIdx, eIdx, { reps: 10, distance: undefined, duration: undefined });
+                                    else updateForTimeBlockExercise(bIdx, gIdx, eIdx, { duration: 30, distance: undefined, reps: undefined });
+                                  }}
+                                  className="px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-cyan-400">
+                                  <option value="reps">Wiederholungen</option>
+                                  <option value="distance">Meter</option>
+                                  <option value="duration">Sekunden</option>
+                                </select>
+                                {measureType === 'distance' && (
+                                  <input type="text" value={ex.distance || ''} placeholder="z.B. 500m"
+                                    onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { distance: e.target.value || undefined })}
+                                    className="w-24 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
+                                )}
+                                {measureType === 'reps' && (
+                                  <input type="number" min={1} value={ex.reps || ''} placeholder="Reps"
+                                    onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { reps: parseInt(e.target.value) || undefined })}
+                                    className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
+                                )}
+                                {measureType === 'duration' && (
+                                  <input type="number" min={1} value={ex.duration || ''} placeholder="Sek"
+                                    onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { duration: parseInt(e.target.value) || undefined })}
+                                    className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <button onClick={() => addForTimeBlockExercise(bIdx, gIdx)}
+                          className="text-xs text-cyan-400 hover:text-white transition-colors font-oswald uppercase mt-2">+ Übung</button>
                       </div>
-                    ))}
-                    <button onClick={() => addForTimeExercise(gIdx)}
-                      className="text-xs text-cyan-400 hover:text-white transition-colors font-oswald uppercase mt-2">+ Übung</button>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            <div className="flex justify-center mb-8">
+              <button onClick={addForTimeBlock}
+                className="px-8 py-3 bg-cyan-900/30 hover:bg-cyan-600 border border-cyan-500/50 hover:border-cyan-400
+                           text-cyan-300 hover:text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-all duration-300">
+                + Runde hinzufügen
+              </button>
             </div>
           </>
         )}
