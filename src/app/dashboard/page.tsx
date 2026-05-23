@@ -146,7 +146,7 @@ export default function DashboardPage() {
     const { data, error } = await supabase.from('workouts').insert({
       user_id: user.id, user_email: user.email, name: 'Neues Workout',
       trainer_name: trainerName || 'Trainer', config: defaultConfig,
-      is_public: false, workout_mode: workoutMode,
+      is_public: true, workout_mode: workoutMode,
     }).select().single();
 
     if (error) { console.error('Error creating workout:', error); return; }
@@ -159,7 +159,7 @@ export default function DashboardPage() {
     const { error } = await supabase.from('workouts').insert({
       user_id: user.id, user_email: user.email,
       name: `${workout.name} (Kopie)`, trainer_name: trainerName || workout.trainer_name,
-      config: workout.config, is_public: false, workout_mode: workout.workout_mode || 'timed',
+      config: workout.config, is_public: true, workout_mode: workout.workout_mode || 'timed',
     }).select().single();
     if (!error) loadWorkouts();
   }
