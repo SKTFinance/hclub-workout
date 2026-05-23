@@ -12,6 +12,22 @@ export interface RoundSettings {
   restTime?: number; // override per round
 }
 
+// Per-group time overrides within a round
+export interface GroupTimeSettings {
+  workTime?: number;
+  restTime?: number;
+}
+
+export type WorkoutMode = 'timed' | 'amrap' | 'fortime';
+
+// Exercise entry for AMRAP and ForTime modes
+export interface ExerciseEntry {
+  name: string;
+  reps?: number;       // number of repetitions
+  distance?: string;   // e.g. "500m", "50m"
+  duration?: number;   // seconds (for timed holds like planks in fortime mode)
+}
+
 export interface WorkoutConfig {
   numGroups: number;
   numRounds: number;
@@ -28,6 +44,12 @@ export interface WorkoutConfig {
   roundSettings?: {
     [roundIndex: number]: RoundSettings;
   };
+  // Per-group time overrides within each round
+  groupTimeSettings?: {
+    [roundIndex: number]: {
+      [groupIndex: number]: GroupTimeSettings;
+    };
+  };
   iconOverrides?: {
     // iconOverrides[roundIndex][groupIndex][exerciseIndex] = icon key from exerciseIconMap
     [roundIndex: number]: {
@@ -36,14 +58,28 @@ export interface WorkoutConfig {
       };
     };
   };
+  // AMRAP mode settings
+  amrapTotalTime?: number; // total time in seconds for AMRAP
+  amrapExercises?: {
+    // amrapExercises[groupIndex] = list of exercises with reps
+    [groupIndex: number]: ExerciseEntry[];
+  };
+  // ForTime mode settings
+  forTimeExercises?: {
+    // forTimeExercises[groupIndex] = list of exercises with distance/reps
+    [groupIndex: number]: ExerciseEntry[];
+  };
 }
 
 export interface Workout {
   id: string;
   user_id: string;
+  user_email?: string;
   name: string;
   trainer_name: string;
   config: WorkoutConfig;
+  is_public?: boolean;
+  workout_mode?: WorkoutMode;
   created_at: string;
   updated_at: string;
 }
@@ -53,6 +89,16 @@ export interface ExerciseSetting {
   user_id: string;
   exercise_name: string;
   color: string;
+}
+
+export interface LibraryExercise {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string;
+  icon_key?: string;
+  category: string;
+  created_at: string;
 }
 
 export type TimerPhase =
