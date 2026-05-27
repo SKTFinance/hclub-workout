@@ -669,8 +669,8 @@ export default function WorkoutEditorPage() {
                 <div>
                   <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Gruppen</label>
                   <input type="text" inputMode="numeric" pattern="[0-9]*" value={groupsInput}
-                    onChange={(e) => { setGroupsInput(e.target.value); const val = parseInt(e.target.value); if (!isNaN(val) && val >= 1 && val <= 6) updateConfig({ numGroups: val }); }}
-                    onBlur={() => { const val = parseInt(groupsInput); const c = isNaN(val) || val < 1 ? 1 : Math.min(6, val); setGroupsInput(String(c)); updateConfig({ numGroups: c }); }}
+                    onChange={(e) => { setGroupsInput(e.target.value); const val = parseInt(e.target.value); if (!isNaN(val) && val >= 1 && val <= 10) updateConfig({ numGroups: val }); }}
+                    onBlur={() => { const val = parseInt(groupsInput); const c = isNaN(val) || val < 1 ? 1 : Math.min(10, val); setGroupsInput(String(c)); updateConfig({ numGroups: c }); }}
                     className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-hclub-magenta" />
                 </div>
                 <div>
@@ -898,9 +898,9 @@ export default function WorkoutEditorPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Gruppen</label>
-                  <input type="number" min={1} max={6}
+                  <input type="number" min={1} max={10}
                     value={config.numGroups}
-                    onChange={(e) => { const val = Math.max(1, Math.min(6, parseInt(e.target.value) || 1)); updateConfig({ numGroups: val }); }}
+                    onChange={(e) => { const val = Math.max(1, Math.min(10, parseInt(e.target.value) || 1)); updateConfig({ numGroups: val }); }}
                     className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-orange-400" />
                 </div>
                 <div>
@@ -984,9 +984,9 @@ export default function WorkoutEditorPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Gruppen</label>
-                  <input type="number" min={1} max={6}
+                  <input type="number" min={1} max={10}
                     value={config.numGroups}
-                    onChange={(e) => { const val = Math.max(1, Math.min(6, parseInt(e.target.value) || 1)); updateConfig({ numGroups: val }); }}
+                    onChange={(e) => { const val = Math.max(1, Math.min(10, parseInt(e.target.value) || 1)); updateConfig({ numGroups: val }); }}
                     className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-cyan-400" />
                 </div>
                 <div>
