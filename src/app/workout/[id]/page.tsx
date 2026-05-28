@@ -771,11 +771,11 @@ export default function WorkoutEditorPage() {
                 <div className={`grid gap-4 ${
                   config.numGroups === 1 ? 'grid-cols-1' :
                   config.numGroups === 2 ? 'grid-cols-2' :
-                  config.numGroups === 3 ? 'grid-cols-3' :
-                  config.numGroups === 4 ? 'grid-cols-2 sm:grid-cols-4' :
-                  config.numGroups <= 6 ? 'grid-cols-2 sm:grid-cols-3' :
-                  'grid-cols-2 sm:grid-cols-4'
-                }`} style={{ minWidth: config.numGroups >= 5 ? `${config.numGroups * 220}px` : undefined }}>
+                  config.numGroups === 3 ? 'grid-cols-1 sm:grid-cols-3' :
+                  config.numGroups === 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
+                  config.numGroups <= 6 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
+                  'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+                }`}>
                   {Array.from({ length: config.numGroups }, (_, groupIndex) => {
                     const groupKey = `${roundIndex}-${groupIndex}`;
                     const groupHasCustomTime = config.groupTimeSettings?.[roundIndex]?.[groupIndex] &&
@@ -948,9 +948,9 @@ export default function WorkoutEditorPage() {
                 <div className={`grid gap-4 ${
                   config.numGroups === 1 ? 'grid-cols-1' :
                   config.numGroups === 2 ? 'grid-cols-2' :
-                  config.numGroups <= 4 ? 'grid-cols-2 md:grid-cols-4' :
-                  'grid-cols-2 md:grid-cols-3'
-                }`} style={{ minWidth: config.numGroups >= 5 ? `${config.numGroups * 200}px` : undefined }}>
+                  config.numGroups <= 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
+                  'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                }`}>
                   {Array.from({ length: config.numGroups }, (_, gIdx) => {
                     const exercises = block.exercises?.[gIdx] || [];
                     return (
@@ -1037,9 +1037,9 @@ export default function WorkoutEditorPage() {
                 <div className={`grid gap-4 ${
                   config.numGroups === 1 ? 'grid-cols-1' :
                   config.numGroups === 2 ? 'grid-cols-2' :
-                  config.numGroups <= 4 ? 'grid-cols-2 md:grid-cols-4' :
-                  'grid-cols-2 md:grid-cols-3'
-                }`} style={{ minWidth: config.numGroups >= 5 ? `${config.numGroups * 200}px` : undefined }}>
+                  config.numGroups <= 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
+                  'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                }`}>
                   {Array.from({ length: config.numGroups }, (_, gIdx) => {
                     const exercises = block.exercises?.[gIdx] || [];
                     return (
