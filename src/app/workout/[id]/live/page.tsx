@@ -834,18 +834,20 @@ export default function LiveWorkoutPage() {
                     <span className="text-blue-400">{getRestTimeForRound(config, roundIdx)}s Pause</span>
                   </div>
                 </div>
-                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${config.numGroups}, 1fr)` }}>
+                <div className="overflow-x-auto">
+                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${config.numGroups}, minmax(80px, 1fr))`, minWidth: config.numGroups > 4 ? `${config.numGroups * 100}px` : undefined }}>
                   {Array.from({ length: config.numGroups }, (_, gIdx) => {
                     const exercises = config.rounds[roundIdx]?.[gIdx] || [];
                     return (
                       <div key={gIdx}>
-                        <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-1">Gruppe {gIdx + 1}</div>
+                        <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-1">G{gIdx + 1}</div>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className="text-sm mb-1" style={{ color: getExerciseColor(ex) }}>{ex}</div>
+                          <div key={eIdx} className="text-xs mb-1" style={{ color: getExerciseColor(ex) }}>{ex}</div>
                         ))}
                       </div>
                     );
                   })}
+                </div>
                 </div>
               </div>
             ))}
@@ -859,20 +861,22 @@ export default function LiveWorkoutPage() {
                 <h3 className="font-oswald text-lg uppercase tracking-wider text-orange-400 mb-3">
                   {getAmrapBlocks(config).length > 1 ? `Block ${bIdx + 1}: ` : ''}{Math.floor(block.totalTime / 60)} Min AMRAP
                 </h3>
-                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${config.numGroups}, 1fr)` }}>
+                <div className="overflow-x-auto">
+                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${config.numGroups}, minmax(90px, 1fr))`, minWidth: config.numGroups > 4 ? `${config.numGroups * 110}px` : undefined }}>
                   {Array.from({ length: config.numGroups }, (_, gIdx) => {
                     const exercises = block.exercises?.[gIdx] || [];
                     return (
                       <div key={gIdx}>
-                        <div className="text-gray-500 text-xs font-oswald uppercase mb-2">Gruppe {gIdx + 1}</div>
+                        <div className="text-gray-500 text-xs font-oswald uppercase mb-2">G{gIdx + 1}</div>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className="text-sm mb-1" style={{ color: getExerciseColor(ex.name) }}>
+                          <div key={eIdx} className="text-xs mb-1" style={{ color: getExerciseColor(ex.name) }}>
                             {ex.reps}x {ex.name}
                           </div>
                         ))}
                       </div>
                     );
                   })}
+                </div>
                 </div>
               </div>
             ))}
@@ -886,20 +890,22 @@ export default function LiveWorkoutPage() {
                 <h3 className="font-oswald text-lg uppercase tracking-wider text-cyan-400 mb-3">
                   {getForTimeBlocks(config).length > 1 ? `Runde ${bIdx + 1}` : 'For Time'}
                 </h3>
-                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${config.numGroups}, 1fr)` }}>
+                <div className="overflow-x-auto">
+                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${config.numGroups}, minmax(90px, 1fr))`, minWidth: config.numGroups > 4 ? `${config.numGroups * 110}px` : undefined }}>
                   {Array.from({ length: config.numGroups }, (_, gIdx) => {
                     const exercises = block.exercises?.[gIdx] || [];
                     return (
                       <div key={gIdx}>
-                        <div className="text-gray-500 text-xs font-oswald uppercase mb-2">Gruppe {gIdx + 1} (Taste {gIdx + 1})</div>
+                        <div className="text-gray-500 text-xs font-oswald uppercase mb-2">G{gIdx + 1} ({gIdx + 1})</div>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className="text-sm mb-1" style={{ color: getExerciseColor(ex.name) }}>
+                          <div key={eIdx} className="text-xs mb-1" style={{ color: getExerciseColor(ex.name) }}>
                             {formatExerciseLabel(ex)}
                           </div>
                         ))}
                       </div>
                     );
                   })}
+                </div>
                 </div>
               </div>
             ))}
@@ -1041,7 +1047,8 @@ export default function LiveWorkoutPage() {
         </div>
 
         {/* Group columns */}
-        <div className="flex-1 flex">
+        <div className="flex-1 overflow-x-auto">
+        <div className="flex h-full" style={{ minWidth: config.numGroups > 4 ? `${config.numGroups * 130}px` : '100%' }}>
           {Array.from({ length: config.numGroups }, (_, gIdx) => {
             const currentBlockData = getAmrapBlocks(config)[amrapCurrentBlock];
             const exercises = currentBlockData?.exercises?.[gIdx] || [];
@@ -1052,26 +1059,27 @@ export default function LiveWorkoutPage() {
 
             return (
               <div key={gIdx} className="flex-1 flex flex-col items-center justify-center relative cursor-pointer"
-                style={{ backgroundColor: GROUP_BG_SHADES[gIdx % GROUP_BG_SHADES.length], borderRight: gIdx < config.numGroups - 1 ? '1px solid #333' : 'none' }}
+                style={{ backgroundColor: GROUP_BG_SHADES[gIdx % GROUP_BG_SHADES.length], borderRight: gIdx < config.numGroups - 1 ? '1px solid #333' : 'none', minWidth: config.numGroups > 4 ? '130px' : undefined }}
                 onClick={() => amrapNextExercise(gIdx)}>
-                <div className="font-oswald text-xs md:text-base uppercase tracking-widest text-gray-500 absolute top-3">
-                  Gruppe {gIdx + 1} <span className="text-orange-400 ml-2">{amrapRoundsCompleted[gIdx] || 0} Runden</span>
+                <div className="font-oswald text-xs uppercase tracking-widest text-gray-500 absolute top-3 text-center px-1">
+                  G{gIdx + 1} <span className="text-orange-400">{amrapRoundsCompleted[gIdx] || 0}R</span>
                 </div>
-                <div className="text-gray-500 text-sm font-oswald mb-2">{currentEx.reps}x</div>
-                <div className="font-oswald text-2xl md:text-5xl uppercase tracking-wider text-center px-4 mb-4"
+                <div className="text-gray-500 text-sm font-oswald mb-1">{currentEx.reps}x</div>
+                <div className={`font-oswald ${config.numGroups > 5 ? 'text-lg md:text-2xl' : 'text-2xl md:text-5xl'} uppercase tracking-wider text-center px-2 mb-2`}
                   style={{ color: getExerciseColor(currentEx.name) }}>
                   {currentEx.name}
                 </div>
                 {nextEx && (
-                  <div className="text-gray-400 text-2xl md:text-3xl font-oswald uppercase tracking-wider">
-                    Nächste: <span style={{ color: getExerciseColor(nextEx.name), opacity: 0.8 }}>{nextEx.reps}x {nextEx.name}</span>
+                  <div className={`text-gray-400 ${config.numGroups > 5 ? 'text-sm md:text-base' : 'text-2xl md:text-3xl'} font-oswald uppercase tracking-wider text-center px-1`}>
+                    <span className="text-gray-500">→ </span><span style={{ color: getExerciseColor(nextEx.name), opacity: 0.8 }}>{nextEx.reps}x {nextEx.name}</span>
                   </div>
                 )}
-                <div className="absolute bottom-4 text-gray-600 text-xs font-oswald uppercase">Klick = Weiter</div>
+                <div className="absolute bottom-4 text-gray-600 text-xs font-oswald uppercase">Klick</div>
                 <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: getExerciseColor(currentEx.name) }} />
               </div>
             );
           })}
+        </div>
         </div>
 
         {/* Bottom controls */}
@@ -1116,7 +1124,8 @@ export default function LiveWorkoutPage() {
         </div>
 
         {/* Group columns */}
-        <div className="flex-1 flex">
+        <div className="flex-1 overflow-x-auto">
+        <div className="flex h-full" style={{ minWidth: config.numGroups > 4 ? `${config.numGroups * 130}px` : '100%' }}>
           {Array.from({ length: config.numGroups }, (_, gIdx) => {
             const currentBlockData = getForTimeBlocks(config)[forTimeCurrentBlock];
             const exercises = currentBlockData?.exercises?.[gIdx] || [];
@@ -1127,36 +1136,36 @@ export default function LiveWorkoutPage() {
 
             return (
               <div key={gIdx} className={`flex-1 flex flex-col items-center justify-center relative ${isFinished ? '' : 'cursor-pointer'}`}
-                style={{ backgroundColor: isFinished ? '#0a1a0a' : GROUP_BG_SHADES[gIdx % GROUP_BG_SHADES.length], borderRight: gIdx < config.numGroups - 1 ? '1px solid #333' : 'none' }}
+                style={{ backgroundColor: isFinished ? '#0a1a0a' : GROUP_BG_SHADES[gIdx % GROUP_BG_SHADES.length], borderRight: gIdx < config.numGroups - 1 ? '1px solid #333' : 'none', minWidth: config.numGroups > 4 ? '130px' : undefined }}
                 onClick={() => !isFinished && forTimeAdvanceGroup(gIdx)}>
-                <div className="font-oswald text-xs md:text-base uppercase tracking-widest text-gray-500 absolute top-3">
-                  Gruppe {gIdx + 1} <span className="text-cyan-400">(Taste {gIdx + 1})</span>
+                <div className="font-oswald text-xs uppercase tracking-widest text-gray-500 absolute top-3 text-center px-1">
+                  G{gIdx + 1} <span className="text-cyan-400">({gIdx + 1})</span>
                 </div>
 
                 {isFinished ? (
-                  <div className="font-oswald text-4xl md:text-6xl uppercase tracking-wider text-green-400">Fertig!</div>
+                  <div className={`font-oswald ${config.numGroups > 5 ? 'text-2xl md:text-4xl' : 'text-4xl md:text-6xl'} uppercase tracking-wider text-green-400`}>Fertig!</div>
                 ) : currentEx ? (
                   <>
                     {/* Exercise progress */}
-                    <div className="flex gap-1 mb-4">
+                    <div className="flex gap-1 mb-2">
                       {exercises.map((_, idx) => (
-                        <div key={idx} className="w-2 h-2 md:w-3 md:h-3 rounded-full"
+                        <div key={idx} className="w-2 h-2 rounded-full"
                           style={{ backgroundColor: idx === currentIdx ? getExerciseColor(currentEx.name) : idx < currentIdx ? '#555' : '#333',
                             transform: idx === currentIdx ? 'scale(1.3)' : 'scale(1)' }} />
                       ))}
                     </div>
 
-                    <div className="font-oswald text-3xl md:text-6xl uppercase tracking-wider text-center px-4 mb-2"
+                    <div className={`font-oswald ${config.numGroups > 5 ? 'text-lg md:text-2xl' : 'text-3xl md:text-6xl'} uppercase tracking-wider text-center px-2 mb-2`}
                       style={{ color: getExerciseColor(currentEx.name) }}>
                       {formatExerciseLabel(currentEx)}
                     </div>
 
                     {nextEx && (
-                      <div className="text-gray-400 text-2xl md:text-3xl font-oswald uppercase tracking-wider mt-4">
-                        Nächste: <span style={{ color: getExerciseColor(nextEx.name), opacity: 0.8 }}>{formatExerciseLabel(nextEx)}</span>
+                      <div className={`text-gray-400 ${config.numGroups > 5 ? 'text-xs md:text-sm' : 'text-2xl md:text-3xl'} font-oswald uppercase tracking-wider mt-2 text-center px-1`}>
+                        <span className="text-gray-500">→ </span><span style={{ color: getExerciseColor(nextEx.name), opacity: 0.8 }}>{formatExerciseLabel(nextEx)}</span>
                       </div>
                     )}
-                    <div className="absolute bottom-4 text-gray-600 text-xs font-oswald uppercase">Klick oder Taste {gIdx + 1} = Weiter</div>
+                    <div className="absolute bottom-4 text-gray-600 text-xs font-oswald uppercase">Taste {gIdx + 1}</div>
                   </>
                 ) : null}
 
@@ -1164,6 +1173,7 @@ export default function LiveWorkoutPage() {
               </div>
             );
           })}
+        </div>
         </div>
 
         {/* Bottom */}
@@ -1274,19 +1284,21 @@ export default function LiveWorkoutPage() {
             {formatTime(timeRemaining)}
           </div>
           <p className="font-oswald text-xl md:text-2xl uppercase tracking-wider text-gray-400 mb-6">Nächste: Runde {currentRound + 1}</p>
-          <div className="w-full max-w-4xl grid gap-3 mb-6" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups, 3)}, 1fr)` }}>
+          <div className="w-full max-w-5xl overflow-x-auto mb-6">
+          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups, 4)}, minmax(120px, 1fr))`, minWidth: config.numGroups > 4 ? `${config.numGroups * 130}px` : undefined }}>
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const nextExercises = config.rounds[currentRound]?.[gIdx] || [];
               const nextEx = nextExercises[0] || 'Übung';
               const ExIcon = getIconForExercise(config, currentRound, gIdx, 0, nextEx);
               return (
-                <div key={gIdx} className="bg-hclub-dark/60 border border-hclub-gray/40 rounded-xl p-4 text-center">
-                  <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-2">Gruppe {String.fromCharCode(65 + gIdx)}</div>
-                  <div className="flex justify-center mb-2 opacity-70"><ExIcon size={48} color={getExerciseColor(nextEx)} /></div>
-                  <div className="font-oswald text-lg md:text-2xl uppercase tracking-wider" style={{ color: getExerciseColor(nextEx) }}>{nextEx}</div>
+                <div key={gIdx} className="bg-hclub-dark/60 border border-hclub-gray/40 rounded-xl p-3 text-center">
+                  <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-1">G{String.fromCharCode(65 + gIdx)}</div>
+                  <div className="flex justify-center mb-1 opacity-70"><ExIcon size={config.numGroups > 5 ? 32 : 40} color={getExerciseColor(nextEx)} /></div>
+                  <div className="font-oswald text-sm md:text-lg uppercase tracking-wider" style={{ color: getExerciseColor(nextEx) }}>{nextEx}</div>
                 </div>
               );
             })}
+          </div>
           </div>
           <button onClick={() => setTimeRemaining(0)}
             className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-oswald text-xl uppercase tracking-wider rounded-xl transition-colors">
@@ -1302,19 +1314,21 @@ export default function LiveWorkoutPage() {
           <div className="font-oswald leading-none text-white mb-6" style={{ fontSize: 'min(40vw, 25vh)' }}>
             {formatTime(timeRemaining)}
           </div>
-          <div className="w-full max-w-4xl grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups, 3)}, 1fr)` }}>
+          <div className="w-full max-w-5xl overflow-x-auto">
+          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups, 4)}, minmax(120px, 1fr))`, minWidth: config.numGroups > 4 ? `${config.numGroups * 130}px` : undefined }}>
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const exercises = config.rounds[currentRound]?.[gIdx] || [];
               const nextEx = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
               const ExIcon = getIconForExercise(config, currentRound, gIdx, currentExerciseIndex, nextEx);
               return (
-                <div key={gIdx} className="bg-hclub-dark/60 border border-hclub-gray/40 rounded-xl p-4 text-center">
-                  <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-2">Gruppe {String.fromCharCode(65 + gIdx)}</div>
-                  <div className="flex justify-center mb-2 opacity-70"><ExIcon size={48} color={getExerciseColor(nextEx)} /></div>
-                  <div className="font-oswald text-lg md:text-2xl uppercase tracking-wider" style={{ color: getExerciseColor(nextEx) }}>{nextEx}</div>
+                <div key={gIdx} className="bg-hclub-dark/60 border border-hclub-gray/40 rounded-xl p-3 text-center">
+                  <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-1">G{String.fromCharCode(65 + gIdx)}</div>
+                  <div className="flex justify-center mb-1 opacity-70"><ExIcon size={config.numGroups > 5 ? 32 : 40} color={getExerciseColor(nextEx)} /></div>
+                  <div className="font-oswald text-sm md:text-lg uppercase tracking-wider" style={{ color: getExerciseColor(nextEx) }}>{nextEx}</div>
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
       )}
@@ -1323,20 +1337,22 @@ export default function LiveWorkoutPage() {
       {phase === 'work' && (
         <>
           <style>{`
-            .work-groups-grid {
-              display: grid;
-              grid-template-columns: ${config.numGroups <= 2 ? '1fr' : 'repeat(2, 1fr)'};
+            .work-groups-scroll {
               flex: 1;
+              overflow-x: auto;
+              overflow-y: hidden;
             }
-            @media (min-width: 768px) {
-              .work-groups-grid {
-                display: flex;
-              }
-              .work-groups-grid > div {
-                flex: 1;
-              }
+            .work-groups-grid {
+              display: flex;
+              height: 100%;
+              min-height: 0;
+            }
+            .work-groups-grid > div {
+              flex: 1;
+              min-width: ${config.numGroups <= 4 ? '0' : config.numGroups <= 6 ? '140px' : '120px'};
             }
           `}</style>
+          <div className="work-groups-scroll">
           <div className="work-groups-grid">
           {Array.from({ length: config.numGroups }, (_, groupIndex) => {
             const exercises = config.rounds[currentRound]?.[groupIndex] || [];
@@ -1403,6 +1419,7 @@ export default function LiveWorkoutPage() {
               </div>
             );
           })}
+          </div>
           </div>
         </>
       )}
