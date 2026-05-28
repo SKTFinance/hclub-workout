@@ -537,7 +537,7 @@ export default function WorkoutEditorPage() {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="flex-1 px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg
+        className="flex-1 min-w-0 px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg
                    text-white text-sm focus:outline-none focus:border-hclub-magenta"
       >
         <optgroup label="HYROX">
@@ -573,7 +573,7 @@ export default function WorkoutEditorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-hclub-black">
+    <div className="min-h-screen bg-hclub-black overflow-x-hidden">
       {/* Header */}
       <header className="border-b border-hclub-gray sticky top-0 bg-hclub-black z-50">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -767,11 +767,11 @@ export default function WorkoutEditorPage() {
                   </div>
                 )}
 
-                <div className="overflow-x-auto pb-2">
+                <div className="overflow-hidden pb-2">
                 <div className={`grid gap-4 ${
                   config.numGroups === 1 ? 'grid-cols-1' :
-                  config.numGroups === 2 ? 'grid-cols-2' :
-                  config.numGroups === 3 ? 'grid-cols-1 sm:grid-cols-3' :
+                  config.numGroups === 2 ? 'grid-cols-1 sm:grid-cols-2' :
+                  config.numGroups === 3 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
                   config.numGroups === 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
                   config.numGroups <= 6 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
                   'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
@@ -785,7 +785,7 @@ export default function WorkoutEditorPage() {
                     const groupRestTime = config.groupTimeSettings?.[roundIndex]?.[groupIndex]?.restTime ?? effectiveRestTime;
 
                     return (
-                    <div key={groupIndex} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4">
+                    <div key={groupIndex} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 min-w-0 overflow-hidden">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400">
                           Gruppe {groupIndex + 1}
@@ -834,7 +834,7 @@ export default function WorkoutEditorPage() {
                           iconPickerOpen?.ex === exIdx;
                         return (
                         <div key={exIdx} className="mb-2">
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 min-w-0">
                             <button type="button"
                               onClick={() => setIconPickerOpen(isPickerOpen ? null : { round: roundIndex, group: groupIndex, ex: exIdx })}
                               title="Icon waehlen"
@@ -847,11 +847,11 @@ export default function WorkoutEditorPage() {
                             </button>
                             {renderExerciseSelect(exercise, (v) => setExercise(roundIndex, groupIndex, exIdx, v))}
                             <button onClick={() => removeExerciseFromGroup(roundIndex, groupIndex, exIdx)}
-                              className="px-2 text-red-400 hover:text-red-300 text-sm" title="Entfernen">x</button>
+                              className="flex-shrink-0 px-2 text-red-400 hover:text-red-300 text-sm" title="Entfernen">x</button>
                           </div>
                           {isPickerOpen && (
-                            <div className="mt-1 p-2 bg-hclub-black border border-hclub-magenta/40 rounded-lg">
-                              <div className="grid grid-cols-6 gap-1">
+                            <div className="mt-1 p-2 bg-hclub-black border border-hclub-magenta/40 rounded-lg overflow-hidden">
+                              <div className="grid grid-cols-5 sm:grid-cols-6 gap-1">
                                 {ICON_PICKER_OPTIONS.map(({ key, label, Component }) => (
                                   <button key={key} type="button" title={label}
                                     onClick={() => { setIconOverride(roundIndex, groupIndex, exIdx, key === '__generic__' ? null : key); setIconPickerOpen(null); }}
@@ -877,11 +877,11 @@ export default function WorkoutEditorPage() {
                         <button onClick={() => addExerciseToGroup(roundIndex, groupIndex)}
                           className="text-xs text-hclub-magenta hover:text-white transition-colors font-oswald uppercase">+ Übung</button>
                       </div>
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex gap-2 mt-2 min-w-0">
                         <input type="text" value={customExercise}
                           onChange={(e) => setCustomExercise(e.target.value)}
                           placeholder="Eigene Übung..."
-                          className="flex-1 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-hclub-magenta"
+                          className="flex-1 min-w-0 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-hclub-magenta"
                           onKeyDown={(e) => { if (e.key === 'Enter') addCustomExercise(roundIndex, groupIndex); }} />
                         <button onClick={() => addCustomExercise(roundIndex, groupIndex)}
                           className="text-xs text-hclub-magenta hover:text-white px-2">+</button>
@@ -944,30 +944,30 @@ export default function WorkoutEditorPage() {
                   )}
                 </div>
 
-                <div className="overflow-x-auto pb-2">
+                <div className="overflow-hidden pb-2">
                 <div className={`grid gap-4 ${
                   config.numGroups === 1 ? 'grid-cols-1' :
-                  config.numGroups === 2 ? 'grid-cols-2' :
+                  config.numGroups === 2 ? 'grid-cols-1 sm:grid-cols-2' :
                   config.numGroups <= 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
                   'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
                 }`}>
                   {Array.from({ length: config.numGroups }, (_, gIdx) => {
                     const exercises = block.exercises?.[gIdx] || [];
                     return (
-                      <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4">
+                      <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 min-w-0 overflow-hidden">
                         <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400 mb-3">
                           Gruppe {gIdx + 1}
                         </h4>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className="flex gap-2 mb-2 items-center">
+                          <div key={eIdx} className="flex gap-2 mb-2 items-center min-w-0">
                             {renderExerciseSelect(ex.name, (v) => updateAmrapBlockExercise(bIdx, gIdx, eIdx, { name: v }))}
                             <input type="number" min={1} max={999} value={ex.reps || ''}
                               onChange={(e) => updateAmrapBlockExercise(bIdx, gIdx, eIdx, { reps: parseInt(e.target.value) || undefined })}
                               placeholder="Reps"
-                              className="w-16 px-2 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-xs text-center focus:outline-none focus:border-orange-400" />
-                            <span className="text-gray-500 text-xs">x</span>
+                              className="w-16 flex-shrink-0 px-2 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-xs text-center focus:outline-none focus:border-orange-400" />
+                            <span className="text-gray-500 text-xs flex-shrink-0">x</span>
                             <button onClick={() => removeAmrapBlockExercise(bIdx, gIdx, eIdx)}
-                              className="text-red-400 hover:text-red-300 text-sm px-1">x</button>
+                              className="flex-shrink-0 text-red-400 hover:text-red-300 text-sm px-1">x</button>
                           </div>
                         ))}
                         <button onClick={() => addAmrapBlockExercise(bIdx, gIdx)}
@@ -1033,17 +1033,17 @@ export default function WorkoutEditorPage() {
                   )}
                 </div>
 
-                <div className="overflow-x-auto pb-2">
+                <div className="overflow-hidden pb-2">
                 <div className={`grid gap-4 ${
                   config.numGroups === 1 ? 'grid-cols-1' :
-                  config.numGroups === 2 ? 'grid-cols-2' :
+                  config.numGroups === 2 ? 'grid-cols-1 sm:grid-cols-2' :
                   config.numGroups <= 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
                   'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
                 }`}>
                   {Array.from({ length: config.numGroups }, (_, gIdx) => {
                     const exercises = block.exercises?.[gIdx] || [];
                     return (
-                      <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4">
+                      <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 min-w-0 overflow-hidden">
                         <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400 mb-3">
                           Gruppe {gIdx + 1} <span className="text-cyan-400 text-xs">(Taste {gIdx + 1})</span>
                         </h4>
@@ -1051,10 +1051,10 @@ export default function WorkoutEditorPage() {
                           const measureType = ex.distance ? 'distance' : ex.duration ? 'duration' : 'reps';
                           return (
                             <div key={eIdx} className="mb-3 p-2 bg-hclub-black/50 rounded-lg border border-hclub-gray/30">
-                              <div className="flex gap-2 mb-2 items-center">
+                              <div className="flex gap-2 mb-2 items-center min-w-0">
                                 {renderExerciseSelect(ex.name, (v) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { name: v }))}
                                 <button onClick={() => removeForTimeBlockExercise(bIdx, gIdx, eIdx)}
-                                  className="text-red-400 hover:text-red-300 text-sm px-1">x</button>
+                                  className="flex-shrink-0 text-red-400 hover:text-red-300 text-sm px-1">x</button>
                               </div>
                               <div className="flex gap-2 items-center">
                                 <select value={measureType}
