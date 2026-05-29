@@ -31,6 +31,8 @@ export default function WorkoutEditorPage() {
   });
   const [saving, setSaving] = useState(false);
   const [customExercise, setCustomExercise] = useState('');
+  const [customAmrapExercise, setCustomAmrapExercise] = useState<Record<string, string>>({});
+  const [customForTimeExercise, setCustomForTimeExercise] = useState<Record<string, string>>({});
   const [expandedRoundSettings, setExpandedRoundSettings] = useState<Record<number, boolean>>({});
   const [expandedGroupSettings, setExpandedGroupSettings] = useState<Record<string, boolean>>({});
   // Local string states for number inputs
@@ -396,6 +398,18 @@ export default function WorkoutEditorPage() {
     setAmrapBlocks(blocks);
   }
 
+  function addCustomAmrapExercise(blockIndex: number, groupIndex: number) {
+    const key = `${blockIndex}-${groupIndex}`;
+    const name = (customAmrapExercise[key] || '').trim();
+    if (!name) return;
+    const blocks = JSON.parse(JSON.stringify(getAmrapBlocks()));
+    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
+    blocks[blockIndex].exercises[groupIndex].push({ name, reps: 10 });
+    setAmrapBlocks(blocks);
+    saveToLibrary(name);
+    setCustomAmrapExercise(prev => ({ ...prev, [key]: '' }));
+  }
+
   function removeAmrapBlockExercise(blockIndex: number, groupIndex: number, exIndex: number) {
     const blocks = JSON.parse(JSON.stringify(getAmrapBlocks()));
     if (blocks[blockIndex].exercises[groupIndex]?.length > 1) {
@@ -449,6 +463,18 @@ export default function WorkoutEditorPage() {
     if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
     blocks[blockIndex].exercises[groupIndex].push({ name: 'Wall Balls', reps: 10 });
     setForTimeBlocks(blocks);
+  }
+
+  function addCustomForTimeExercise(blockIndex: number, groupIndex: number) {
+    const key = `${blockIndex}-${groupIndex}`;
+    const name = (customForTimeExercise[key] || '').trim();
+    if (!name) return;
+    const blocks = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
+    blocks[blockIndex].exercises[groupIndex].push({ name, reps: 10 });
+    setForTimeBlocks(blocks);
+    saveToLibrary(name);
+    setCustomForTimeExercise(prev => ({ ...prev, [key]: '' }));
   }
 
   function removeForTimeBlockExercise(blockIndex: number, groupIndex: number, exIndex: number) {
@@ -972,6 +998,15 @@ export default function WorkoutEditorPage() {
                         ))}
                         <button onClick={() => addAmrapBlockExercise(bIdx, gIdx)}
                           className="text-xs text-orange-400 hover:text-white transition-colors font-oswald uppercase mt-2">+ Übung</button>
+                        <div className="flex gap-2 mt-2 min-w-0">
+                          <input type="text" value={customAmrapExercise[`${bIdx}-${gIdx}`] || ''}
+                            onChange={(e) => setCustomAmrapExercise(prev => ({ ...prev, [`${bIdx}-${gIdx}`]: e.target.value }))}
+                            placeholder="Eigene Übung..."
+                            className="flex-1 min-w-0 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-orange-400"
+                            onKeyDown={(e) => { if (e.key === 'Enter') addCustomAmrapExercise(bIdx, gIdx); }} />
+                          <button onClick={() => addCustomAmrapExercise(bIdx, gIdx)}
+                            className="text-xs text-orange-400 hover:text-white px-2">+</button>
+                        </div>
                       </div>
                     );
                   })}
@@ -1090,6 +1125,15 @@ export default function WorkoutEditorPage() {
                         })}
                         <button onClick={() => addForTimeBlockExercise(bIdx, gIdx)}
                           className="text-xs text-cyan-400 hover:text-white transition-colors font-oswald uppercase mt-2">+ Übung</button>
+                        <div className="flex gap-2 mt-2 min-w-0">
+                          <input type="text" value={customForTimeExercise[`${bIdx}-${gIdx}`] || ''}
+                            onChange={(e) => setCustomForTimeExercise(prev => ({ ...prev, [`${bIdx}-${gIdx}`]: e.target.value }))}
+                            placeholder="Eigene Übung..."
+                            className="flex-1 min-w-0 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-cyan-400"
+                            onKeyDown={(e) => { if (e.key === 'Enter') addCustomForTimeExercise(bIdx, gIdx); }} />
+                          <button onClick={() => addCustomForTimeExercise(bIdx, gIdx)}
+                            className="text-xs text-cyan-400 hover:text-white px-2">+</button>
+                        </div>
                       </div>
                     );
                   })}
