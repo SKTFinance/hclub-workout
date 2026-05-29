@@ -1286,8 +1286,8 @@ export default function LiveWorkoutPage() {
             {formatTime(timeRemaining)}
           </div>
           <p className="font-oswald text-xl md:text-2xl uppercase tracking-wider text-gray-400 mb-6">Nächste: Runde {currentRound + 1}</p>
-          <div className="w-full max-w-5xl overflow-x-auto mb-6">
-          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups, 4)}, minmax(120px, 1fr))`, minWidth: config.numGroups > 4 ? `${config.numGroups * 130}px` : undefined }}>
+          <div className="w-full max-w-5xl mb-6">
+          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups > 4 ? Math.ceil(config.numGroups / 2) : config.numGroups, 4)}, 1fr)` }}>
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const nextExercises = config.rounds[currentRound]?.[gIdx] || [];
               const nextEx = nextExercises[0] || 'Übung';
@@ -1316,8 +1316,8 @@ export default function LiveWorkoutPage() {
           <div className="font-oswald leading-none text-white mb-6" style={{ fontSize: 'min(40vw, 25vh)' }}>
             {formatTime(timeRemaining)}
           </div>
-          <div className="w-full max-w-5xl overflow-x-auto">
-          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups, 4)}, minmax(120px, 1fr))`, minWidth: config.numGroups > 4 ? `${config.numGroups * 130}px` : undefined }}>
+          <div className="w-full max-w-5xl">
+          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups > 4 ? Math.ceil(config.numGroups / 2) : config.numGroups, 4)}, 1fr)` }}>
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const exercises = config.rounds[currentRound]?.[gIdx] || [];
               const nextEx = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
@@ -1345,13 +1345,11 @@ export default function LiveWorkoutPage() {
               overflow-y: hidden;
             }
             .work-groups-grid {
-              display: flex;
+              display: grid;
               height: 100%;
               min-height: 0;
-            }
-            .work-groups-grid > div {
-              flex: 1;
-              min-width: ${config.numGroups <= 4 ? '0' : config.numGroups <= 6 ? '140px' : '120px'};
+              grid-template-columns: repeat(${config.numGroups > 4 ? Math.ceil(config.numGroups / 2) : config.numGroups}, 1fr);
+              grid-template-rows: ${config.numGroups > 4 ? '1fr 1fr' : '1fr'};
             }
           `}</style>
           <div className="work-groups-scroll">
