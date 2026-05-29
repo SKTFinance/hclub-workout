@@ -823,12 +823,14 @@ export default function LiveWorkoutPage() {
         )}
 
         {workoutMode === 'timed' && (
-          <div className="w-full max-w-5xl grid gap-6 md:grid-cols-2 mb-8">
+          <div className={`w-full mb-8 grid gap-6 ${
+            config.numRounds === 1 ? 'max-w-5xl grid-cols-1' : 'max-w-5xl md:grid-cols-2'
+          }`}>
             {Array.from({ length: config.numRounds }, (_, roundIdx) => (
               <div key={roundIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 fade-in-up"
                 style={{ animationDelay: `${0.2 + roundIdx * 0.1}s`, opacity: 0 }}>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-oswald text-lg uppercase tracking-wider text-hclub-magenta">Runde {roundIdx + 1}</h3>
+                  <h3 className={`font-oswald uppercase tracking-wider text-hclub-magenta ${config.numRounds === 1 ? 'text-xl' : 'text-lg'}`}>Runde {roundIdx + 1}</h3>
                   <div className="flex gap-3 text-xs font-oswald uppercase">
                     <span className="text-green-400">{getWorkTimeForRound(config, roundIdx)}s Arbeit</span>
                     <span className="text-blue-400">{getRestTimeForRound(config, roundIdx)}s Pause</span>
@@ -840,9 +842,9 @@ export default function LiveWorkoutPage() {
                     const exercises = config.rounds[roundIdx]?.[gIdx] || [];
                     return (
                       <div key={gIdx}>
-                        <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-1">G{gIdx + 1}</div>
+                        <div className={`text-gray-500 font-oswald uppercase tracking-wider mb-1 ${config.numRounds === 1 ? 'text-sm' : 'text-xs'}`}>G{gIdx + 1}</div>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className="text-xs mb-1" style={{ color: getExerciseColor(ex) }}>{ex}</div>
+                          <div key={eIdx} className={`mb-1 ${config.numRounds === 1 ? 'text-sm' : 'text-xs'}`} style={{ color: getExerciseColor(ex) }}>{ex}</div>
                         ))}
                       </div>
                     );
