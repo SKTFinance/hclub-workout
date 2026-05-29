@@ -1408,7 +1408,7 @@ export default function LiveWorkoutPage() {
 
                 {/* Next exercise preview - BIGGER */}
                 {nextExercise && (
-                  <div className="font-oswald text-xl md:text-3xl uppercase tracking-wider mt-1 md:mt-2 px-3 py-1 rounded-lg"
+                  <div className="font-oswald text-xl md:text-3xl uppercase tracking-wider mt-1 md:mt-2 px-3 py-1 rounded-lg text-center"
                     style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
                     <span className="text-gray-400">Nächste: </span>
                     <span style={{ color: getExerciseColor(nextExercise) }}>{nextExercise}</span>
