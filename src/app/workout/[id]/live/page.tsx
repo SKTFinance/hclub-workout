@@ -212,7 +212,7 @@ export default function LiveWorkoutPage() {
     if (isPaused || phase === 'idle' || phase === 'summary' || phase === 'finished' || phase === 'countdown') return;
     if (workoutMode === 'fortime') return; // no countdown sounds in fortime
 
-    if (timeRemaining <= 10 && timeRemaining > 0 && timeRemaining !== prevTimeRef.current) {
+    if (timeRemaining <= 5 && timeRemaining > 0 && timeRemaining !== prevTimeRef.current) {
       if (phase === 'work') {
         playPowerTimerBeep();
         setNumberPopKey((k) => k + 1);
@@ -1035,8 +1035,8 @@ export default function LiveWorkoutPage() {
           <div className="text-gray-500 text-sm font-oswald uppercase tracking-wider mb-1">
             AMRAP{getAmrapBlocks(config).length > 1 ? ` Block ${amrapCurrentBlock + 1}/${getAmrapBlocks(config).length}` : ''}
           </div>
-          <div className={`font-oswald leading-none text-white ${timeRemaining <= 10 ? 'text-hclub-magenta heartbeat' : ''}`}
-            style={{ fontSize: 'min(30vw, 20vh)', textShadow: timeRemaining <= 10 ? '0 0 60px #FF00FF' : 'none' }}>
+          <div className={`font-oswald leading-none text-white ${timeRemaining <= 5 ? 'text-hclub-magenta heartbeat' : ''}`}
+            style={{ fontSize: 'min(30vw, 20vh)', textShadow: timeRemaining <= 5 ? '0 0 60px #FF00FF' : 'none' }}>
             {formatTime(timeRemaining)}
           </div>
           <div className="flex gap-4 mt-2">
@@ -1200,7 +1200,7 @@ export default function LiveWorkoutPage() {
   }
 
   // =================== TIMED MODE: WORK / REST / ROUND REST ===================
-  const showPowerTimer = phase === 'work' && timeRemaining <= 10 && timeRemaining > 0;
+  const showPowerTimer = phase === 'work' && timeRemaining <= 5 && timeRemaining > 0;
   const showShake = phase === 'work' && timeRemaining <= 3 && timeRemaining > 0;
   const workTimeTotal = getWorkTimeForRound(config, currentRound);
   const progressPercent = phase === 'work' ? (timeRemaining / workTimeTotal) * 100 : 100;
@@ -1260,7 +1260,7 @@ export default function LiveWorkoutPage() {
 
         {/* GIANT TIMER - centered */}
         <div className="flex justify-center">
-          <div className={`font-oswald tracking-wider text-white ${phase === 'work' && timeRemaining <= 10 ? 'heartbeat text-hclub-magenta' : ''}`}
+          <div className={`font-oswald tracking-wider text-white ${phase === 'work' && timeRemaining <= 5 ? 'heartbeat text-hclub-magenta' : ''}`}
                style={{ fontSize: 'min(8vw, 4rem)', lineHeight: 1 }}>
             {formatTime(timeRemaining)}
           </div>
