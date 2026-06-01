@@ -1,0 +1,69 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/lib/supabase/server';
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
+async function isAdmin(): Promise<boolean> {
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data } = await supabaseAdmin
+    .from('hclub_admins')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .single();
+
+  return !!data;
+}
+
+// GET: Liste aller User
+export async function GET() {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: 'Kein Zugriff' }, { status: 403 });
+  }
+
+  const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const simplified = users.map((u) => ({
+    id: u.id,
+    email: u.email,
+    created_at: u.created_at,
+    last_sign_in_at: u.last_sign_in_at,
+  }));
+
+  return NextResponse.json({ users: simplified });
+}
+
+// POST: Neuen User anlegen
+export async function POST(request: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: 'Kein Zugriff' }, { status: 403 });
+  }
+
+  const { email, password } = await request.json();
+
+  if (!email || !password) {
+    return NextResponse.json({ error: 'Email und Passwort erforderlich' }, { status: 400 });
+  }
+
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ user: { id: data.user.id, email: data.user.email } }, { status: 201 });
+}

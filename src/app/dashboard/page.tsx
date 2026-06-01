@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [trainerName, setTrainerName] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [filterMode, setFilterMode] = useState<FilterMode>('mine');
   const [sortMode, setSortMode] = useState<SortMode>('date');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -50,7 +51,11 @@ export default function DashboardPage() {
 
   const loadWorkouts = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) setCurrentUserId(user.id);
+    if (user) {
+      setCurrentUserId(user.id);
+      // Admin-Check
+      fetch('/api/admin/users').then(res => { if (res.ok) setIsAdmin(true); });
+    }
 
     let query = supabase.from('workouts').select('*');
 
@@ -290,6 +295,11 @@ export default function DashboardPage() {
             H-<span className="text-hclub-magenta">CLUB</span>
           </h1>
           <div className="flex items-center gap-4">
+            {isAdmin && (
+              <a href="/admin" className="text-hclub-magenta hover:text-white transition-colors text-sm font-oswald uppercase tracking-wider">
+                Benutzerverwaltung
+              </a>
+            )}
             <a href="/settings" className="text-gray-400 hover:text-hclub-magenta transition-colors text-sm font-oswald uppercase tracking-wider">Einstellungen</a>
             <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 transition-colors text-sm font-oswald uppercase tracking-wider">Abmelden</button>
           </div>
