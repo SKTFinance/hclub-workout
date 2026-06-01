@@ -2,18 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
+
+export const dynamic = 'force-dynamic';
 
 async function isAdmin(): Promise<boolean> {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
 
-  const { data } = await supabaseAdmin
+  const { data } = await getAdminClient()
     .from('hclub_admins')
     .select('user_id')
     .eq('user_id', user.id)
@@ -38,7 +42,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Passwort muss mindestens 6 Zeichen haben' }, { status: 400 });
   }
 
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(id, { password });
+  const { error } = await getAdminClient().auth.admin.updateUserById(id, { password });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -65,7 +69,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Du kannst deinen eigenen Account nicht löschen' }, { status: 400 });
   }
 
-  const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+  const { error } = await getAdminClient().auth.admin.deleteUser(id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

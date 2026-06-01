@@ -2,18 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
+
+export const dynamic = 'force-dynamic';
 
 async function isAdmin(): Promise<boolean> {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
 
-  const { data } = await supabaseAdmin
+  const { data } = await getAdminClient()
     .from('hclub_admins')
     .select('user_id')
     .eq('user_id', user.id)
@@ -28,7 +32,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Kein Zugriff' }, { status: 403 });
   }
 
-  const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
+  const { data: { users }, error } = await getAdminClient().auth.admin.listUsers();
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -55,7 +59,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Email und Passwort erforderlich' }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+  const { data, error } = await getAdminClient().auth.admin.createUser({
     email,
     password,
     email_confirm: true,
