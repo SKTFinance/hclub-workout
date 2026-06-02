@@ -4,8 +4,8 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 
 function getAdminClient() {
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://hbprnkqadwdgyorqkyno.supabase.co',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhicHJua3FhZHdkZ3lvcnFreW5vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDU1MzY5MiwiZXhwIjoyMDkwMTI5NjkyfQ.iTONk7ZpdEShn9H1JXOe_dqRs_rwosxb0InU9xNjR30',
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 }
