@@ -86,6 +86,9 @@ export interface WorkoutConfig {
   };
   // ForTime blocks (multiple rounds/blocks)
   forTimeBlocks?: ForTimeBlock[];
+  // ForTime (= AMRAP im UI) round timer
+  forTimeRoundTimerEnabled?: boolean;
+  forTimeRoundTimerMinutes?: number; // minutes per round
 }
 
 export interface Workout {

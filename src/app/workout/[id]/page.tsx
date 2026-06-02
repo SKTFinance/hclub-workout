@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
-import type { Workout, WorkoutConfig, WorkoutMode, ExerciseEntry, LibraryExercise, AmrapBlock, ForTimeBlock } from '@/lib/types';
+import type { Workout, WorkoutConfig, WorkoutMode, ExerciseEntry, LibraryExercise, ForTimeBlock } from '@/lib/types';
 import { HYROX_EXERCISES, TRAINING_EXERCISES } from '@/lib/exercises';
 import { ICON_PICKER_OPTIONS, exerciseIconMap, getExerciseIcon } from '@/lib/exerciseIcons';
 
@@ -31,7 +31,6 @@ export default function WorkoutEditorPage() {
   });
   const [saving, setSaving] = useState(false);
   const [customExercise, setCustomExercise] = useState('');
-  const [customAmrapExercise, setCustomAmrapExercise] = useState<Record<string, string>>({});
   const [customForTimeExercise, setCustomForTimeExercise] = useState<Record<string, string>>({});
   const [expandedRoundSettings, setExpandedRoundSettings] = useState<Record<number, boolean>>({});
   const [expandedGroupSettings, setExpandedGroupSettings] = useState<Record<string, boolean>>({});
@@ -43,6 +42,12 @@ export default function WorkoutEditorPage() {
   const [iconPickerOpen, setIconPickerOpen] = useState<{ round: number; group: number; ex: number } | null>(null);
   // Exercise library
   const [libraryExercises, setLibraryExercises] = useState<LibraryExercise[]>([]);
+  // Admin state
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // ForTime (= AMRAP im UI) round timer state
+  const [forTimeRoundTimerEnabled, setForTimeRoundTimerEnabled] = useState(false);
+  const [forTimeRoundTimerMinutes, setForTimeRoundTimerMinutes] = useState(12);
 
   const loadWorkout = useCallback(async () => {
     const { data } = await supabase
@@ -62,6 +67,11 @@ export default function WorkoutEditorPage() {
       setRoundsInput(String(w.config.numRounds));
       setRoundRestInput(String(w.config.roundRestTime));
       setWarmupInput(String(w.config.warmupTime));
+      // Load fortime round timer settings from config
+      if (w.config.forTimeRoundTimerEnabled) {
+        setForTimeRoundTimerEnabled(true);
+        setForTimeRoundTimerMinutes(w.config.forTimeRoundTimerMinutes || 12);
+      }
     }
   }, [supabase, id]);
 
@@ -73,10 +83,22 @@ export default function WorkoutEditorPage() {
     if (data) setLibraryExercises(data as LibraryExercise[]);
   }, [supabase]);
 
+  const checkAdmin = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from('hclub_admins')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    setIsAdmin(!!data);
+  }, [supabase]);
+
   useEffect(() => {
     loadWorkout();
     loadLibrary();
-  }, [loadWorkout, loadLibrary]);
+    checkAdmin();
+  }, [loadWorkout, loadLibrary, checkAdmin]);
 
   // Save custom exercises to library automatically
   async function saveToLibrary(exerciseName: string) {
@@ -309,116 +331,7 @@ export default function WorkoutEditorPage() {
     });
   }
 
-  // AMRAP exercise helpers
-  function updateAmrapExercise(groupIndex: number, exIndex: number, updates: Partial<ExerciseEntry>) {
-    setConfig((prev) => {
-      const amrapExercises = JSON.parse(JSON.stringify(prev.amrapExercises || {}));
-      if (!amrapExercises[groupIndex]) amrapExercises[groupIndex] = [];
-      amrapExercises[groupIndex][exIndex] = { ...amrapExercises[groupIndex][exIndex], ...updates };
-      return { ...prev, amrapExercises };
-    });
-  }
-
-  function addAmrapExercise(groupIndex: number) {
-    setConfig((prev) => {
-      const amrapExercises = JSON.parse(JSON.stringify(prev.amrapExercises || {}));
-      if (!amrapExercises[groupIndex]) amrapExercises[groupIndex] = [];
-      amrapExercises[groupIndex].push({ name: 'Wall Balls', reps: 10 });
-      return { ...prev, amrapExercises };
-    });
-  }
-
-  function removeAmrapExercise(groupIndex: number, exIndex: number) {
-    setConfig((prev) => {
-      const amrapExercises = JSON.parse(JSON.stringify(prev.amrapExercises || {}));
-      if (amrapExercises[groupIndex]?.length > 1) {
-        amrapExercises[groupIndex].splice(exIndex, 1);
-      }
-      return { ...prev, amrapExercises };
-    });
-  }
-
-  // AMRAP Block helpers
-  function getAmrapBlocks(): AmrapBlock[] {
-    if (config.amrapBlocks && config.amrapBlocks.length > 0) return config.amrapBlocks;
-    // Legacy: convert single block to array
-    return [{
-      totalTime: config.amrapTotalTime || 1200,
-      exercises: config.amrapExercises || {},
-    }];
-  }
-
-  function setAmrapBlocks(blocks: AmrapBlock[]) {
-    // Also keep legacy fields in sync for backward compat
-    setConfig(prev => ({
-      ...prev,
-      amrapBlocks: blocks,
-      amrapTotalTime: blocks[0]?.totalTime || 1200,
-      amrapExercises: blocks[0]?.exercises || {},
-    }));
-  }
-
-  function addAmrapBlock() {
-    const blocks = getAmrapBlocks();
-    const newBlock: AmrapBlock = {
-      totalTime: 1200,
-      exercises: {},
-    };
-    // Initialize with one exercise per group
-    for (let g = 0; g < config.numGroups; g++) {
-      newBlock.exercises[g] = [{ name: 'Wall Balls', reps: 10 }];
-    }
-    setAmrapBlocks([...blocks, newBlock]);
-  }
-
-  function removeAmrapBlock(blockIndex: number) {
-    const blocks = getAmrapBlocks();
-    if (blocks.length <= 1) return;
-    const updated = blocks.filter((_, i) => i !== blockIndex);
-    setAmrapBlocks(updated);
-  }
-
-  function updateAmrapBlockTime(blockIndex: number, totalTime: number) {
-    const blocks = [...getAmrapBlocks()];
-    blocks[blockIndex] = { ...blocks[blockIndex], totalTime };
-    setAmrapBlocks(blocks);
-  }
-
-  function updateAmrapBlockExercise(blockIndex: number, groupIndex: number, exIndex: number, updates: Partial<ExerciseEntry>) {
-    const blocks = JSON.parse(JSON.stringify(getAmrapBlocks()));
-    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
-    blocks[blockIndex].exercises[groupIndex][exIndex] = { ...blocks[blockIndex].exercises[groupIndex][exIndex], ...updates };
-    setAmrapBlocks(blocks);
-  }
-
-  function addAmrapBlockExercise(blockIndex: number, groupIndex: number) {
-    const blocks = JSON.parse(JSON.stringify(getAmrapBlocks()));
-    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
-    blocks[blockIndex].exercises[groupIndex].push({ name: 'Wall Balls', reps: 10 });
-    setAmrapBlocks(blocks);
-  }
-
-  function addCustomAmrapExercise(blockIndex: number, groupIndex: number) {
-    const key = `${blockIndex}-${groupIndex}`;
-    const name = (customAmrapExercise[key] || '').trim();
-    if (!name) return;
-    const blocks = JSON.parse(JSON.stringify(getAmrapBlocks()));
-    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
-    blocks[blockIndex].exercises[groupIndex].push({ name, reps: 10 });
-    setAmrapBlocks(blocks);
-    saveToLibrary(name);
-    setCustomAmrapExercise(prev => ({ ...prev, [key]: '' }));
-  }
-
-  function removeAmrapBlockExercise(blockIndex: number, groupIndex: number, exIndex: number) {
-    const blocks = JSON.parse(JSON.stringify(getAmrapBlocks()));
-    if (blocks[blockIndex].exercises[groupIndex]?.length > 1) {
-      blocks[blockIndex].exercises[groupIndex].splice(exIndex, 1);
-    }
-    setAmrapBlocks(blocks);
-  }
-
-  // ForTime Block helpers
+  // ForTime Block helpers (= AMRAP-Modus im UI)
   function getForTimeBlocks(): ForTimeBlock[] {
     if (config.forTimeBlocks && config.forTimeBlocks.length > 0) return config.forTimeBlocks;
     // Legacy: convert single block to array
@@ -485,43 +398,20 @@ export default function WorkoutEditorPage() {
     setForTimeBlocks(blocks);
   }
 
-  // ForTime exercise helpers
-  function updateForTimeExercise(groupIndex: number, exIndex: number, updates: Partial<ExerciseEntry>) {
-    setConfig((prev) => {
-      const forTimeExercises = JSON.parse(JSON.stringify(prev.forTimeExercises || {}));
-      if (!forTimeExercises[groupIndex]) forTimeExercises[groupIndex] = [];
-      forTimeExercises[groupIndex][exIndex] = { ...forTimeExercises[groupIndex][exIndex], ...updates };
-      return { ...prev, forTimeExercises };
-    });
-  }
-
-  function addForTimeExercise(groupIndex: number) {
-    setConfig((prev) => {
-      const forTimeExercises = JSON.parse(JSON.stringify(prev.forTimeExercises || {}));
-      if (!forTimeExercises[groupIndex]) forTimeExercises[groupIndex] = [];
-      forTimeExercises[groupIndex].push({ name: 'Wall Balls', reps: 10 });
-      return { ...prev, forTimeExercises };
-    });
-  }
-
-  function removeForTimeExercise(groupIndex: number, exIndex: number) {
-    setConfig((prev) => {
-      const forTimeExercises = JSON.parse(JSON.stringify(prev.forTimeExercises || {}));
-      if (forTimeExercises[groupIndex]?.length > 1) {
-        forTimeExercises[groupIndex].splice(exIndex, 1);
-      }
-      return { ...prev, forTimeExercises };
-    });
-  }
-
   async function saveWorkout() {
     setSaving(true);
+    // Persist fortime round timer settings into config
+    const configToSave = {
+      ...config,
+      forTimeRoundTimerEnabled,
+      forTimeRoundTimerMinutes,
+    };
     await supabase
       .from('workouts')
       .update({
         name,
         trainer_name: localStorage.getItem('hclub_trainer_name') || '',
-        config,
+        config: configToSave,
         is_public: isPublic,
         workout_mode: workoutMode,
         updated_at: new Date().toISOString(),
@@ -664,8 +554,7 @@ export default function WorkoutEditorPage() {
                          focus:outline-none focus:border-hclub-magenta transition-colors"
             >
               <option value="timed">Zeitbasiert (Timer)</option>
-              <option value="amrap">AMRAP (Wiederholungen)</option>
-              <option value="fortime">Distanz/Wiederholungen (For Time)</option>
+              <option value="fortime">AMRAP</option>
             </select>
           </div>
           <div className="flex items-end">
@@ -861,21 +750,29 @@ export default function WorkoutEditorPage() {
                         return (
                         <div key={exIdx} className="mb-2">
                           <div className="flex gap-2 min-w-0">
-                            <button type="button"
-                              onClick={() => setIconPickerOpen(isPickerOpen ? null : { round: roundIndex, group: groupIndex, ex: exIdx })}
-                              title="Icon waehlen"
-                              className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
-                                isPickerOpen ? 'border-hclub-magenta bg-hclub-magenta/10'
-                                : overrideKey ? 'border-hclub-magenta/50 bg-hclub-dark'
-                                : 'border-hclub-gray bg-hclub-black hover:border-gray-500'
-                              }`}>
-                              <IconComponent size={22} color={isPickerOpen ? '#e91e8c' : '#9ca3af'} />
-                            </button>
+                            {/* Icon picker: nur für Admins */}
+                            {isAdmin && (
+                              <button type="button"
+                                onClick={() => setIconPickerOpen(isPickerOpen ? null : { round: roundIndex, group: groupIndex, ex: exIdx })}
+                                title="Icon waehlen"
+                                className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
+                                  isPickerOpen ? 'border-hclub-magenta bg-hclub-magenta/10'
+                                  : overrideKey ? 'border-hclub-magenta/50 bg-hclub-dark'
+                                  : 'border-hclub-gray bg-hclub-black hover:border-gray-500'
+                                }`}>
+                                <IconComponent size={22} color={isPickerOpen ? '#e91e8c' : '#9ca3af'} />
+                              </button>
+                            )}
+                            {!isAdmin && (
+                              <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center">
+                                <IconComponent size={22} color="#9ca3af" />
+                              </div>
+                            )}
                             {renderExerciseSelect(exercise, (v) => setExercise(roundIndex, groupIndex, exIdx, v))}
                             <button onClick={() => removeExerciseFromGroup(roundIndex, groupIndex, exIdx)}
                               className="flex-shrink-0 px-2 text-red-400 hover:text-red-300 text-sm" title="Entfernen">x</button>
                           </div>
-                          {isPickerOpen && (
+                          {isAdmin && isPickerOpen && (
                             <div className="mt-1 p-2 bg-hclub-black border border-hclub-magenta/40 rounded-lg overflow-hidden">
                               <div className="grid grid-cols-5 sm:grid-cols-6 gap-1">
                                 {ICON_PICKER_OPTIONS.map(({ key, label, Component }) => (
@@ -923,116 +820,14 @@ export default function WorkoutEditorPage() {
           </>
         )}
 
-        {/* ===================== AMRAP MODE ===================== */}
-        {workoutMode === 'amrap' && (
-          <>
-            <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8">
-              <h3 className="font-oswald text-lg uppercase tracking-wider mb-4 text-orange-400">
-                AMRAP Einstellungen
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Gruppen</label>
-                  <input type="number" min={1} max={10}
-                    value={config.numGroups}
-                    onChange={(e) => { const val = Math.max(1, Math.min(10, parseInt(e.target.value) || 1)); updateConfig({ numGroups: val }); }}
-                    className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-orange-400" />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Warmup (s)</label>
-                  <input type="number" min={0} max={300}
-                    value={config.warmupTime}
-                    onChange={(e) => { const val = Math.max(0, Math.min(300, parseInt(e.target.value) || 0)); updateConfig({ warmupTime: val }); }}
-                    className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-orange-400" />
-                </div>
-              </div>
-            </div>
-
-            {/* AMRAP Blocks */}
-            {getAmrapBlocks().map((block, bIdx) => (
-              <div key={bIdx} className="mb-8">
-                <div className="flex items-center gap-3 mb-4">
-                  <h3 className="font-oswald text-xl uppercase tracking-wider text-orange-400">
-                    Block {bIdx + 1}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-gray-400 font-oswald uppercase">Zeit (Min):</label>
-                    <input type="number" min={1} max={120}
-                      value={Math.floor(block.totalTime / 60)}
-                      onChange={(e) => { const val = Math.max(1, Math.min(120, parseInt(e.target.value) || 20)); updateAmrapBlockTime(bIdx, val * 60); }}
-                      className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded-lg text-white text-xs text-center focus:outline-none focus:border-orange-400" />
-                  </div>
-                  {getAmrapBlocks().length > 1 && (
-                    <button onClick={() => removeAmrapBlock(bIdx)}
-                      className="text-xs text-red-400 hover:text-red-300 font-oswald uppercase px-2 py-1 border border-red-400/30 rounded-lg">
-                      Block entfernen
-                    </button>
-                  )}
-                </div>
-
-                <div className="overflow-hidden pb-2">
-                <div className={`grid gap-4 ${
-                  config.numGroups === 1 ? 'grid-cols-1' :
-                  config.numGroups === 2 ? 'grid-cols-1 sm:grid-cols-2' :
-                  config.numGroups <= 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
-                  'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                }`}>
-                  {Array.from({ length: config.numGroups }, (_, gIdx) => {
-                    const exercises = block.exercises?.[gIdx] || [];
-                    return (
-                      <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 min-w-0 overflow-hidden">
-                        <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400 mb-3">
-                          Gruppe {gIdx + 1}
-                        </h4>
-                        {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className="flex gap-2 mb-2 items-center min-w-0">
-                            {renderExerciseSelect(ex.name, (v) => updateAmrapBlockExercise(bIdx, gIdx, eIdx, { name: v }))}
-                            <input type="number" min={1} max={999} value={ex.reps || ''}
-                              onChange={(e) => updateAmrapBlockExercise(bIdx, gIdx, eIdx, { reps: parseInt(e.target.value) || undefined })}
-                              placeholder="Reps"
-                              className="w-16 flex-shrink-0 px-2 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-xs text-center focus:outline-none focus:border-orange-400" />
-                            <span className="text-gray-500 text-xs flex-shrink-0">x</span>
-                            <button onClick={() => removeAmrapBlockExercise(bIdx, gIdx, eIdx)}
-                              className="flex-shrink-0 text-red-400 hover:text-red-300 text-sm px-1">x</button>
-                          </div>
-                        ))}
-                        <button onClick={() => addAmrapBlockExercise(bIdx, gIdx)}
-                          className="text-xs text-orange-400 hover:text-white transition-colors font-oswald uppercase mt-2">+ Übung</button>
-                        <div className="flex gap-2 mt-2 min-w-0">
-                          <input type="text" value={customAmrapExercise[`${bIdx}-${gIdx}`] || ''}
-                            onChange={(e) => setCustomAmrapExercise(prev => ({ ...prev, [`${bIdx}-${gIdx}`]: e.target.value }))}
-                            placeholder="Eigene Übung..."
-                            className="flex-1 min-w-0 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-orange-400"
-                            onKeyDown={(e) => { if (e.key === 'Enter') addCustomAmrapExercise(bIdx, gIdx); }} />
-                          <button onClick={() => addCustomAmrapExercise(bIdx, gIdx)}
-                            className="text-xs text-orange-400 hover:text-white px-2">+</button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                </div>
-              </div>
-            ))}
-
-            <div className="flex justify-center mb-8">
-              <button onClick={addAmrapBlock}
-                className="px-8 py-3 bg-orange-900/30 hover:bg-orange-600 border border-orange-500/50 hover:border-orange-400
-                           text-orange-300 hover:text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-all duration-300">
-                + Block hinzufügen
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* ===================== FOR TIME MODE ===================== */}
+        {/* ===================== AMRAP MODE (fortime in DB) ===================== */}
         {workoutMode === 'fortime' && (
           <>
             <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8">
               <h3 className="font-oswald text-lg uppercase tracking-wider mb-4 text-cyan-400">
-                For Time Einstellungen
+                AMRAP Einstellungen
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Gruppen</label>
                   <input type="number" min={1} max={10}
@@ -1048,12 +843,49 @@ export default function WorkoutEditorPage() {
                     className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-cyan-400" />
                 </div>
               </div>
-              <p className="text-gray-500 text-xs mt-3 font-oswald uppercase">
-                Kein Timer - Gruppen werden manuell weitergeschaltet (Klick oder Taste 1-{config.numGroups})
-              </p>
+
+              {/* Timer pro Runde Toggle */}
+              <div className="border-t border-hclub-gray/40 pt-4 mt-2">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <div
+                      onClick={() => setForTimeRoundTimerEnabled(v => !v)}
+                      className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${forTimeRoundTimerEnabled ? 'bg-cyan-500' : 'bg-hclub-gray'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${forTimeRoundTimerEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
+                    </div>
+                    <span className="font-oswald uppercase tracking-wider text-sm text-gray-300">
+                      Timer pro Runde
+                    </span>
+                  </label>
+                  {forTimeRoundTimerEnabled && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={120}
+                        value={forTimeRoundTimerMinutes}
+                        onChange={(e) => setForTimeRoundTimerMinutes(Math.max(1, Math.min(120, parseInt(e.target.value) || 12)))}
+                        className="w-20 px-2 py-1 bg-hclub-black border border-cyan-500/60 rounded-lg text-white text-center text-sm focus:outline-none focus:border-cyan-400"
+                      />
+                      <span className="text-gray-400 text-sm font-oswald uppercase">Minuten</span>
+                    </div>
+                  )}
+                </div>
+                {forTimeRoundTimerEnabled && (
+                  <p className="text-xs text-cyan-400/70 mt-2 font-oswald">
+                    Countdown läuft während die Gruppen ihre Übungen absolvieren.
+                  </p>
+                )}
+                {!forTimeRoundTimerEnabled && (
+                  <p className="text-xs text-gray-500 mt-2 font-oswald">
+                    Kein Timer — Gruppen klicken selbst weiter (Taste 1–{config.numGroups})
+                  </p>
+                )}
+              </div>
             </div>
 
-            {/* ForTime Blocks */}
+            {/* AMRAP Blocks (Runden) */}
             {getForTimeBlocks().map((block, bIdx) => (
               <div key={bIdx} className="mb-8">
                 <div className="flex items-center gap-3 mb-4">
@@ -1080,7 +912,7 @@ export default function WorkoutEditorPage() {
                     return (
                       <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 min-w-0 overflow-hidden">
                         <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400 mb-3">
-                          Gruppe {gIdx + 1} <span className="text-cyan-400 text-xs">(Taste {gIdx + 1})</span>
+                          Gruppe {gIdx + 1}
                         </h4>
                         {exercises.map((ex, eIdx) => {
                           const measureType = ex.distance ? 'distance' : ex.duration ? 'duration' : 'reps';
