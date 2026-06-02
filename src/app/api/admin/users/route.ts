@@ -37,12 +37,14 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const simplified = users.map((u) => ({
-    id: u.id,
-    email: u.email,
-    created_at: u.created_at,
-    last_sign_in_at: u.last_sign_in_at,
-  }));
+  const simplified = users
+    .filter((u) => u.email?.includes('@h-club'))
+    .map((u) => ({
+      id: u.id,
+      email: u.email,
+      created_at: u.created_at,
+      last_sign_in_at: u.last_sign_in_at,
+    }));
 
   return NextResponse.json({ users: simplified });
 }
