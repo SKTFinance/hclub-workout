@@ -236,16 +236,26 @@ export default function LiveWorkoutPage() {
     prevTimeRef.current = timeRemaining;
   }, [timeRemaining, phase, isPaused, workoutMode]);
 
-  // Round timer sound for fortime mode
+  // Round timer sound + auto-advance for fortime mode
   useEffect(() => {
     if (workoutMode !== 'fortime' || !forTimeRoundTimerEnabled || phase !== 'work') return;
     if (forTimeRoundTimeRemaining <= 5 && forTimeRoundTimeRemaining > 0) {
       playCountdownBeep();
     }
-    if (forTimeRoundTimeRemaining === 0 && forTimeElapsed > 0) {
+    if (forTimeRoundTimeRemaining === 0 && forTimeElapsed > 0 && workout) {
       playRoundEndSound();
+      // Auto-advance to next block when round timer expires
+      const blocks = getForTimeBlocks(workout.config);
+      const nextBlock = forTimeCurrentBlock + 1;
+      if (nextBlock < blocks.length) {
+        setPhase('roundRest');
+        setTimeRemaining(workout.config.roundRestTime || 60);
+        setForTimeCurrentBlock(nextBlock);
+      } else {
+        setPhase('finished');
+      }
     }
-  }, [forTimeRoundTimeRemaining, workoutMode, forTimeRoundTimerEnabled, phase, forTimeElapsed]);
+  }, [forTimeRoundTimeRemaining, workoutMode, forTimeRoundTimerEnabled, phase, forTimeElapsed, workout, forTimeCurrentBlock]);
 
   // Exercise change animation trigger
   useEffect(() => {
@@ -436,7 +446,8 @@ export default function LiveWorkoutPage() {
     }
 
     // After roundRest in ForTime, start next block
-    if (phase === 'roundRest' && timeRemaining === 0 && prevTimeRef.current !== 0 && workout) {
+    // Note: use timeRemaining === 0 without prevTimeRef check (which isn't updated in fortime mode)
+    if (phase === 'roundRest' && timeRemaining === 0 && !isPaused && workout) {
       startCountdown(() => {
         setPhase('work');
         // Reset round timer for new block
