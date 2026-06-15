@@ -57,6 +57,8 @@ export default function LiveWorkoutPage() {
   // ForTime (= AMRAP im UI) state
   const [forTimeCurrentExIndex, setForTimeCurrentExIndex] = useState<Record<number, number>>({});
   const [forTimeGroupFinished, setForTimeGroupFinished] = useState<Record<number, boolean>>({});
+  // Absolvierte Durchgänge pro Gruppe (AMRAP-Loop): schnelle Gruppen fangen wieder vorne an
+  const [forTimeGroupRounds, setForTimeGroupRounds] = useState<Record<number, number>>({});
   const [forTimeElapsed, setForTimeElapsed] = useState(0);
   const [forTimeCurrentBlock, setForTimeCurrentBlock] = useState(0);
   // Round timer for fortime mode
@@ -441,6 +443,7 @@ export default function LiveWorkoutPage() {
         }
         setForTimeCurrentExIndex(initIdx);
         setForTimeGroupFinished(initFinished);
+        setForTimeGroupRounds({});
       });
       return;
     }
@@ -463,6 +466,7 @@ export default function LiveWorkoutPage() {
         }
         setForTimeCurrentExIndex(initIdx);
         setForTimeGroupFinished(initFinished);
+        setForTimeGroupRounds({});
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -479,6 +483,13 @@ export default function LiveWorkoutPage() {
     setForTimeCurrentExIndex(prev => {
       const nextIdx = (prev[groupIndex] || 0) + 1;
       if (nextIdx >= exercises.length) {
+        // AMRAP mit Rundentimer: Gruppe ist durch → Durchgang zählen und wieder vorne anfangen,
+        // bis der Rundentimer abläuft (echtes AMRAP). Ohne Timer: Gruppe gilt als fertig.
+        if (forTimeRoundTimerEnabled) {
+          setForTimeGroupRounds(pr => ({ ...pr, [groupIndex]: (pr[groupIndex] || 0) + 1 }));
+          playRoundEndSound();
+          return { ...prev, [groupIndex]: 0 };
+        }
         setForTimeGroupFinished(pf => ({ ...pf, [groupIndex]: true }));
         playRoundEndSound();
         return prev;
@@ -585,6 +596,7 @@ export default function LiveWorkoutPage() {
           }
           setForTimeCurrentExIndex(initIdx);
           setForTimeGroupFinished(initFinished);
+          setForTimeGroupRounds({});
         });
       }
     }
@@ -954,6 +966,7 @@ export default function LiveWorkoutPage() {
               const exercises = currentBlockData?.exercises?.[gIdx] || [];
               const currentIdx = forTimeCurrentExIndex[gIdx] || 0;
               const isFinished = forTimeGroupFinished[gIdx];
+              const groupRounds = forTimeGroupRounds[gIdx] || 0;
 
               return (
                 <div key={gIdx}
@@ -968,7 +981,14 @@ export default function LiveWorkoutPage() {
                   {/* Group header */}
                   <div className="px-3 pt-2 pb-1 border-b border-white/5 shrink-0">
                     <div className="font-oswald text-xs uppercase tracking-widest text-gray-500 flex items-center justify-between">
-                      <span>Gruppe {gIdx + 1}</span>
+                      <span className="flex items-center gap-2">
+                        Gruppe {gIdx + 1}
+                        {roundTimerActive && groupRounds > 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold tracking-normal">
+                            {groupRounds} {groupRounds === 1 ? 'Durchgang' : 'Durchgänge'}
+                          </span>
+                        )}
+                      </span>
                       <span className="text-cyan-500 text-[10px]">({gIdx + 1})</span>
                     </div>
                     {!isFinished && (
