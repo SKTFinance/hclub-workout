@@ -411,3 +411,23 @@ input, select, textarea {
   backdrop-filter: blur(10px);
   border-top: 1px solid rgba(255, 0, 255, 0.14);
 }
+
+/* Summary exercise list rows: bullet + spacing + subtle divider */
+.rd-ex-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(255, 0, 255, 0.1);
+}
+.rd-ex-row:first-of-type {
+  border-top: none;
+}
+.rd-ex-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor, 0 0 14px currentColor;
+}

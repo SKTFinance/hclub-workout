@@ -753,9 +753,12 @@ export default function LiveWorkoutPage() {
                     const exercises = config.rounds[roundIdx]?.[gIdx] || [];
                     return (
                       <div key={gIdx}>
-                        <div className={`text-gray-500 font-oswald uppercase tracking-wider mb-1 ${config.numRounds === 1 ? 'text-sm' : 'text-xs'}`}>G{gIdx + 1}</div>
+                        <div className={`text-gray-500 font-oswald uppercase tracking-wider mb-1.5 ${config.numRounds === 1 ? 'text-sm' : 'text-xs'}`}>G{gIdx + 1}</div>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className={`mb-1 ${config.numRounds === 1 ? 'text-sm' : 'text-xs'}`} style={{ color: getExerciseColor(ex) }}>{ex}</div>
+                          <div key={eIdx} className={`rd-ex-row ${config.numRounds === 1 ? 'text-sm' : 'text-xs'}`} style={{ color: getExerciseColor(ex) }}>
+                            <span className="rd-ex-dot" />
+                            <span>{ex}</span>
+                          </div>
                         ))}
                       </div>
                     );
@@ -787,8 +790,9 @@ export default function LiveWorkoutPage() {
                       <div key={gIdx}>
                         <div className="text-gray-500 text-xs font-oswald uppercase mb-2">G{gIdx + 1} ({gIdx + 1})</div>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className="text-xs mb-1" style={{ color: getExerciseColor(ex.name) }}>
-                            {formatExerciseLabel(ex)}
+                          <div key={eIdx} className="rd-ex-row text-xs" style={{ color: getExerciseColor(ex.name) }}>
+                            <span className="rd-ex-dot" />
+                            <span>{formatExerciseLabel(ex)}</span>
                           </div>
                         ))}
                       </div>
