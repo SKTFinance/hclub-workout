@@ -12,25 +12,9 @@ import {
   playPhaseEndSound,
   playRoundEndSound,
 } from '@/lib/sounds';
-import { getExerciseIcon, exerciseIconMap } from '@/lib/exerciseIcons';
+import { getExerciseImage } from '@/lib/exerciseImages';
 
 type Phase = 'idle' | 'summary' | 'warmup' | 'countdown' | 'work' | 'rest' | 'roundRest' | 'finished';
-
-const GROUP_BG_SHADES = ['#1a1a1a', '#222222', '#2a2a2a', '#1e1e1e', '#252525', '#202020'];
-
-function getIconForExercise(
-  config: WorkoutConfig,
-  roundIndex: number,
-  groupIndex: number,
-  exerciseIndex: number,
-  exerciseName: string
-) {
-  const overrideKey = config.iconOverrides?.[roundIndex]?.[groupIndex]?.[exerciseIndex];
-  if (overrideKey && exerciseIconMap[overrideKey]) {
-    return exerciseIconMap[overrideKey];
-  }
-  return getExerciseIcon(exerciseName);
-}
 
 const PARTICLE_COLORS = ['#FF00FF', '#CC00CC', '#9900FF', '#FF66FF', '#FFD700', '#00BFFF', '#FF4444', '#32CD32'];
 
@@ -923,7 +907,7 @@ export default function LiveWorkoutPage() {
     const roundTimerExpired = roundTimerActive && forTimeRoundTimeRemaining === 0;
 
     return (
-      <div className="workout-fullscreen flex flex-col">
+      <div className="workout-fullscreen rd-live-bg flex flex-col">
         {isPaused && (
           <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50 cursor-pointer" onClick={() => setIsPaused(false)}>
             <span className="font-oswald text-6xl uppercase tracking-wider text-yellow-400">Pausiert</span>
@@ -931,31 +915,31 @@ export default function LiveWorkoutPage() {
         )}
 
         {/* Top bar: Elapsed / Round Timer */}
-        <div className="flex items-center justify-between px-4 py-2 md:py-3 bg-gradient-to-b from-black/90 to-transparent shrink-0 relative z-10">
+        <div className="rd-topbar flex items-center justify-between px-4 py-2 md:py-3 shrink-0 relative z-10">
           <div className="flex flex-col">
-            <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider">
+            <div className="rd-timer-label font-oswald text-[10px] uppercase">
               AMRAP{totalBlocks > 1 ? ` — Runde ${forTimeCurrentBlock + 1}/${totalBlocks}` : ''}
             </div>
-            <div className="font-oswald text-white" style={{ fontSize: 'min(8vw, 2.5rem)' }}>
+            <div className="rd-timer font-oswald font-bold" style={{ fontSize: 'min(8vw, 2.75rem)' }}>
               {formatTime(forTimeElapsed)}
             </div>
           </div>
 
           {/* Round countdown timer */}
           {roundTimerActive && (
-            <div className={`flex flex-col items-center ${roundTimerExpired ? 'text-red-400' : forTimeRoundTimeRemaining <= 30 ? 'text-yellow-400' : 'text-cyan-400'}`}>
-              <div className="text-xs font-oswald uppercase tracking-wider opacity-70">
+            <div className={`flex flex-col items-center ${roundTimerExpired ? 'text-red-400' : forTimeRoundTimeRemaining <= 30 ? 'text-yellow-400' : 'text-hclub-magenta'}`}>
+              <div className="rd-timer-label text-[10px] font-oswald uppercase">
                 Rundenzeit
               </div>
-              <div className={`font-oswald font-bold ${roundTimerExpired ? 'heartbeat' : ''}`}
-                style={{ fontSize: 'min(10vw, 3rem)', textShadow: roundTimerExpired ? '0 0 30px #f87171' : forTimeRoundTimeRemaining <= 30 ? '0 0 20px #facc15' : 'none' }}>
+              <div className={`font-oswald font-bold ${roundTimerExpired ? 'heartbeat' : 'rd-timer-accent'}`}
+                style={{ fontSize: 'min(10vw, 3.25rem)', textShadow: roundTimerExpired ? '0 0 30px #f87171' : forTimeRoundTimeRemaining <= 30 ? '0 0 20px #facc15' : undefined }}>
                 {formatTime(forTimeRoundTimeRemaining)}
               </div>
             </div>
           )}
 
-          <div className="font-oswald text-lg tracking-wider text-gray-500">
-            H-<span className="text-hclub-magenta">CLUB</span>
+          <div className="font-oswald text-lg tracking-wider text-gray-400">
+            H-<span className="text-hclub-magenta rd-timer-accent">CLUB</span>
           </div>
         </div>
 
@@ -968,16 +952,29 @@ export default function LiveWorkoutPage() {
               const isFinished = forTimeGroupFinished[gIdx];
               const groupRounds = forTimeGroupRounds[gIdx] || 0;
 
+              const currentExName = exercises[currentIdx]?.name || '';
+
               return (
                 <div key={gIdx}
-                  className={`flex-1 flex flex-col relative ${isFinished ? '' : 'cursor-pointer'}`}
+                  className={`rd-col ${isFinished ? '' : 'rd-col-active cursor-pointer'} flex-1 flex flex-col relative`}
                   style={{
-                    backgroundColor: isFinished ? '#0a1a0a' : GROUP_BG_SHADES[gIdx % GROUP_BG_SHADES.length],
-                    borderRight: gIdx < config.numGroups - 1 ? '1px solid #333' : 'none',
+                    backgroundColor: isFinished ? '#07160a' : undefined,
+                    borderRight: gIdx < config.numGroups - 1 ? '1px solid rgba(255,0,255,0.12)' : 'none',
                     minWidth: config.numGroups > 4 ? '160px' : undefined,
                   }}
                   onClick={() => !isFinished && forTimeAdvanceGroup(gIdx)}
                 >
+                  {/* Current exercise image */}
+                  {!isFinished && (
+                    <div className="px-3 pt-2 shrink-0 flex justify-center">
+                      <div className="rd-img-frame rd-img-glow" style={{ width: '100%', maxWidth: config.numGroups > 4 ? 130 : 180, aspectRatio: '4 / 3' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={getExerciseImage(currentExName)} alt={currentExName}
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
+                      </div>
+                    </div>
+                  )}
+
                   {/* Group header */}
                   <div className="px-3 pt-2 pb-1 border-b border-white/5 shrink-0">
                     <div className="font-oswald text-xs uppercase tracking-widest text-gray-500 flex items-center justify-between">
@@ -1075,7 +1072,7 @@ export default function LiveWorkoutPage() {
         </div>
 
         {/* Bottom controls */}
-        <div className="flex items-center justify-between px-4 py-2 bg-hclub-dark/80 border-t border-hclub-gray/50 shrink-0">
+        <div className="rd-bottombar flex items-center justify-between px-4 py-2 shrink-0">
           <div className="flex items-center gap-3">
             <button onClick={() => setIsPaused(p => !p)}
               className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
@@ -1101,7 +1098,7 @@ export default function LiveWorkoutPage() {
   const progressPercent = phase === 'work' ? (timeRemaining / workTimeTotal) * 100 : 100;
 
   return (
-    <div className={`workout-fullscreen flex flex-col ${showPowerTimer ? 'bg-pulse-dark' : ''} ${showShake ? 'shake' : ''}`}>
+    <div className={`workout-fullscreen rd-live-bg flex flex-col ${showPowerTimer ? 'bg-pulse-dark' : ''} ${showShake ? 'shake' : ''}`}>
       {/* Pause overlay */}
       {isPaused && (
         <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -1141,22 +1138,23 @@ export default function LiveWorkoutPage() {
       )}
 
       {/* Top bar */}
-      <div className="grid grid-cols-3 items-center px-4 py-2 bg-hclub-dark/80 border-b border-hclub-gray/50 shrink-0">
+      <div className="rd-topbar grid grid-cols-3 items-center px-4 py-2 md:py-3 shrink-0 relative z-10">
         <div className="flex items-center gap-3">
           <div className="font-oswald text-sm uppercase tracking-wider">
             {phase === 'rest' && <span className="text-yellow-400">Pause</span>}
             {phase === 'roundRest' && <span className="text-orange-400">Rundenpause</span>}
-            {phase === 'work' && <span className="text-green-400">Arbeit</span>}
+            {phase === 'work' && <span className="text-hclub-magenta rd-timer-accent">Arbeit</span>}
           </div>
-          <div className="font-oswald text-lg tracking-wider text-gray-400">
+          <div className="rd-chip font-oswald text-sm md:text-base tracking-wider text-gray-200 px-2.5 py-0.5 rounded-full">
             Runde {currentRound + 1}/{config.numRounds}
           </div>
         </div>
 
         {/* GIANT TIMER - centered */}
-        <div className="flex justify-center">
-          <div className={`font-oswald tracking-wider text-white ${phase === 'work' && timeRemaining <= 5 ? 'heartbeat text-hclub-magenta' : ''}`}
-               style={{ fontSize: 'min(8vw, 4rem)', lineHeight: 1 }}>
+        <div className="flex flex-col items-center justify-center">
+          <div className="rd-timer-label font-oswald text-[9px] md:text-[11px] uppercase mb-0.5">Timer</div>
+          <div className={`rd-timer font-oswald font-bold tracking-wider ${phase === 'work' && timeRemaining <= 5 ? 'heartbeat rd-timer-accent' : ''}`}
+               style={{ fontSize: 'min(9vw, 4.5rem)', lineHeight: 1 }}>
             {formatTime(timeRemaining)}
           </div>
         </div>
@@ -1186,11 +1184,13 @@ export default function LiveWorkoutPage() {
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const nextExercises = config.rounds[currentRound]?.[gIdx] || [];
               const nextEx = nextExercises[0] || 'Übung';
-              const ExIcon = getIconForExercise(config, currentRound, gIdx, 0, nextEx);
               return (
-                <div key={gIdx} className="bg-hclub-dark/60 border border-hclub-gray/40 rounded-xl p-3 text-center">
-                  <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-1">G{String.fromCharCode(65 + gIdx)}</div>
-                  <div className="flex justify-center mb-1 opacity-70"><ExIcon size={config.numGroups > 5 ? 32 : 40} color={getExerciseColor(nextEx)} /></div>
+                <div key={gIdx} className="rd-col rd-col-active rounded-xl p-3 text-center">
+                  <div className="text-gray-400 text-xs font-oswald uppercase tracking-wider mb-2">G{String.fromCharCode(65 + gIdx)}</div>
+                  <div className="rd-img-frame mx-auto mb-2" style={{ width: '100%', maxWidth: config.numGroups > 5 ? 90 : 120, aspectRatio: '4 / 3' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={getExerciseImage(nextEx)} alt={nextEx} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
+                  </div>
                   <div className="font-oswald text-sm md:text-lg uppercase tracking-wider" style={{ color: getExerciseColor(nextEx) }}>{nextEx}</div>
                 </div>
               );
@@ -1216,11 +1216,13 @@ export default function LiveWorkoutPage() {
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const exercises = config.rounds[currentRound]?.[gIdx] || [];
               const nextEx = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
-              const ExIcon = getIconForExercise(config, currentRound, gIdx, currentExerciseIndex, nextEx);
               return (
-                <div key={gIdx} className="bg-hclub-dark/60 border border-hclub-gray/40 rounded-xl p-3 text-center">
-                  <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-1">G{String.fromCharCode(65 + gIdx)}</div>
-                  <div className="flex justify-center mb-1 opacity-70"><ExIcon size={config.numGroups > 5 ? 32 : 40} color={getExerciseColor(nextEx)} /></div>
+                <div key={gIdx} className="rd-col rd-col-active rounded-xl p-3 text-center">
+                  <div className="text-gray-400 text-xs font-oswald uppercase tracking-wider mb-2">G{String.fromCharCode(65 + gIdx)}</div>
+                  <div className="rd-img-frame mx-auto mb-2" style={{ width: '100%', maxWidth: config.numGroups > 5 ? 90 : 120, aspectRatio: '4 / 3' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={getExerciseImage(nextEx)} alt={nextEx} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
+                  </div>
                   <div className="font-oswald text-sm md:text-lg uppercase tracking-wider" style={{ color: getExerciseColor(nextEx) }}>{nextEx}</div>
                 </div>
               );
@@ -1254,47 +1256,53 @@ export default function LiveWorkoutPage() {
             const currentExercise = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
             const exerciseColor = getExerciseColor(currentExercise);
             const nextExercise = getNextExercise(config, groupIndex);
-            const ExerciseIcon = getIconForExercise(config, currentRound, groupIndex, currentExerciseIndex, currentExercise);
+            const exerciseImage = getExerciseImage(currentExercise);
 
             const groupWorkTime = getWorkTimeForGroup(config, currentRound, groupIndex);
             const hasGroupCustomTime = groupWorkTime !== workTimeTotal;
 
+            const imgSize = config.numGroups <= 2 ? 200 : config.numGroups <= 4 ? 140 : 96;
+
             return (
               <div key={groupIndex}
-                className="flex flex-col items-center justify-center relative slide-up min-h-[120px] md:min-h-0"
+                className="rd-col rd-col-active flex flex-col items-center justify-center relative slide-up min-h-[120px] md:min-h-0"
                 style={{
-                  backgroundColor: GROUP_BG_SHADES[groupIndex % GROUP_BG_SHADES.length],
-                  borderRight: groupIndex < config.numGroups - 1 ? '1px solid #333' : 'none',
-                  borderBottom: '1px solid #333',
+                  borderRight: groupIndex < config.numGroups - 1 ? '1px solid rgba(255,0,255,0.12)' : 'none',
+                  borderBottom: '1px solid rgba(255,0,255,0.12)',
                   animationDelay: `${groupIndex * 0.1}s`,
                 }}>
                 {/* Time progress bar */}
-                <div className="time-progress-bar" style={{ width: `${progressPercent}%`, backgroundColor: exerciseColor, opacity: 0.6 }} />
+                <div className="time-progress-bar" style={{ width: `${progressPercent}%`, backgroundColor: exerciseColor, opacity: 0.8 }} />
 
                 {/* Group label */}
-                <div className="font-oswald text-xs md:text-sm uppercase tracking-widest text-gray-500 mt-1 md:absolute md:top-3">
+                <div className="font-oswald text-xs md:text-sm uppercase tracking-widest text-gray-400 mt-1 md:absolute md:top-3">
                   Gruppe {groupIndex + 1}
-                  {hasGroupCustomTime && <span className="text-cyan-400 ml-2">({groupWorkTime}s)</span>}
+                  {hasGroupCustomTime && <span className="text-hclub-magenta ml-2">({groupWorkTime}s)</span>}
                 </div>
 
-                {/* Exercise icon */}
-                <div key={`icon-${exerciseAnimKey}`} className="exercise-enter mb-1 md:mb-2 opacity-80">
-                  <ExerciseIcon size={config.numGroups <= 2 ? 56 : 40} color={exerciseColor} />
+                {/* Exercise image */}
+                <div key={`img-${exerciseAnimKey}`}
+                  className="rd-img-frame rd-img-glow exercise-enter mb-2 md:mb-3"
+                  style={{ width: imgSize, height: Math.round(imgSize * 0.75) }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={exerciseImage} alt={currentExercise}
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
                 </div>
 
                 {/* Current exercise name */}
                 <div key={exerciseAnimKey}
                   className="font-oswald text-lg sm:text-xl md:text-3xl lg:text-4xl uppercase tracking-wider text-center px-2 md:px-4 mb-1 md:mb-3 exercise-enter"
-                  style={{ color: exerciseColor }}>
+                  style={{ color: exerciseColor, textShadow: `0 0 22px ${exerciseColor}66` }}>
                   {currentExercise}
                 </div>
 
                 {/* Exercise progress dots */}
                 <div className="flex gap-1 md:gap-2 mb-1 md:mb-2">
                   {exercises.map((_, idx) => (
-                    <div key={idx} className="w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300"
+                    <div key={idx} className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${idx === currentExerciseIndex ? 'rd-dot-active' : ''}`}
                       style={{
-                        backgroundColor: idx === currentExerciseIndex ? exerciseColor : idx < currentExerciseIndex ? '#555' : '#333',
+                        color: exerciseColor,
+                        backgroundColor: idx === currentExerciseIndex ? exerciseColor : idx < currentExerciseIndex ? '#666' : '#333',
                         transform: idx === currentExerciseIndex ? 'scale(1.3)' : 'scale(1)',
                       }} />
                   ))}
@@ -1303,7 +1311,7 @@ export default function LiveWorkoutPage() {
                 {/* Next exercise preview */}
                 {nextExercise && (
                   <div className="font-oswald text-xl md:text-3xl uppercase tracking-wider mt-1 md:mt-2 px-3 py-1 rounded-lg text-center"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                    style={{ backgroundColor: 'rgba(255,0,255,0.06)', border: '1px solid rgba(255,0,255,0.12)' }}>
                     <span className="text-gray-400">Nächste: </span>
                     <span style={{ color: getExerciseColor(nextExercise) }}>{nextExercise}</span>
                   </div>
@@ -1319,7 +1327,7 @@ export default function LiveWorkoutPage() {
       )}
 
       {/* Bottom controls */}
-      <div className="flex items-center justify-between px-4 py-2 bg-hclub-dark/80 border-t border-hclub-gray/50 shrink-0">
+      <div className="rd-bottombar flex items-center justify-between px-4 py-2 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => setIsPaused(p => !p)}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90"

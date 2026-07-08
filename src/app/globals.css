@@ -293,3 +293,121 @@ h1, h2, h3, h4, h5, h6, .font-oswald {
 input, select, textarea {
   color-scheme: dark;
 }
+
+/* ============================================================
+   IN-WORKOUT REDESIGN (workout-redesign branch)
+   Nur Optik: dunkler Look + H-Club-Lila Glow, moderne Timer/Karten.
+   ============================================================ */
+
+/* Ambient purple radial glow background for the live workout */
+.rd-live-bg {
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(255, 0, 255, 0.16), transparent 60%),
+    radial-gradient(100% 60% at 50% 110%, rgba(153, 0, 255, 0.12), transparent 60%),
+    #050208;
+}
+
+/* Glassy top timer bar */
+.rd-topbar {
+  background: linear-gradient(180deg, rgba(20, 4, 24, 0.92), rgba(5, 2, 8, 0.35));
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 0, 255, 0.14);
+}
+
+/* Big timer digits with neon glow */
+.rd-timer {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 0 18px rgba(255, 0, 255, 0.55), 0 0 46px rgba(255, 0, 255, 0.25);
+}
+.rd-timer-label {
+  color: #d9a8e6;
+  letter-spacing: 0.28em;
+}
+.rd-timer-accent {
+  color: #ff4df0;
+  text-shadow: 0 0 22px rgba(255, 0, 255, 0.7), 0 0 60px rgba(255, 0, 255, 0.35);
+}
+
+/* Round/countdown pill chips */
+.rd-chip {
+  border: 1px solid rgba(255, 0, 255, 0.35);
+  background: rgba(255, 0, 255, 0.08);
+  box-shadow: 0 0 18px rgba(255, 0, 255, 0.18) inset;
+}
+
+/* Group column card */
+.rd-col {
+  position: relative;
+  background: linear-gradient(180deg, rgba(24, 10, 28, 0.55), rgba(8, 4, 12, 0.75));
+  transition: box-shadow 0.4s ease, background 0.4s ease;
+}
+.rd-col::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 60px rgba(255, 0, 255, 0.05);
+}
+.rd-col-active {
+  background: linear-gradient(180deg, rgba(40, 12, 46, 0.7), rgba(12, 5, 18, 0.85));
+  box-shadow: 0 0 0 1px rgba(255, 0, 255, 0.25) inset, 0 0 40px rgba(255, 0, 255, 0.12);
+}
+
+/* Exercise image frame */
+.rd-img-frame {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0a0410;
+  border: 1px solid rgba(255, 0, 255, 0.22);
+  box-shadow: 0 0 30px rgba(255, 0, 255, 0.18), 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+.rd-img-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.rd-img-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 45%, rgba(5, 2, 8, 0.85) 100%);
+  pointer-events: none;
+}
+.rd-img-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(140deg, rgba(255, 0, 255, 0.6), transparent 45%, transparent 60%, rgba(153, 0, 255, 0.5));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Glow ring for the current exercise image */
+.rd-img-glow {
+  animation: rd-img-glow 2.4s ease-in-out infinite;
+}
+@keyframes rd-img-glow {
+  0%, 100% { box-shadow: 0 0 24px rgba(255, 0, 255, 0.18), 0 8px 30px rgba(0,0,0,0.6); }
+  50% { box-shadow: 0 0 48px rgba(255, 0, 255, 0.42), 0 0 90px rgba(255,0,255,0.18), 0 8px 30px rgba(0,0,0,0.6); }
+}
+
+/* Neon progress dot / bar */
+.rd-dot-active {
+  box-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
+}
+
+/* Bottom controls glass */
+.rd-bottombar {
+  background: linear-gradient(0deg, rgba(20, 4, 24, 0.9), rgba(5, 2, 8, 0.3));
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 0, 255, 0.14);
+}
