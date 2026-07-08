@@ -963,15 +963,15 @@ export default function LiveWorkoutPage() {
                   className={`rd-col ${isFinished ? '' : 'rd-col-active cursor-pointer'} flex-1 flex flex-col relative`}
                   style={{
                     backgroundColor: isFinished ? '#07160a' : undefined,
-                    borderRight: gIdx < config.numGroups - 1 ? '1px solid rgba(255,0,255,0.12)' : 'none',
+                    borderRight: gIdx < config.numGroups - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
                     minWidth: config.numGroups > 4 ? '160px' : undefined,
                   }}
                   onClick={() => !isFinished && forTimeAdvanceGroup(gIdx)}
                 >
-                  {/* Current exercise image */}
+                  {/* Current exercise image — Schein in der Übungsfarbe */}
                   {!isFinished && (
                     <div className="px-3 pt-2 shrink-0 flex justify-center">
-                      <div className="rd-img-frame rd-img-glow" style={{ width: '100%', maxWidth: config.numGroups > 4 ? 130 : 180, aspectRatio: '4 / 3' }}>
+                      <div className="rd-img-frame rd-img-color" style={{ width: '100%', maxWidth: config.numGroups > 4 ? 130 : 180, aspectRatio: '4 / 3', ['--ex-color' as string]: getExerciseColor(currentExName) }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={getExerciseImage(currentExName)} alt={currentExName}
                           onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
@@ -1065,10 +1065,6 @@ export default function LiveWorkoutPage() {
                     </div>
                   )}
 
-                  {/* Bottom color bar */}
-                  <div className="h-1 shrink-0" style={{
-                    backgroundColor: isFinished ? '#22c55e' : getExerciseColor(exercises[currentIdx]?.name || '')
-                  }} />
                 </div>
               );
             })}
@@ -1096,13 +1092,10 @@ export default function LiveWorkoutPage() {
   }
 
   // =================== TIMED MODE: WORK / REST / ROUND REST ===================
-  const showPowerTimer = phase === 'work' && timeRemaining <= 5 && timeRemaining > 0;
-  const showShake = phase === 'work' && timeRemaining <= 3 && timeRemaining > 0;
   const workTimeTotal = getWorkTimeForRound(config, currentRound);
-  const progressPercent = phase === 'work' ? (timeRemaining / workTimeTotal) * 100 : 100;
 
   return (
-    <div className={`workout-fullscreen rd-live-bg flex flex-col ${showPowerTimer ? 'bg-pulse-dark' : ''} ${showShake ? 'shake' : ''}`}>
+    <div className="workout-fullscreen rd-live-bg flex flex-col">
       {/* Pause overlay */}
       {isPaused && (
         <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -1114,29 +1107,8 @@ export default function LiveWorkoutPage() {
       {showRoundAnnounce && (
         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div className="round-announce font-oswald font-bold text-hclub-magenta uppercase"
-               style={{ fontSize: 'min(30vw, 25vh)', textShadow: '0 0 60px #FF00FF, 0 0 100px rgba(255,0,255,0.4)', lineHeight: 1 }}>
+               style={{ fontSize: 'min(30vw, 25vh)', textShadow: '0 0 40px rgba(255,0,255,0.5)', lineHeight: 1 }}>
             Runde {announceRound}
-          </div>
-        </div>
-      )}
-
-      {/* Power timer edge glow */}
-      {showPowerTimer && (
-        <>
-          <div className="edge-glow-top" />
-          <div className="edge-glow-bottom" />
-          <div className="edge-glow-left" />
-          <div className="edge-glow-right" />
-        </>
-      )}
-
-      {/* Power timer overlay */}
-      {showPowerTimer && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
-          <div className="flash-overlay absolute inset-0 bg-hclub-magenta" />
-          <div key={numberPopKey} className="number-pop font-oswald text-[16rem] md:text-[22rem] leading-none text-hclub-magenta font-bold"
-               style={{ textShadow: '0 0 60px #FF00FF, 0 0 120px #FF00FF' }}>
-            {timeRemaining}
           </div>
         </div>
       )}
@@ -1157,7 +1129,7 @@ export default function LiveWorkoutPage() {
         {/* GIANT TIMER - centered */}
         <div className="flex flex-col items-center justify-center">
           <div className="rd-timer-label font-oswald text-[9px] md:text-[11px] uppercase mb-0.5">Timer</div>
-          <div className={`rd-timer font-oswald font-bold tracking-wider ${phase === 'work' && timeRemaining <= 5 ? 'heartbeat rd-timer-accent' : ''}`}
+          <div className={`rd-timer font-oswald font-bold tracking-wider ${phase === 'work' && timeRemaining <= 5 ? 'rd-timer-accent' : ''}`}
                style={{ fontSize: 'min(9vw, 4.5rem)', lineHeight: 1 }}>
             {formatTime(timeRemaining)}
           </div>
@@ -1175,6 +1147,28 @@ export default function LiveWorkoutPage() {
         </div>
       </div>
 
+      {/* Single, prominent full-width progress bar (one Timer for all groups) */}
+      {(() => {
+        const phaseTotal =
+          phase === 'work' ? workTimeTotal :
+          phase === 'rest' ? getRestTimeForRound(config, currentRound) :
+          phase === 'roundRest' ? config.roundRestTime : 0;
+        const fillPct = phaseTotal > 0 ? Math.max(0, Math.min(100, (timeRemaining / phaseTotal) * 100)) : 0;
+        const barColor =
+          phase === 'work' ? '#FF00FF' :
+          phase === 'rest' ? '#FACC15' :
+          phase === 'roundRest' ? '#FB923C' : '#FF00FF';
+        return (
+          <div className="rd-progress-track">
+            <div className="rd-progress-fill" style={{
+              width: `${fillPct}%`,
+              backgroundColor: barColor,
+              boxShadow: `0 0 12px ${barColor}, 0 0 24px ${barColor}80`,
+            }} />
+          </div>
+        );
+      })()}
+
       {/* Round rest display */}
       {phase === 'roundRest' && (
         <div className="flex-1 flex flex-col items-center justify-center px-4">
@@ -1191,7 +1185,7 @@ export default function LiveWorkoutPage() {
               return (
                 <div key={gIdx} className="rd-col rd-col-active rounded-xl p-3 text-center">
                   <div className="text-gray-400 text-xs font-oswald uppercase tracking-wider mb-2">G{String.fromCharCode(65 + gIdx)}</div>
-                  <div className="rd-img-frame mx-auto mb-2" style={{ width: '100%', maxWidth: config.numGroups > 5 ? 90 : 120, aspectRatio: '4 / 3' }}>
+                  <div className="rd-img-frame rd-img-color mx-auto mb-2" style={{ width: '100%', maxWidth: config.numGroups > 5 ? 90 : 120, aspectRatio: '4 / 3', ['--ex-color' as string]: getExerciseColor(nextEx) }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={getExerciseImage(nextEx)} alt={nextEx} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
                   </div>
@@ -1223,7 +1217,7 @@ export default function LiveWorkoutPage() {
               return (
                 <div key={gIdx} className="rd-col rd-col-active rounded-xl p-3 text-center">
                   <div className="text-gray-400 text-xs font-oswald uppercase tracking-wider mb-2">G{String.fromCharCode(65 + gIdx)}</div>
-                  <div className="rd-img-frame mx-auto mb-2" style={{ width: '100%', maxWidth: config.numGroups > 5 ? 90 : 120, aspectRatio: '4 / 3' }}>
+                  <div className="rd-img-frame rd-img-color mx-auto mb-2" style={{ width: '100%', maxWidth: config.numGroups > 5 ? 90 : 120, aspectRatio: '4 / 3', ['--ex-color' as string]: getExerciseColor(nextEx) }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={getExerciseImage(nextEx)} alt={nextEx} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
                   </div>
@@ -1252,6 +1246,21 @@ export default function LiveWorkoutPage() {
               grid-template-columns: repeat(${config.numGroups > 4 ? Math.ceil(config.numGroups / 2) : config.numGroups}, 1fr);
               grid-template-rows: ${config.numGroups > 4 ? '1fr 1fr' : '1fr'};
             }
+            /* Sauberes, zeilenbündiges Layout je Spalte:
+               feste Slots für Label / Bild / Name / Dots / Nächste,
+               damit alle Spalten auf EINER Höhe liegen. */
+            .work-col-inner {
+              display: grid;
+              grid-template-rows: auto auto 1fr auto auto;
+              justify-items: center;
+              align-items: start;
+              height: 100%;
+              width: 100%;
+              padding: 0.75rem 0.25rem 0.5rem;
+              gap: 0.25rem;
+            }
+            .work-col-img { align-self: end; }
+            .work-col-name { align-self: start; }
           `}</style>
           <div className="work-groups-scroll">
           <div className="work-groups-grid">
@@ -1269,59 +1278,56 @@ export default function LiveWorkoutPage() {
 
             return (
               <div key={groupIndex}
-                className="rd-col rd-col-active flex flex-col items-center justify-center relative slide-up min-h-[120px] md:min-h-0"
+                className="rd-col rd-col-active relative slide-up min-h-[120px] md:min-h-0"
                 style={{
-                  borderRight: groupIndex < config.numGroups - 1 ? '1px solid rgba(255,0,255,0.12)' : 'none',
-                  borderBottom: '1px solid rgba(255,0,255,0.12)',
+                  borderRight: groupIndex < config.numGroups - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
                   animationDelay: `${groupIndex * 0.1}s`,
                 }}>
-                {/* Time progress bar */}
-                <div className="time-progress-bar" style={{ width: `${progressPercent}%`, backgroundColor: exerciseColor, opacity: 0.8 }} />
-
-                {/* Group label */}
-                <div className="font-oswald text-xs md:text-sm uppercase tracking-widest text-gray-400 mt-1 md:absolute md:top-3">
-                  Gruppe {groupIndex + 1}
-                  {hasGroupCustomTime && <span className="text-hclub-magenta ml-2">({groupWorkTime}s)</span>}
-                </div>
-
-                {/* Exercise image */}
-                <div key={`img-${exerciseAnimKey}`}
-                  className="rd-img-frame rd-img-glow exercise-enter mb-2 md:mb-3"
-                  style={{ width: imgSize, height: Math.round(imgSize * 0.75) }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={exerciseImage} alt={currentExercise}
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
-                </div>
-
-                {/* Current exercise name */}
-                <div key={exerciseAnimKey}
-                  className="font-oswald text-lg sm:text-xl md:text-3xl lg:text-4xl uppercase tracking-wider text-center px-2 md:px-4 mb-1 md:mb-3 exercise-enter"
-                  style={{ color: exerciseColor, textShadow: `0 0 22px ${exerciseColor}66` }}>
-                  {currentExercise}
-                </div>
-
-                {/* Exercise progress dots */}
-                <div className="flex gap-1 md:gap-2 mb-1 md:mb-2">
-                  {exercises.map((_, idx) => (
-                    <div key={idx} className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${idx === currentExerciseIndex ? 'rd-dot-active' : ''}`}
-                      style={{
-                        color: exerciseColor,
-                        backgroundColor: idx === currentExerciseIndex ? exerciseColor : idx < currentExerciseIndex ? '#666' : '#333',
-                        transform: idx === currentExerciseIndex ? 'scale(1.3)' : 'scale(1)',
-                      }} />
-                  ))}
-                </div>
-
-                {/* Next exercise preview */}
-                {nextExercise && (
-                  <div className="font-oswald text-xl md:text-3xl uppercase tracking-wider mt-1 md:mt-2 px-3 py-1 rounded-lg text-center"
-                    style={{ backgroundColor: 'rgba(255,0,255,0.06)', border: '1px solid rgba(255,0,255,0.12)' }}>
-                    <span className="text-gray-400">Nächste: </span>
-                    <span style={{ color: getExerciseColor(nextExercise) }}>{nextExercise}</span>
+                <div className="work-col-inner">
+                  {/* Group label — feste Zeile 1 */}
+                  <div className="font-oswald text-xs md:text-sm uppercase tracking-widest text-gray-400">
+                    Gruppe {groupIndex + 1}
+                    {hasGroupCustomTime && <span className="text-hclub-magenta ml-2">({groupWorkTime}s)</span>}
                   </div>
-                )}
 
-                <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: exerciseColor }} />
+                  {/* Exercise image — feste Zeile 2, alle Spalten gleiche Bildhöhe/Baseline */}
+                  <div key={`img-${exerciseAnimKey}`}
+                    className="work-col-img rd-img-frame rd-img-color exercise-enter"
+                    style={{ width: imgSize, height: Math.round(imgSize * 0.75), ['--ex-color' as string]: exerciseColor }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={exerciseImage} alt={currentExercise}
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
+                  </div>
+
+                  {/* Current exercise name — feste Zeile 3 (obere Baseline) */}
+                  <div key={exerciseAnimKey}
+                    className="work-col-name font-oswald text-lg sm:text-xl md:text-3xl lg:text-4xl uppercase tracking-wider text-center px-2 md:px-4 exercise-enter"
+                    style={{ color: exerciseColor, textShadow: `0 0 14px ${exerciseColor}40` }}>
+                    {currentExercise}
+                  </div>
+
+                  {/* Exercise progress dots — feste Zeile 4 */}
+                  <div className="flex gap-1 md:gap-2">
+                    {exercises.map((_, idx) => (
+                      <div key={idx} className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${idx === currentExerciseIndex ? 'rd-dot-active' : ''}`}
+                        style={{
+                          color: exerciseColor,
+                          backgroundColor: idx === currentExerciseIndex ? exerciseColor : idx < currentExerciseIndex ? '#666' : '#333',
+                          transform: idx === currentExerciseIndex ? 'scale(1.3)' : 'scale(1)',
+                        }} />
+                    ))}
+                  </div>
+
+                  {/* Next exercise preview — feste Zeile 5 */}
+                  {nextExercise ? (
+                    <div className="font-oswald text-xl md:text-3xl uppercase tracking-wider px-3 py-1 rounded-lg text-center"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <span className="text-gray-400">Nächste: </span>
+                      <span style={{ color: getExerciseColor(nextExercise) }}>{nextExercise}</span>
+                    </div>
+                  ) : <div />}
+                </div>
               </div>
             );
           })}

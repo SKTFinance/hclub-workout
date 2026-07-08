@@ -299,11 +299,10 @@ input, select, textarea {
    Nur Optik: dunkler Look + H-Club-Lila Glow, moderne Timer/Karten.
    ============================================================ */
 
-/* Ambient purple radial glow background for the live workout */
+/* Ambient purple background for the live workout (ruhig, dezent) */
 .rd-live-bg {
   background:
-    radial-gradient(120% 80% at 50% -10%, rgba(255, 0, 255, 0.16), transparent 60%),
-    radial-gradient(100% 60% at 50% 110%, rgba(153, 0, 255, 0.12), transparent 60%),
+    radial-gradient(120% 80% at 50% -10%, rgba(255, 0, 255, 0.07), transparent 60%),
     #050208;
 }
 
@@ -311,58 +310,69 @@ input, select, textarea {
 .rd-topbar {
   background: linear-gradient(180deg, rgba(20, 4, 24, 0.92), rgba(5, 2, 8, 0.35));
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 0, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 0, 255, 0.12);
 }
 
-/* Big timer digits with neon glow */
+/* Big timer digits (dezenter Glow) */
 .rd-timer {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   color: #fff;
-  text-shadow: 0 0 18px rgba(255, 0, 255, 0.55), 0 0 46px rgba(255, 0, 255, 0.25);
+  text-shadow: 0 0 14px rgba(255, 0, 255, 0.28);
 }
 .rd-timer-label {
-  color: #d9a8e6;
+  color: #c79ad2;
   letter-spacing: 0.28em;
 }
 .rd-timer-accent {
   color: #ff4df0;
-  text-shadow: 0 0 22px rgba(255, 0, 255, 0.7), 0 0 60px rgba(255, 0, 255, 0.35);
+  text-shadow: 0 0 14px rgba(255, 0, 255, 0.35);
 }
 
 /* Round/countdown pill chips */
 .rd-chip {
-  border: 1px solid rgba(255, 0, 255, 0.35);
-  background: rgba(255, 0, 255, 0.08);
-  box-shadow: 0 0 18px rgba(255, 0, 255, 0.18) inset;
+  border: 1px solid rgba(255, 0, 255, 0.28);
+  background: rgba(255, 0, 255, 0.06);
 }
 
-/* Group column card */
+/* ===== Single, prominent full-width progress bar under the top bar ===== */
+.rd-progress-track {
+  position: relative;
+  height: 8px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  flex-shrink: 0;
+  z-index: 10;
+}
+.rd-progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  transition: width 1s linear, background-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* Group column card (ruhig, kein pulsierender Rand) */
 .rd-col {
   position: relative;
-  background: linear-gradient(180deg, rgba(24, 10, 28, 0.55), rgba(8, 4, 12, 0.75));
-  transition: box-shadow 0.4s ease, background 0.4s ease;
-}
-.rd-col::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  box-shadow: inset 0 0 60px rgba(255, 0, 255, 0.05);
+  background: linear-gradient(180deg, rgba(20, 9, 24, 0.5), rgba(8, 4, 12, 0.72));
+  transition: background 0.4s ease;
 }
 .rd-col-active {
-  background: linear-gradient(180deg, rgba(40, 12, 46, 0.7), rgba(12, 5, 18, 0.85));
-  box-shadow: 0 0 0 1px rgba(255, 0, 255, 0.25) inset, 0 0 40px rgba(255, 0, 255, 0.12);
+  background: linear-gradient(180deg, rgba(28, 11, 32, 0.6), rgba(10, 5, 15, 0.8));
 }
 
-/* Exercise image frame */
+/* Exercise image frame — dezenter, ruhiger Rahmen.
+   Der farbige Schein kommt über --ex-color je Karte (rd-img-color). */
 .rd-img-frame {
   position: relative;
   border-radius: 16px;
   overflow: hidden;
   background: #0a0410;
-  border: 1px solid rgba(255, 0, 255, 0.22);
-  box-shadow: 0 0 30px rgba(255, 0, 255, 0.18), 0 8px 30px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
 }
 .rd-img-frame img {
   width: 100%;
@@ -374,35 +384,22 @@ input, select, textarea {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 45%, rgba(5, 2, 8, 0.85) 100%);
+  background: linear-gradient(180deg, transparent 50%, rgba(5, 2, 8, 0.8) 100%);
   pointer-events: none;
 }
-.rd-img-frame::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(140deg, rgba(255, 0, 255, 0.6), transparent 45%, transparent 60%, rgba(153, 0, 255, 0.5));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 2;
+
+/* Weicher, farbiger Schein rund um das Bild in der Übungsfarbe (subtil, statisch) */
+.rd-img-color {
+  border-color: color-mix(in srgb, var(--ex-color, #ff00ff) 45%, transparent);
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--ex-color, #ff00ff) 30%, transparent),
+    0 0 46px color-mix(in srgb, var(--ex-color, #ff00ff) 14%, transparent),
+    0 6px 24px rgba(0, 0, 0, 0.55);
 }
 
-/* Glow ring for the current exercise image */
-.rd-img-glow {
-  animation: rd-img-glow 2.4s ease-in-out infinite;
-}
-@keyframes rd-img-glow {
-  0%, 100% { box-shadow: 0 0 24px rgba(255, 0, 255, 0.18), 0 8px 30px rgba(0,0,0,0.6); }
-  50% { box-shadow: 0 0 48px rgba(255, 0, 255, 0.42), 0 0 90px rgba(255,0,255,0.18), 0 8px 30px rgba(0,0,0,0.6); }
-}
-
-/* Neon progress dot / bar */
+/* Progress dot in Übungsfarbe (ohne Dauer-Glow) */
 .rd-dot-active {
-  box-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
+  box-shadow: 0 0 6px currentColor;
 }
 
 /* Bottom controls glass */
