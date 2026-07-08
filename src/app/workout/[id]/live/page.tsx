@@ -1260,7 +1260,28 @@ export default function LiveWorkoutPage() {
               gap: 0.25rem;
             }
             .work-col-img { align-self: end; }
-            .work-col-name { align-self: start; }
+            /* Übungsname: feste Höhe für 2 Zeilen, Inhalt oben/zentriert,
+               damit Name-Block + alles darunter über alle Spalten bündig steht. */
+            .work-col-name {
+              align-self: start;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 100%;
+              min-height: 2.2em;
+              line-height: 1.05;
+            }
+            /* "NÄCHSTE"-Box: feste, gleiche Höhe (Platz für 2 Textzeilen),
+               Inhalt vertikal zentriert -> alle Boxen G1..G8 exakt gleich groß. */
+            .work-col-next {
+              align-self: center;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+              min-height: 3.2em;
+              line-height: 1.1;
+            }
           `}</style>
           <div className="work-groups-scroll">
           <div className="work-groups-grid">
@@ -1319,12 +1340,12 @@ export default function LiveWorkoutPage() {
                     ))}
                   </div>
 
-                  {/* Next exercise preview — feste Zeile 5 */}
+                  {/* Next exercise preview — feste Zeile 5, feste Boxhöhe für 2 Zeilen */}
                   {nextExercise ? (
-                    <div className="font-oswald text-xl md:text-3xl uppercase tracking-wider px-3 py-1 rounded-lg text-center"
+                    <div className="work-col-next font-oswald text-xl md:text-3xl uppercase tracking-wider px-3 py-1 rounded-lg"
                       style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                      <span className="text-gray-400">Nächste: </span>
-                      <span style={{ color: getExerciseColor(nextExercise) }}>{nextExercise}</span>
+                      <span><span className="text-gray-400">Nächste: </span>
+                      <span style={{ color: getExerciseColor(nextExercise) }}>{nextExercise}</span></span>
                     </div>
                   ) : <div />}
                 </div>

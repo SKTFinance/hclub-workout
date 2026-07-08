@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { ALL_DEFAULT_EXERCISES } from '@/lib/exercises';
@@ -62,22 +63,72 @@ function ImagePickerDropdown({
   onSelect: (slug: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
 
+  // Portal target is only available on the client.
+  useEffect(() => { setMounted(true); }, []);
+
+  // Close on Escape.
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    if (open) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false); }
+    if (open) document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, [open]);
 
   const options = ['__generic__', ...AVAILABLE_IMAGE_SLUGS];
 
+  // Centered modal rendered via portal at document.body so it is NEVER
+  // clipped by the scrollable/overflow-hidden exercise row/list.
+  const modal = open && mounted ? createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+    >
+      <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm text-gray-300 font-oswald uppercase tracking-wider">Foto wählen</p>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="text-gray-400 hover:text-white text-sm font-oswald uppercase"
+          >
+            Schließen
+          </button>
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 overflow-y-auto pr-1">
+          {options.map((slug) => (
+            <button
+              key={slug}
+              type="button"
+              onClick={() => { onSelect(slug); setOpen(false); }}
+              title={slugLabel(slug)}
+              className={`relative rounded-lg overflow-hidden border-2 transition-colors ${
+                currentSlug === slug
+                  ? 'border-hclub-magenta'
+                  : 'border-transparent hover:border-hclub-gray'
+              }`}
+              style={{ aspectRatio: '4 / 3' }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={slugToImageUrl(slug)}
+                alt={slugLabel(slug)}
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }}
+              />
+              <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-gray-200 font-oswald uppercase tracking-wider px-1 py-0.5 truncate text-center">
+                {slugLabel(slug)}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -92,36 +143,7 @@ function ImagePickerDropdown({
           onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }}
         />
       </button>
-      {open && (
-        <div className="absolute z-50 top-11 right-0 bg-hclub-dark border border-hclub-gray rounded-lg p-2 shadow-xl"
-          style={{ width: 300 }}>
-          <p className="text-xs text-gray-400 font-oswald uppercase tracking-wider mb-2 px-1">Foto wählen</p>
-          <div className="grid grid-cols-4 gap-1.5 max-h-56 overflow-y-auto">
-            {options.map((slug) => (
-              <button
-                key={slug}
-                type="button"
-                onClick={() => { onSelect(slug); setOpen(false); }}
-                title={slugLabel(slug)}
-                className={`relative rounded overflow-hidden border transition-colors ${
-                  currentSlug === slug
-                    ? 'border-hclub-magenta'
-                    : 'border-transparent hover:border-hclub-gray'
-                }`}
-                style={{ aspectRatio: '4 / 3' }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={slugToImageUrl(slug)}
-                  alt={slugLabel(slug)}
-                  className="w-full h-full object-cover"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }}
-                />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {modal}
     </div>
   );
 }
@@ -142,7 +164,9 @@ function IconPickerDropdown({
   onSelect: (key: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const IconComponent = useMemo(() => {
     const opt = ICON_PICKER_OPTIONS.find((o) => o.key === currentIcon);
@@ -150,17 +174,52 @@ function IconPickerDropdown({
   }, [currentIcon]);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    if (open) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false); }
+    if (open) document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, [open]);
 
+  // Centered modal via portal so the grid is never clipped by the row/list overflow.
+  const modal = open && mounted ? createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+    >
+      <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 shadow-2xl w-full max-w-sm max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm text-gray-300 font-oswald uppercase tracking-wider">Icon wählen</p>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="text-gray-400 hover:text-white text-sm font-oswald uppercase"
+          >
+            Schließen
+          </button>
+        </div>
+        <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 overflow-y-auto pr-1">
+          {ICON_PICKER_OPTIONS.map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => { onSelect(opt.key); setOpen(false); }}
+              title={opt.label}
+              className={`flex items-center justify-center aspect-square rounded-lg border-2 transition-colors ${
+                currentIcon === opt.key
+                  ? 'border-hclub-magenta bg-hclub-magenta/10'
+                  : 'border-transparent hover:border-hclub-gray'
+              }`}
+            >
+              <opt.Component size={26} color={exerciseColor} />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -169,29 +228,7 @@ function IconPickerDropdown({
       >
         <IconComponent size={22} color={exerciseColor} />
       </button>
-      {open && (
-        <div className="absolute z-50 top-10 left-0 bg-hclub-dark border border-hclub-gray rounded-lg p-2 shadow-xl"
-          style={{ width: 260 }}>
-          <p className="text-xs text-gray-400 font-oswald uppercase tracking-wider mb-2 px-1">Icon wählen</p>
-          <div className="grid grid-cols-6 gap-1 max-h-48 overflow-y-auto">
-            {ICON_PICKER_OPTIONS.map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => { onSelect(opt.key); setOpen(false); }}
-                title={opt.label}
-                className={`flex items-center justify-center w-9 h-9 rounded border transition-colors ${
-                  currentIcon === opt.key
-                    ? 'border-hclub-magenta bg-hclub-magenta/10'
-                    : 'border-transparent hover:border-hclub-gray'
-                }`}
-              >
-                <opt.Component size={24} color={exerciseColor} />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {modal}
     </div>
   );
 }

@@ -41,6 +41,7 @@ const NAME_TO_SLUG: Record<string, string> = {
   'overhead press': 'shoulder-press',
   'military press': 'shoulder-press',
   'barbell shoulder press': 'shoulder-press',
+  'dumbell shoulder press': 'shoulder-press',
   'dumbbell shoulder press': 'shoulder-press',
   'db shoulder press': 'shoulder-press',
   'strict press': 'shoulder-press',

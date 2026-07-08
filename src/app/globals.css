@@ -414,11 +414,25 @@ input, select, textarea {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 0;
+  /* Feste Zeilenhöhe: Platz für 2 Textzeilen reserviert, damit Zeile 1..N
+     über ALLE Gruppen-Spalten G1..G8 exakt bündig auf einer Linie stehen.
+     Einzeilige Namen werden dank align-items:center vertikal zentriert. */
+  min-height: 2.9em;
+  box-sizing: border-box;
+  padding: 4px 0;
   border-top: 1px solid rgba(255, 0, 255, 0.1);
 }
 .rd-ex-row:first-of-type {
   border-top: none;
+}
+/* Übungsname: max. 2 Zeilen, sauber umbrechen, mittig zur festen Zeilenhöhe */
+.rd-ex-row > span:last-child {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.15;
 }
 .rd-ex-dot {
   flex: 0 0 auto;
