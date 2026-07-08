@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation';
 import { ALL_DEFAULT_EXERCISES } from '@/lib/exercises';
 import type { ExerciseSetting } from '@/lib/types';
 import { ICON_PICKER_OPTIONS, getExerciseIcon } from '@/lib/exerciseIcons';
+import { AVAILABLE_IMAGE_SLUGS, getDefaultImageSlug, slugToImageUrl } from '@/lib/exerciseImages';
 
 const ICONS_STORAGE_KEY = 'hclub_exercise_icons';
+const IMAGES_STORAGE_KEY = 'hclub_exercise_images';
 
 function loadIconsFromStorage(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -24,6 +26,104 @@ function saveIconsToStorage(icons: Record<string, string>) {
   } catch {
     // ignore
   }
+}
+
+// Image overrides are keyed by the lower-cased exercise name (same lookup as getExerciseImage).
+function loadImagesFromStorage(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem(IMAGES_STORAGE_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function saveImagesToStorage(images: Record<string, string>) {
+  try {
+    localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(images));
+  } catch {
+    // ignore
+  }
+}
+
+// Human label for an image slug ('sled-push' -> 'Sled Push').
+function slugLabel(slug: string): string {
+  if (slug === '__generic__') return 'Generic';
+  return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Inline image picker dropdown — mirrors IconPickerDropdown UX, but shows
+// the actual /exercises/*.jpg thumbnails so trainers can swap the photo.
+function ImagePickerDropdown({
+  currentSlug,
+  onSelect,
+}: {
+  currentSlug: string; // resolved slug ('run', 'shoulder-press', ...) or '__generic__'
+  onSelect: (slug: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  const options = ['__generic__', ...AVAILABLE_IMAGE_SLUGS];
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title="Foto auswählen"
+        className="w-12 h-9 flex items-center justify-center border border-hclub-gray rounded bg-hclub-black overflow-hidden hover:border-hclub-magenta transition-colors"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={slugToImageUrl(currentSlug)}
+          alt={slugLabel(currentSlug)}
+          className="w-full h-full object-cover"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }}
+        />
+      </button>
+      {open && (
+        <div className="absolute z-50 top-11 right-0 bg-hclub-dark border border-hclub-gray rounded-lg p-2 shadow-xl"
+          style={{ width: 300 }}>
+          <p className="text-xs text-gray-400 font-oswald uppercase tracking-wider mb-2 px-1">Foto wählen</p>
+          <div className="grid grid-cols-4 gap-1.5 max-h-56 overflow-y-auto">
+            {options.map((slug) => (
+              <button
+                key={slug}
+                type="button"
+                onClick={() => { onSelect(slug); setOpen(false); }}
+                title={slugLabel(slug)}
+                className={`relative rounded overflow-hidden border transition-colors ${
+                  currentSlug === slug
+                    ? 'border-hclub-magenta'
+                    : 'border-transparent hover:border-hclub-gray'
+                }`}
+                style={{ aspectRatio: '4 / 3' }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={slugToImageUrl(slug)}
+                  alt={slugLabel(slug)}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface CustomExercise {
@@ -99,10 +199,12 @@ function IconPickerDropdown({
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [icons, setIcons] = useState<Record<string, string>>({});
+  const [images, setImages] = useState<Record<string, string>>({});
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
   const [newExerciseName, setNewExerciseName] = useState('');
   const [newExerciseColor, setNewExerciseColor] = useState('#FF00FF');
   const [newExerciseIcon, setNewExerciseIcon] = useState('__generic__');
+  const [newExerciseImage, setNewExerciseImage] = useState('__generic__');
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [trainerName, setTrainerName] = useState('');
@@ -118,15 +220,21 @@ export default function SettingsPage() {
     []
   );
 
-  // Load icons from localStorage on mount
+  // Load icons + image overrides from localStorage on mount
   useEffect(() => {
     setIcons(loadIconsFromStorage());
+    setImages(loadImagesFromStorage());
   }, []);
 
   // Persist icons to localStorage whenever they change
   useEffect(() => {
     if (Object.keys(icons).length > 0) saveIconsToStorage(icons);
   }, [icons]);
+
+  // Persist image overrides to localStorage whenever they change
+  useEffect(() => {
+    if (Object.keys(images).length > 0) saveImagesToStorage(images);
+  }, [images]);
 
   const loadTrainerName = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -194,6 +302,23 @@ export default function SettingsPage() {
     });
   }
 
+  // Store image override keyed by lower-cased name (matches getExerciseImage lookup).
+  // Selecting the default slug removes the override again.
+  function updateImage(name: string, slug: string) {
+    const key = name.toLowerCase();
+    const isDefault = slug === getDefaultImageSlug(name);
+    setImages((prev) => {
+      const next = { ...prev };
+      if (isDefault) {
+        delete next[key];
+      } else {
+        next[key] = slug;
+      }
+      saveImagesToStorage(next);
+      return next;
+    });
+  }
+
   async function addCustomExercise() {
     const trimmed = newExerciseName.trim();
     if (!trimmed) return;
@@ -217,11 +342,16 @@ export default function SettingsPage() {
       updateIcon(trimmed, newExerciseIcon);
     }
 
+    if (newExerciseImage && newExerciseImage !== '__generic__') {
+      updateImage(trimmed, newExerciseImage);
+    }
+
     setCustomExercises((prev) => [...prev, { name: trimmed, color: newExerciseColor }]);
     setSettings((prev) => ({ ...prev, [trimmed]: newExerciseColor }));
     setNewExerciseName('');
     setNewExerciseColor('#FF00FF');
     setNewExerciseIcon('__generic__');
+    setNewExerciseImage('__generic__');
   }
 
   async function deleteCustomExercise(exerciseName: string) {
@@ -246,6 +376,12 @@ export default function SettingsPage() {
       const next = { ...prev };
       delete next[exerciseName];
       saveIconsToStorage(next);
+      return next;
+    });
+    setImages((prev) => {
+      const next = { ...prev };
+      delete next[exerciseName.toLowerCase()];
+      saveImagesToStorage(next);
       return next;
     });
   }
@@ -296,6 +432,18 @@ export default function SettingsPage() {
       return next;
     });
 
+    // Migrate image override to new name (keyed lower-case)
+    setImages((prev) => {
+      const next = { ...prev };
+      const oldKey = oldName.toLowerCase();
+      if (next[oldKey]) {
+        next[trimmed.toLowerCase()] = next[oldKey];
+        delete next[oldKey];
+        saveImagesToStorage(next);
+      }
+      return next;
+    });
+
     setCustomExercises((prev) =>
       prev.map((e) => (e.name === oldName ? { name: trimmed, color } : e))
     );
@@ -335,6 +483,7 @@ export default function SettingsPage() {
     const isEditing = editingExercise === exerciseName;
     const color = settings[exerciseName] || defaultColor;
     const iconKey = icons[exerciseName] || exerciseName.toLowerCase();
+    const imageSlug = images[exerciseName.toLowerCase()] || getDefaultImageSlug(exerciseName);
 
     return (
       <div
@@ -378,6 +527,10 @@ export default function SettingsPage() {
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-2">
+          <ImagePickerDropdown
+            currentSlug={imageSlug}
+            onSelect={(slug) => updateImage(exerciseName, slug)}
+          />
           <IconPickerDropdown
             currentIcon={iconKey}
             exerciseColor={color}
@@ -523,6 +676,15 @@ export default function SettingsPage() {
                 currentIcon={newExerciseIcon}
                 exerciseColor={newExerciseColor}
                 onSelect={setNewExerciseIcon}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">
+                Foto
+              </label>
+              <ImagePickerDropdown
+                currentSlug={newExerciseImage}
+                onSelect={setNewExerciseImage}
               />
             </div>
             <button
