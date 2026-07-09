@@ -720,21 +720,28 @@ export default function LiveWorkoutPage() {
   // =================== SUMMARY STATE ===================
   if (phase === 'summary') {
     return (
-      <div className="workout-fullscreen flex flex-col items-center overflow-y-auto py-8 px-4">
-        <h1 className="font-oswald text-4xl md:text-5xl font-bold tracking-wider mb-2 fade-in-up">
-          {workout.name}
-        </h1>
-        <p className="text-gray-400 text-lg mb-2 fade-in-up" style={{ animationDelay: '0.1s' }}>
-          {workout.trainer_name}
-        </p>
-        {totalTimeEstimate > 0 && (
-          <div className="font-oswald text-xl text-hclub-magenta mb-8 fade-in-up" style={{ animationDelay: '0.15s' }}>
-            Geschaetzte Dauer: {formatTimeMinutes(totalTimeEstimate)}
-          </div>
-        )}
+      <div className="workout-fullscreen flex flex-col overflow-hidden">
+        {/* Fixierter Kopf — immer sichtbar */}
+        <div className="shrink-0 flex flex-col items-center px-4 pt-4 pb-2">
+          <h1 className="font-oswald font-bold tracking-wider fade-in-up text-center leading-none"
+              style={{ fontSize: 'clamp(20px, 4.5vh, 44px)' }}>
+            {workout.name}
+          </h1>
+          <p className="text-gray-400 fade-in-up" style={{ animationDelay: '0.1s', fontSize: 'clamp(12px, 2vh, 18px)' }}>
+            {workout.trainer_name}
+          </p>
+          {totalTimeEstimate > 0 && (
+            <div className="font-oswald text-hclub-magenta fade-in-up" style={{ animationDelay: '0.15s', fontSize: 'clamp(12px, 2vh, 18px)' }}>
+              Geschaetzte Dauer: {formatTimeMinutes(totalTimeEstimate)}
+            </div>
+          )}
+        </div>
+
+        {/* Scrollbarer Mittelbereich — nimmt den Rest, Buttons bleiben sichtbar */}
+        <div className="flex-1 min-h-0 overflow-y-auto w-full flex flex-col items-center px-4 py-2">
 
         {workoutMode === 'timed' && (
-          <div className={`w-full mb-8 grid gap-6 ${
+          <div className={`w-full mb-2 grid gap-4 ${
             config.numRounds === 1 ? 'max-w-5xl grid-cols-1' : 'max-w-5xl md:grid-cols-2'
           }`}>
             {Array.from({ length: config.numRounds }, (_, roundIdx) => (
@@ -771,7 +778,7 @@ export default function LiveWorkoutPage() {
         )}
 
         {workoutMode === 'fortime' && (
-          <div className="w-full max-w-5xl mb-8 space-y-4">
+          <div className="w-full max-w-5xl mb-2 space-y-4">
             {config.forTimeRoundTimerEnabled && (
               <div className="text-center text-cyan-400 font-oswald uppercase tracking-wider mb-2">
                 Timer pro Runde: {config.forTimeRoundTimerMinutes || 12} Minuten
@@ -805,13 +812,15 @@ export default function LiveWorkoutPage() {
           </div>
         )}
 
-        <div className="flex gap-4 fade-in-up" style={{ animationDelay: '0.6s', opacity: 0 }}>
+        </div>
+        {/* Fixierter Fuß — Start-/Zurück-Buttons IMMER sichtbar & klickbar */}
+        <div className="shrink-0 flex gap-4 justify-center items-center px-4 py-3 border-t border-hclub-gray/40 bg-black/40">
           <button onClick={() => setPhase('idle')}
-            className="px-8 py-3 bg-hclub-gray hover:bg-hclub-magenta/30 text-white font-oswald text-xl uppercase tracking-wider rounded-xl transition-colors">
+            className="px-8 py-3 bg-hclub-gray hover:bg-hclub-magenta/30 text-white font-oswald text-lg md:text-xl uppercase tracking-wider rounded-xl transition-colors">
             Zurück
           </button>
           <button onClick={startWorkout}
-            className="px-12 py-3 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald text-xl uppercase tracking-widest rounded-xl transition-colors glow-pulse">
+            className="px-12 py-3 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald text-lg md:text-xl uppercase tracking-widest rounded-xl transition-colors glow-pulse">
             Los geht&apos;s!
           </button>
         </div>
@@ -1169,63 +1178,131 @@ export default function LiveWorkoutPage() {
         );
       })()}
 
-      {/* Round rest display */}
+      {/* Shared fit-to-viewport styles for the REST / ROUNDREST card grids */}
+      {(phase === 'rest' || phase === 'roundRest') && (
+        <style>{`
+          .rest-wrap {
+            flex: 1 1 0%;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: clamp(6px, 1.5vmin, 20px) clamp(8px, 2vmin, 24px);
+            gap: clamp(4px, 1.2vmin, 14px);
+          }
+          .rest-head {
+            flex: 0 0 auto;
+            font-size: clamp(16px, 4vh, 40px);
+            line-height: 1;
+          }
+          .rest-sub {
+            flex: 0 0 auto;
+            font-size: clamp(12px, 2.4vh, 22px);
+            line-height: 1;
+          }
+          .rest-grid-wrap {
+            flex: 1 1 0%;
+            min-height: 0;
+            width: 100%;
+            max-width: 1400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .rest-grid {
+            display: grid;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            gap: clamp(4px, 1.2vmin, 14px);
+            grid-template-columns: repeat(${config.numGroups > 4 ? Math.ceil(config.numGroups / 2) : config.numGroups}, minmax(0, 1fr));
+            grid-template-rows: ${config.numGroups > 4 ? 'minmax(0,1fr) minmax(0,1fr)' : 'minmax(0,1fr)'};
+          }
+          .rest-card {
+            container-type: size;
+            min-height: 0;
+            min-width: 0;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            justify-items: center;
+            align-items: center;
+            gap: 1.5cqmin;
+            padding: 2.5cqmin;
+            border-radius: 10px;
+            box-sizing: border-box;
+          }
+          .rest-card-label { font-size: clamp(8px, 5cqmin, 18px); line-height: 1; }
+          .rest-card-img {
+            height: 100%;
+            max-height: 62cqmin;
+            aspect-ratio: 4 / 3;
+            max-width: 94%;
+          }
+          .rest-card-img img { width: 100%; height: 100%; object-fit: cover; }
+          .rest-card-name {
+            font-size: clamp(10px, 8cqmin, 26px);
+            line-height: 1.02;
+            text-align: center;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            overflow: hidden;
+          }
+        `}</style>
+      )}
+
+      {/* Round rest display — kein doppelter Timer (oben bleibt Referenz), fit-to-viewport */}
       {phase === 'roundRest' && (
-        <div className="flex-1 flex flex-col items-center justify-center px-4">
-          <h2 className="font-oswald text-3xl md:text-5xl uppercase tracking-widest text-orange-400 mb-4">Rundenpause</h2>
-          <div className="font-oswald leading-none text-white mb-6" style={{ fontSize: 'min(40vw, 25vh)' }}>
-            {formatTime(timeRemaining)}
-          </div>
-          <p className="font-oswald text-xl md:text-2xl uppercase tracking-wider text-gray-400 mb-6">Nächste: Runde {currentRound + 1}</p>
-          <div className="w-full max-w-5xl mb-6">
-          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups > 4 ? Math.ceil(config.numGroups / 2) : config.numGroups, 4)}, 1fr)` }}>
-            {Array.from({ length: config.numGroups }, (_, gIdx) => {
-              const nextExercises = config.rounds[currentRound]?.[gIdx] || [];
-              const nextEx = nextExercises[0] || 'Übung';
-              return (
-                <div key={gIdx} className="rd-col rd-col-active rounded-xl p-3 text-center">
-                  <div className="text-gray-400 text-xs font-oswald uppercase tracking-wider mb-2">G{String.fromCharCode(65 + gIdx)}</div>
-                  <div className="rd-img-frame rd-img-color mx-auto mb-2" style={{ width: '100%', maxWidth: config.numGroups > 5 ? 90 : 120, aspectRatio: '4 / 3', ['--ex-color' as string]: getExerciseColor(nextEx) }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={getExerciseImage(nextEx)} alt={nextEx} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
+        <div className="rest-wrap">
+          <h2 className="rest-head font-oswald uppercase tracking-widest text-orange-400">Rundenpause</h2>
+          <p className="rest-sub font-oswald uppercase tracking-wider text-gray-400">Nächste: Runde {currentRound + 1}</p>
+          <div className="rest-grid-wrap">
+            <div className="rest-grid">
+              {Array.from({ length: config.numGroups }, (_, gIdx) => {
+                const nextExercises = config.rounds[currentRound]?.[gIdx] || [];
+                const nextEx = nextExercises[0] || 'Übung';
+                return (
+                  <div key={gIdx} className="rest-card rd-col rd-col-active">
+                    <div className="rest-card-label text-gray-400 font-oswald uppercase tracking-wider">G{String.fromCharCode(65 + gIdx)}</div>
+                    <div className="rest-card-img rd-img-frame rd-img-color" style={{ ['--ex-color' as string]: getExerciseColor(nextEx) }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={getExerciseImage(nextEx)} alt={nextEx} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
+                    </div>
+                    <div className="rest-card-name font-oswald uppercase tracking-wider" style={{ color: getExerciseColor(nextEx) }}>{nextEx}</div>
                   </div>
-                  <div className="font-oswald text-sm md:text-lg uppercase tracking-wider" style={{ color: getExerciseColor(nextEx) }}>{nextEx}</div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
           </div>
           <button onClick={() => setTimeRemaining(0)}
-            className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-oswald text-xl uppercase tracking-wider rounded-xl transition-colors">
+            className="shrink-0 px-8 py-2.5 bg-green-600 hover:bg-green-500 text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-colors">
             Weiter &rarr;
           </button>
         </div>
       )}
 
-      {/* Rest between exercises */}
+      {/* Rest between exercises — kein doppelter Timer, fit-to-viewport */}
       {phase === 'rest' && (
-        <div className="flex-1 flex flex-col items-center justify-center px-4">
-          <h2 className="font-oswald text-3xl md:text-5xl uppercase tracking-widest text-yellow-400 mb-4">Pause</h2>
-          <div className="font-oswald leading-none text-white mb-6" style={{ fontSize: 'min(40vw, 25vh)' }}>
-            {formatTime(timeRemaining)}
-          </div>
-          <div className="w-full max-w-5xl">
-          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(config.numGroups > 4 ? Math.ceil(config.numGroups / 2) : config.numGroups, 4)}, 1fr)` }}>
-            {Array.from({ length: config.numGroups }, (_, gIdx) => {
-              const exercises = config.rounds[currentRound]?.[gIdx] || [];
-              const nextEx = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
-              return (
-                <div key={gIdx} className="rd-col rd-col-active rounded-xl p-3 text-center">
-                  <div className="text-gray-400 text-xs font-oswald uppercase tracking-wider mb-2">G{String.fromCharCode(65 + gIdx)}</div>
-                  <div className="rd-img-frame rd-img-color mx-auto mb-2" style={{ width: '100%', maxWidth: config.numGroups > 5 ? 90 : 120, aspectRatio: '4 / 3', ['--ex-color' as string]: getExerciseColor(nextEx) }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={getExerciseImage(nextEx)} alt={nextEx} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
+        <div className="rest-wrap">
+          <h2 className="rest-head font-oswald uppercase tracking-widest text-yellow-400">Pause</h2>
+          <div className="rest-grid-wrap">
+            <div className="rest-grid">
+              {Array.from({ length: config.numGroups }, (_, gIdx) => {
+                const exercises = config.rounds[currentRound]?.[gIdx] || [];
+                const nextEx = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
+                return (
+                  <div key={gIdx} className="rest-card rd-col rd-col-active">
+                    <div className="rest-card-label text-gray-400 font-oswald uppercase tracking-wider">G{String.fromCharCode(65 + gIdx)}</div>
+                    <div className="rest-card-img rd-img-frame rd-img-color" style={{ ['--ex-color' as string]: getExerciseColor(nextEx) }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={getExerciseImage(nextEx)} alt={nextEx} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
+                    </div>
+                    <div className="rest-card-name font-oswald uppercase tracking-wider" style={{ color: getExerciseColor(nextEx) }}>{nextEx}</div>
                   </div>
-                  <div className="font-oswald text-sm md:text-lg uppercase tracking-wider" style={{ color: getExerciseColor(nextEx) }}>{nextEx}</div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -1234,53 +1311,106 @@ export default function LiveWorkoutPage() {
       {phase === 'work' && (
         <>
           <style>{`
+            /* Fit-to-viewport: der Grid-Bereich nimmt den Rest der Höhe (flex:1),
+               kein Scroll. Spalten/Reihen adaptiv nach Gruppenzahl. */
             .work-groups-scroll {
-              flex: 1;
-              overflow-x: auto;
-              overflow-y: hidden;
+              flex: 1 1 0%;
+              min-height: 0;
+              overflow: hidden;
             }
             .work-groups-grid {
               display: grid;
               height: 100%;
+              width: 100%;
               min-height: 0;
-              grid-template-columns: repeat(${config.numGroups > 4 ? Math.ceil(config.numGroups / 2) : config.numGroups}, 1fr);
-              grid-template-rows: ${config.numGroups > 4 ? '1fr 1fr' : '1fr'};
+              gap: clamp(2px, 0.5vmin, 8px);
+              padding: clamp(2px, 0.6vmin, 10px);
+              grid-template-columns: repeat(${config.numGroups > 4 ? Math.ceil(config.numGroups / 2) : config.numGroups}, minmax(0, 1fr));
+              grid-template-rows: ${config.numGroups > 4 ? 'minmax(0,1fr) minmax(0,1fr)' : 'minmax(0,1fr)'};
             }
-            /* Sauberes, zeilenbündiges Layout je Spalte:
-               feste Slots für Label / Bild / Name / Dots / Nächste,
-               damit alle Spalten auf EINER Höhe liegen. */
+            /* Jede Karte ist ein Container-Query-Kontext -> Inhalt skaliert
+               relativ zur KARTENGRÖSSE (cqmin), nicht zur Viewport-Breite.
+               Dadurch bei 3 Gruppen groß, bei 8 kompakt, immer ausgewogen. */
+            .work-col {
+              container-type: size;
+              min-height: 0;
+              min-width: 0;
+              height: 100%;
+              align-self: stretch;
+              border-radius: 10px;
+            }
+            /* Spalten-Inhalt: feste Slot-Reihenfolge, vertikal ausgewogen zentriert.
+               1fr oben+unten drückt Bild/Name/Dots mittig -> kein Loch. */
+            /* Inhalt vertikal zentriert (align-content:center) mit auto-Bändern.
+               Da ALLE Karten gleiche Zellgröße + gleiche Bandstruktur haben,
+               liegen Label/Bild/Name/Dots/Nächste in jeder Spalte auf gleicher
+               Höhe. Bild ist durch cqh UND cqw begrenzt -> nie zu groß. */
             .work-col-inner {
               display: grid;
-              grid-template-rows: auto auto 1fr auto auto;
+              grid-template-rows: auto auto auto auto auto;
+              grid-auto-rows: 0;
               justify-items: center;
-              align-items: start;
+              align-content: center;
+              justify-content: center;
               height: 100%;
               width: 100%;
-              padding: 0.75rem 0.25rem 0.5rem;
-              gap: 0.25rem;
+              padding: 3cqmin 3cqmin;
+              gap: 2cqmin;
+              box-sizing: border-box;
+              overflow: hidden;
             }
-            .work-col-img { align-self: end; }
-            /* Übungsname: feste Höhe für 2 Zeilen, Inhalt oben/zentriert,
-               damit Name-Block + alles darunter über alle Spalten bündig steht. */
+            .work-col-label {
+              font-size: clamp(8px, 4.2cqmin, 20px);
+              line-height: 1;
+            }
+            /* Bild: Höhe an Kartenhöhe gekoppelt (cqh), Breite folgt via
+               aspect-ratio, aber durch max-width (cqw) gedeckelt -> nie zu breit. */
+            .work-col-img {
+              height: 46cqh;
+              width: auto;
+              max-width: 90cqw;
+              aspect-ratio: 4 / 3;
+              flex-shrink: 0;
+            }
+            .work-col-img img { width: 100%; height: 100%; object-fit: cover; }
+            /* Übungsname skaliert mit der Karte, max. 2 Zeilen */
             .work-col-name {
-              align-self: start;
-              display: flex;
-              align-items: center;
-              justify-content: center;
+              display: -webkit-box;
+              -webkit-box-orient: vertical;
+              -webkit-line-clamp: 2;
+              line-clamp: 2;
+              overflow: hidden;
               width: 100%;
-              min-height: 2.2em;
-              line-height: 1.05;
+              text-align: center;
+              font-size: clamp(13px, 7cqmin, 40px);
+              line-height: 1.02;
             }
-            /* "NÄCHSTE"-Box: feste, gleiche Höhe (Platz für 2 Textzeilen),
-               Inhalt vertikal zentriert -> alle Boxen G1..G8 exakt gleich groß. */
+            .work-col-dots { display: flex; }
+            .work-col-dot {
+              width: clamp(5px, 2.2cqmin, 12px);
+              height: clamp(5px, 2.2cqmin, 12px);
+              border-radius: 9999px;
+            }
+            /* "NÄCHSTE"-Box: skaliert mit, max. 2 Zeilen */
             .work-col-next {
-              align-self: center;
               display: flex;
               align-items: center;
               justify-content: center;
               text-align: center;
-              min-height: 3.2em;
+              max-width: 100%;
+              font-size: clamp(11px, 4.5cqmin, 26px);
               line-height: 1.1;
+              padding: 0.4em 0.7em;
+              border-radius: 8px;
+              background: rgba(255,255,255,0.04);
+              border: 1px solid rgba(255,255,255,0.08);
+            }
+            .work-col-next > span {
+              display: -webkit-box;
+              -webkit-box-orient: vertical;
+              -webkit-line-clamp: 2;
+              line-clamp: 2;
+              overflow: hidden;
             }
           `}</style>
           <div className="work-groups-scroll">
@@ -1295,43 +1425,41 @@ export default function LiveWorkoutPage() {
             const groupWorkTime = getWorkTimeForGroup(config, currentRound, groupIndex);
             const hasGroupCustomTime = groupWorkTime !== workTimeTotal;
 
-            const imgSize = config.numGroups <= 2 ? 200 : config.numGroups <= 4 ? 140 : 96;
-
             return (
               <div key={groupIndex}
-                className="rd-col rd-col-active relative slide-up min-h-[120px] md:min-h-0"
+                className="work-col rd-col rd-col-active relative slide-up"
                 style={{
                   borderRight: groupIndex < config.numGroups - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
                   borderBottom: '1px solid rgba(255,255,255,0.06)',
                   animationDelay: `${groupIndex * 0.1}s`,
                 }}>
                 <div className="work-col-inner">
-                  {/* Group label — feste Zeile 1 */}
-                  <div className="font-oswald text-xs md:text-sm uppercase tracking-widest text-gray-400">
+                  {/* Group label */}
+                  <div className="work-col-label font-oswald uppercase tracking-widest text-gray-400">
                     Gruppe {groupIndex + 1}
                     {hasGroupCustomTime && <span className="text-hclub-magenta ml-2">({groupWorkTime}s)</span>}
                   </div>
 
-                  {/* Exercise image — feste Zeile 2, alle Spalten gleiche Bildhöhe/Baseline */}
+                  {/* Exercise image — skaliert mit der Karte */}
                   <div key={`img-${exerciseAnimKey}`}
                     className="work-col-img rd-img-frame rd-img-color exercise-enter"
-                    style={{ width: imgSize, height: Math.round(imgSize * 0.75), ['--ex-color' as string]: exerciseColor }}>
+                    style={{ ['--ex-color' as string]: exerciseColor }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={exerciseImage} alt={currentExercise}
                       onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
                   </div>
 
-                  {/* Current exercise name — feste Zeile 3 (obere Baseline) */}
+                  {/* Current exercise name */}
                   <div key={exerciseAnimKey}
-                    className="work-col-name font-oswald text-lg sm:text-xl md:text-3xl lg:text-4xl uppercase tracking-wider text-center px-2 md:px-4 exercise-enter"
+                    className="work-col-name font-oswald uppercase tracking-wider exercise-enter px-1"
                     style={{ color: exerciseColor, textShadow: `0 0 14px ${exerciseColor}40` }}>
                     {currentExercise}
                   </div>
 
-                  {/* Exercise progress dots — feste Zeile 4 */}
-                  <div className="flex gap-1 md:gap-2">
+                  {/* Exercise progress dots */}
+                  <div className="work-col-dots flex gap-1 md:gap-2">
                     {exercises.map((_, idx) => (
-                      <div key={idx} className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${idx === currentExerciseIndex ? 'rd-dot-active' : ''}`}
+                      <div key={idx} className={`work-col-dot transition-all duration-300 ${idx === currentExerciseIndex ? 'rd-dot-active' : ''}`}
                         style={{
                           color: exerciseColor,
                           backgroundColor: idx === currentExerciseIndex ? exerciseColor : idx < currentExerciseIndex ? '#666' : '#333',
@@ -1340,10 +1468,9 @@ export default function LiveWorkoutPage() {
                     ))}
                   </div>
 
-                  {/* Next exercise preview — feste Zeile 5, feste Boxhöhe für 2 Zeilen */}
+                  {/* Next exercise preview */}
                   {nextExercise ? (
-                    <div className="work-col-next font-oswald text-xl md:text-3xl uppercase tracking-wider px-3 py-1 rounded-lg"
-                      style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div className="work-col-next font-oswald uppercase tracking-wider">
                       <span><span className="text-gray-400">Nächste: </span>
                       <span style={{ color: getExerciseColor(nextExercise) }}>{nextExercise}</span></span>
                     </div>
