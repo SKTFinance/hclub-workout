@@ -6,28 +6,9 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { ALL_DEFAULT_EXERCISES } from '@/lib/exercises';
 import type { ExerciseSetting } from '@/lib/types';
-import { ICON_PICKER_OPTIONS, getExerciseIcon } from '@/lib/exerciseIcons';
 import { AVAILABLE_IMAGE_SLUGS, getDefaultImageSlug, slugToImageUrl } from '@/lib/exerciseImages';
 
-const ICONS_STORAGE_KEY = 'hclub_exercise_icons';
 const IMAGES_STORAGE_KEY = 'hclub_exercise_images';
-
-function loadIconsFromStorage(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  try {
-    return JSON.parse(localStorage.getItem(ICONS_STORAGE_KEY) || '{}');
-  } catch {
-    return {};
-  }
-}
-
-function saveIconsToStorage(icons: Record<string, string>) {
-  try {
-    localStorage.setItem(ICONS_STORAGE_KEY, JSON.stringify(icons));
-  } catch {
-    // ignore
-  }
-}
 
 // Image overrides are keyed by the lower-cased exercise name (same lookup as getExerciseImage).
 function loadImagesFromStorage(): Record<string, string> {
@@ -53,8 +34,8 @@ function slugLabel(slug: string): string {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// Inline image picker dropdown — mirrors IconPickerDropdown UX, but shows
-// the actual /exercises/*.jpg thumbnails so trainers can swap the photo.
+// Inline image picker dropdown — zeigt die /exercises/*.jpg Thumbnails,
+// damit Trainer das Foto pro Übung tauschen können.
 function ImagePickerDropdown({
   currentSlug,
   onSelect,
@@ -153,94 +134,12 @@ interface CustomExercise {
   color: string;
 }
 
-// Inline icon picker dropdown
-function IconPickerDropdown({
-  currentIcon,
-  exerciseColor,
-  onSelect,
-}: {
-  currentIcon: string;
-  exerciseColor: string;
-  onSelect: (key: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => { setMounted(true); }, []);
-
-  const IconComponent = useMemo(() => {
-    const opt = ICON_PICKER_OPTIONS.find((o) => o.key === currentIcon);
-    return opt ? opt.Component : getExerciseIcon(currentIcon);
-  }, [currentIcon]);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false); }
-    if (open) document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open]);
-
-  // Centered modal via portal so the grid is never clipped by the row/list overflow.
-  const modal = open && mounted ? createPortal(
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
-    >
-      <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 shadow-2xl w-full max-w-sm max-h-[85vh] flex flex-col">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm text-gray-300 font-oswald uppercase tracking-wider">Icon wählen</p>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="text-gray-400 hover:text-white text-sm font-oswald uppercase"
-          >
-            Schließen
-          </button>
-        </div>
-        <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 overflow-y-auto pr-1">
-          {ICON_PICKER_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => { onSelect(opt.key); setOpen(false); }}
-              title={opt.label}
-              className={`flex items-center justify-center aspect-square rounded-lg border-2 transition-colors ${
-                currentIcon === opt.key
-                  ? 'border-hclub-magenta bg-hclub-magenta/10'
-                  : 'border-transparent hover:border-hclub-gray'
-              }`}
-            >
-              <opt.Component size={26} color={exerciseColor} />
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>,
-    document.body
-  ) : null;
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        title="Icon auswählen"
-        className="w-10 h-8 flex items-center justify-center border border-hclub-gray rounded bg-hclub-black hover:border-hclub-magenta transition-colors"
-      >
-        <IconComponent size={22} color={exerciseColor} />
-      </button>
-      {modal}
-    </div>
-  );
-}
-
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
-  const [icons, setIcons] = useState<Record<string, string>>({});
   const [images, setImages] = useState<Record<string, string>>({});
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
   const [newExerciseName, setNewExerciseName] = useState('');
   const [newExerciseColor, setNewExerciseColor] = useState('#FF00FF');
-  const [newExerciseIcon, setNewExerciseIcon] = useState('__generic__');
   const [newExerciseImage, setNewExerciseImage] = useState('__generic__');
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -257,16 +156,10 @@ export default function SettingsPage() {
     []
   );
 
-  // Load icons + image overrides from localStorage on mount
+  // Load image overrides from localStorage on mount
   useEffect(() => {
-    setIcons(loadIconsFromStorage());
     setImages(loadImagesFromStorage());
   }, []);
-
-  // Persist icons to localStorage whenever they change
-  useEffect(() => {
-    if (Object.keys(icons).length > 0) saveIconsToStorage(icons);
-  }, [icons]);
 
   // Persist image overrides to localStorage whenever they change
   useEffect(() => {
@@ -331,14 +224,6 @@ export default function SettingsPage() {
     setSaved(false);
   }
 
-  function updateIcon(name: string, iconKey: string) {
-    setIcons((prev) => {
-      const next = { ...prev, [name]: iconKey };
-      saveIconsToStorage(next);
-      return next;
-    });
-  }
-
   // Store image override keyed by lower-cased name (matches getExerciseImage lookup).
   // Selecting the default slug removes the override again.
   function updateImage(name: string, slug: string) {
@@ -375,10 +260,6 @@ export default function SettingsPage() {
         { onConflict: 'user_id,exercise_name' }
       );
 
-    if (newExerciseIcon && newExerciseIcon !== '__generic__') {
-      updateIcon(trimmed, newExerciseIcon);
-    }
-
     if (newExerciseImage && newExerciseImage !== '__generic__') {
       updateImage(trimmed, newExerciseImage);
     }
@@ -387,7 +268,6 @@ export default function SettingsPage() {
     setSettings((prev) => ({ ...prev, [trimmed]: newExerciseColor }));
     setNewExerciseName('');
     setNewExerciseColor('#FF00FF');
-    setNewExerciseIcon('__generic__');
     setNewExerciseImage('__generic__');
   }
 
@@ -407,12 +287,6 @@ export default function SettingsPage() {
     setSettings((prev) => {
       const next = { ...prev };
       delete next[exerciseName];
-      return next;
-    });
-    setIcons((prev) => {
-      const next = { ...prev };
-      delete next[exerciseName];
-      saveIconsToStorage(next);
       return next;
     });
     setImages((prev) => {
@@ -458,17 +332,6 @@ export default function SettingsPage() {
         { onConflict: 'user_id,exercise_name' }
       );
 
-    // Migrate icon to new name
-    setIcons((prev) => {
-      const next = { ...prev };
-      if (next[oldName]) {
-        next[trimmed] = next[oldName];
-        delete next[oldName];
-        saveIconsToStorage(next);
-      }
-      return next;
-    });
-
     // Migrate image override to new name (keyed lower-case)
     setImages((prev) => {
       const next = { ...prev };
@@ -510,7 +373,7 @@ export default function SettingsPage() {
         .upsert(entry, { onConflict: 'user_id,exercise_name' });
     }
 
-    // Icons are already saved to localStorage on change
+    // Image overrides are already saved to localStorage on change
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -519,7 +382,6 @@ export default function SettingsPage() {
   function renderExerciseRow(exerciseName: string, defaultColor: string, isCustom: boolean) {
     const isEditing = editingExercise === exerciseName;
     const color = settings[exerciseName] || defaultColor;
-    const iconKey = icons[exerciseName] || exerciseName.toLowerCase();
     const imageSlug = images[exerciseName.toLowerCase()] || getDefaultImageSlug(exerciseName);
 
     return (
@@ -567,11 +429,6 @@ export default function SettingsPage() {
           <ImagePickerDropdown
             currentSlug={imageSlug}
             onSelect={(slug) => updateImage(exerciseName, slug)}
-          />
-          <IconPickerDropdown
-            currentIcon={iconKey}
-            exerciseColor={color}
-            onSelect={(key) => updateIcon(exerciseName, key)}
           />
           <input
             type="color"
@@ -704,16 +561,6 @@ export default function SettingsPage() {
                              focus:outline-none focus:border-hclub-magenta"
                 />
               </div>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">
-                Icon
-              </label>
-              <IconPickerDropdown
-                currentIcon={newExerciseIcon}
-                exerciseColor={newExerciseColor}
-                onSelect={setNewExerciseIcon}
-              />
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">
