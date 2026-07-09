@@ -40,6 +40,9 @@ export default function WorkoutEditorPage() {
   const [roundRestInput, setRoundRestInput] = useState(String(config.roundRestTime));
   const [warmupInput, setWarmupInput] = useState(String(config.warmupTime));
   const [iconPickerOpen, setIconPickerOpen] = useState<{ round: number; group: number; ex: number } | null>(null);
+  // Drag-and-drop state for reordering exercises within a group
+  const [dragExercise, setDragExercise] = useState<{ round: number; group: number; ex: number } | null>(null);
+  const [dragOverExercise, setDragOverExercise] = useState<{ round: number; group: number; ex: number } | null>(null);
   // Exercise library
   const [libraryExercises, setLibraryExercises] = useState<LibraryExercise[]>([]);
   // Admin state
@@ -160,6 +163,135 @@ export default function WorkoutEditorPage() {
       }
       return { ...prev, rounds };
     });
+  }
+
+  // Reorder exercises within a group (drag-and-drop). Moves the exercise at
+  // `fromIndex` to `toIndex` and keeps the per-exercise iconOverrides in sync.
+  function reorderExerciseInGroup(roundIndex: number, groupIndex: number, fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    setConfig((prev) => {
+      const rounds = JSON.parse(JSON.stringify(prev.rounds));
+      const list: string[] = rounds[roundIndex]?.[groupIndex];
+      if (!Array.isArray(list) || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
+        return prev;
+      }
+      const [moved] = list.splice(fromIndex, 1);
+      list.splice(toIndex, 0, moved);
+      rounds[roundIndex][groupIndex] = list;
+
+      // Keep iconOverrides aligned to the new exercise order
+      const iconOverrides = JSON.parse(JSON.stringify(prev.iconOverrides || {}));
+      const groupOverrides = iconOverrides[roundIndex]?.[groupIndex];
+      if (groupOverrides && Object.keys(groupOverrides).length > 0) {
+        const orderKeys = list.map((_, i) => i);
+        // Build old-index order then apply same splice to derive mapping
+        const idxOrder = orderKeys.map((_, i) => i);
+        const [movedIdx] = idxOrder.splice(fromIndex, 1);
+        idxOrder.splice(toIndex, 0, movedIdx);
+        const remapped: Record<number, string> = {};
+        idxOrder.forEach((oldIdx, newIdx) => {
+          if (groupOverrides[oldIdx] !== undefined) remapped[newIdx] = groupOverrides[oldIdx];
+        });
+        if (!iconOverrides[roundIndex]) iconOverrides[roundIndex] = {};
+        iconOverrides[roundIndex][groupIndex] = remapped;
+      }
+
+      return { ...prev, rounds, iconOverrides };
+    });
+  }
+
+  // Duplicate a group across ALL rounds: inserts a copy right after `groupIndex`,
+  // shifts subsequent groups (rounds/groupTimeSettings/iconOverrides) by one,
+  // bumps numGroups. `rotateBy` cyclically rotates the exercise order of the NEW
+  // group in every round (1st -> 2nd, ..., last -> 1st for rotateBy=1). 0 = exact copy.
+  function duplicateGroup(roundIndex: number, groupIndex: number, rotateBy: number) {
+    setConfig((prev) => {
+      const newNumGroups = prev.numGroups + 1;
+      const rounds = JSON.parse(JSON.stringify(prev.rounds));
+      const groupTimeSettings = JSON.parse(JSON.stringify(prev.groupTimeSettings || {}));
+      const iconOverrides = JSON.parse(JSON.stringify(prev.iconOverrides || {}));
+
+      const rotate = <T,>(arr: T[], by: number): T[] => {
+        const n = arr.length;
+        if (n === 0) return arr;
+        const k = ((by % n) + n) % n;
+        if (k === 0) return arr.slice();
+        // rotateBy=1 => 1. -> 2. means element moves DOWN by one position:
+        // new[i] = old[(i - k + n) % n]
+        return arr.map((_, i) => arr[(i - k + n) % n]);
+      };
+
+      const insertAt = groupIndex + 1;
+
+      // For every round, shift group-indexed exercise arrays right, then insert copy
+      for (let r = 0; r < prev.numRounds; r++) {
+        if (!rounds[r]) rounds[r] = {};
+        for (let g = newNumGroups - 1; g > insertAt; g--) {
+          rounds[r][g] = rounds[r][g - 1];
+        }
+        const source = prev.rounds[r]?.[groupIndex] || ['Wall Balls'];
+        rounds[r][insertAt] = rotate(JSON.parse(JSON.stringify(source)), rotateBy);
+
+        // Shift group-indexed settings for this round
+        if (groupTimeSettings[r]) {
+          for (let g = newNumGroups - 1; g > insertAt; g--) {
+            if (groupTimeSettings[r][g - 1] !== undefined) groupTimeSettings[r][g] = groupTimeSettings[r][g - 1];
+            else delete groupTimeSettings[r][g];
+          }
+          if (groupTimeSettings[r][groupIndex] !== undefined) {
+            groupTimeSettings[r][insertAt] = JSON.parse(JSON.stringify(groupTimeSettings[r][groupIndex]));
+          } else {
+            delete groupTimeSettings[r][insertAt];
+          }
+        }
+
+        if (iconOverrides[r]) {
+          for (let g = newNumGroups - 1; g > insertAt; g--) {
+            if (iconOverrides[r][g - 1] !== undefined) iconOverrides[r][g] = iconOverrides[r][g - 1];
+            else delete iconOverrides[r][g];
+          }
+          if (iconOverrides[r][groupIndex] !== undefined) {
+            // Copy overrides and rotate their indices to match the rotated order
+            const srcOv: Record<number, string> = iconOverrides[r][groupIndex];
+            const srcLen = (prev.rounds[r]?.[groupIndex] || []).length;
+            const rotated: Record<number, string> = {};
+            if (srcLen > 0) {
+              const k = ((rotateBy % srcLen) + srcLen) % srcLen;
+              Object.entries(srcOv).forEach(([oldIdxStr, val]) => {
+                const oldIdx = Number(oldIdxStr);
+                const newIdx = (oldIdx + k) % srcLen;
+                rotated[newIdx] = val as string;
+              });
+            }
+            iconOverrides[r][insertAt] = rotated;
+          } else {
+            delete iconOverrides[r][insertAt];
+          }
+        }
+      }
+
+      return {
+        ...prev,
+        numGroups: newNumGroups,
+        rounds,
+        groupTimeSettings,
+        iconOverrides,
+      };
+    });
+    setGroupsInput(String(config.numGroups + 1));
+  }
+
+  // Asks how far to rotate the copied group's exercise order, then duplicates.
+  function promptDuplicateGroup(roundIndex: number, groupIndex: number) {
+    const exCount = (config.rounds[roundIndex]?.[groupIndex] || []).length;
+    const answer = window.prompt(
+      `Gruppe ${groupIndex + 1} duplizieren.\n\nWillst du die Anordnung um X verschieben?\n(1 = jede Übung rückt eine Position weiter, 2 = zwei, … · leer/0 = exakte Kopie)`,
+      '0'
+    );
+    if (answer === null) return; // cancelled
+    const raw = parseInt(answer.trim(), 10);
+    const rotateBy = isNaN(raw) ? 0 : (exCount > 0 ? ((raw % exCount) + exCount) % exCount : 0);
+    duplicateGroup(roundIndex, groupIndex, rotateBy);
   }
 
   function addCustomExercise(roundIndex: number, groupIndex: number) {
@@ -701,20 +833,30 @@ export default function WorkoutEditorPage() {
 
                     return (
                     <div key={groupIndex} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 min-w-0 overflow-hidden">
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between mb-3 gap-2">
                         <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400">
                           Gruppe {groupIndex + 1}
                         </h4>
-                        <button
-                          onClick={() => toggleGroupSettings(roundIndex, groupIndex)}
-                          className={`text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border ${
-                            groupHasCustomTime
-                              ? 'border-cyan-500 text-cyan-400 bg-cyan-500/10'
-                              : 'border-hclub-gray/50 text-gray-500 hover:text-gray-300'
-                          }`}
-                        >
-                          {groupHasCustomTime ? `${groupWorkTime}s/${groupRestTime}s` : 'Zeit'}
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => promptDuplicateGroup(roundIndex, groupIndex)}
+                            title="Gruppe duplizieren (mit optionaler Rotation)"
+                            className="text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border
+                                       border-hclub-gray/50 text-gray-400 hover:text-purple-300 hover:border-purple-500 hover:bg-purple-900/20"
+                          >
+                            Duplizieren
+                          </button>
+                          <button
+                            onClick={() => toggleGroupSettings(roundIndex, groupIndex)}
+                            className={`text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border ${
+                              groupHasCustomTime
+                                ? 'border-cyan-500 text-cyan-400 bg-cyan-500/10'
+                                : 'border-hclub-gray/50 text-gray-500 hover:text-gray-300'
+                            }`}
+                          >
+                            {groupHasCustomTime ? `${groupWorkTime}s/${groupRestTime}s` : 'Zeit'}
+                          </button>
+                        </div>
                       </div>
 
                       {isGroupExpanded && (
@@ -747,9 +889,53 @@ export default function WorkoutEditorPage() {
                           iconPickerOpen?.round === roundIndex &&
                           iconPickerOpen?.group === groupIndex &&
                           iconPickerOpen?.ex === exIdx;
+                        const isDragging =
+                          dragExercise?.round === roundIndex &&
+                          dragExercise?.group === groupIndex &&
+                          dragExercise?.ex === exIdx;
+                        const isDragOver =
+                          dragOverExercise?.round === roundIndex &&
+                          dragOverExercise?.group === groupIndex &&
+                          dragOverExercise?.ex === exIdx &&
+                          !isDragging;
                         return (
-                        <div key={exIdx} className="mb-2">
-                          <div className="flex gap-2 min-w-0">
+                        <div key={exIdx}
+                          className={`mb-2 rounded-lg transition-all ${isDragging ? 'opacity-40' : ''} ${isDragOver ? 'ring-2 ring-hclub-magenta ring-offset-2 ring-offset-hclub-dark' : ''}`}
+                          onDragOver={(e) => {
+                            if (!dragExercise || dragExercise.round !== roundIndex || dragExercise.group !== groupIndex) return;
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'move';
+                            if (dragOverExercise?.ex !== exIdx || dragOverExercise?.group !== groupIndex || dragOverExercise?.round !== roundIndex) {
+                              setDragOverExercise({ round: roundIndex, group: groupIndex, ex: exIdx });
+                            }
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (dragExercise && dragExercise.round === roundIndex && dragExercise.group === groupIndex) {
+                              reorderExerciseInGroup(roundIndex, groupIndex, dragExercise.ex, exIdx);
+                            }
+                            setDragExercise(null);
+                            setDragOverExercise(null);
+                          }}>
+                          <div className="flex gap-2 min-w-0 items-center">
+                            {/* Drag handle: Übung per Ziehen umsortieren */}
+                            <div
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.effectAllowed = 'move';
+                                e.dataTransfer.setData('text/plain', String(exIdx));
+                                setDragExercise({ round: roundIndex, group: groupIndex, ex: exIdx });
+                              }}
+                              onDragEnd={() => { setDragExercise(null); setDragOverExercise(null); }}
+                              title="Ziehen zum Umsortieren"
+                              className="flex-shrink-0 w-6 h-9 flex items-center justify-center cursor-grab active:cursor-grabbing text-gray-500 hover:text-hclub-magenta select-none"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <circle cx="6" cy="4" r="1.6" /><circle cx="14" cy="4" r="1.6" />
+                                <circle cx="6" cy="10" r="1.6" /><circle cx="14" cy="10" r="1.6" />
+                                <circle cx="6" cy="16" r="1.6" /><circle cx="14" cy="16" r="1.6" />
+                              </svg>
+                            </div>
                             {/* Icon picker: nur für Admins */}
                             {isAdmin && (
                               <button type="button"
