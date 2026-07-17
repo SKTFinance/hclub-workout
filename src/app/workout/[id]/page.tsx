@@ -842,6 +842,14 @@ export default function WorkoutEditorPage() {
                     onChange={(e) => { const val = Math.max(0, Math.min(300, parseInt(e.target.value) || 0)); updateConfig({ warmupTime: val }); }}
                     className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-cyan-400" />
                 </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Rundenpause (s)</label>
+                  <input type="number" min={0} max={600}
+                    value={config.roundRestTime ?? 60}
+                    onChange={(e) => { const val = Math.max(0, Math.min(600, parseInt(e.target.value) || 0)); updateConfig({ roundRestTime: val }); }}
+                    className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-cyan-400" />
+                  <p className="text-[11px] text-gray-500 mt-1 font-oswald">Pause zwischen den Runden · 0 = Standard 60 Sek.</p>
+                </div>
               </div>
 
               {/* Timer pro Runde Toggle */}

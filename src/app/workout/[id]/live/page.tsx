@@ -1161,7 +1161,7 @@ export default function LiveWorkoutPage() {
         const phaseTotal =
           phase === 'work' ? workTimeTotal :
           phase === 'rest' ? getRestTimeForRound(config, currentRound) :
-          phase === 'roundRest' ? config.roundRestTime : 0;
+          phase === 'roundRest' ? (config.roundRestTime || 60) : 0;
         const fillPct = phaseTotal > 0 ? Math.max(0, Math.min(100, (timeRemaining / phaseTotal) * 100)) : 0;
         const barColor =
           phase === 'work' ? '#FF00FF' :
