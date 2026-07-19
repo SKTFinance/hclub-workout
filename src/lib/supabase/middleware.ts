@@ -29,27 +29,35 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Robust: ein Fehler beim Auth-Check (z. B. Supabase-Hänger) darf NIEMALS
+  // die ganze App mit MIDDLEWARE_INVOCATION_FAILED (500) lahmlegen. Im
+  // Fehlerfall Request einfach durchlassen statt zu werfen.
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  // Protected routes
-  const isProtected =
-    request.nextUrl.pathname.startsWith('/dashboard') ||
-    request.nextUrl.pathname.startsWith('/workout') ||
-    request.nextUrl.pathname.startsWith('/settings') ||
-    request.nextUrl.pathname.startsWith('/admin');
+    // Protected routes
+    const isProtected =
+      request.nextUrl.pathname.startsWith('/dashboard') ||
+      request.nextUrl.pathname.startsWith('/workout') ||
+      request.nextUrl.pathname.startsWith('/settings') ||
+      request.nextUrl.pathname.startsWith('/admin');
 
-  if (!user && isProtected) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
-  }
+    if (!user && isProtected) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      return NextResponse.redirect(url);
+    }
 
-  if (user && request.nextUrl.pathname === '/login') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
+    if (user && request.nextUrl.pathname === '/login') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
+  } catch (err) {
+    console.error('[middleware] Auth-Check fehlgeschlagen, Request wird durchgelassen:', err);
+    return supabaseResponse;
   }
 
   return supabaseResponse;
