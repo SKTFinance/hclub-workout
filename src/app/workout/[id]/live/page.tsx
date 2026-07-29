@@ -927,25 +927,31 @@ export default function LiveWorkoutPage() {
           </div>
         )}
 
-        {/* Top bar: Elapsed / Round Timer */}
+        {/* Top bar: Gesamtzeit-Countdown prominent */}
         <div className="rd-topbar flex items-center justify-between px-4 py-2 md:py-3 shrink-0 relative z-10">
           <div className="flex flex-col">
             <div className="rd-timer-label font-oswald text-[10px] uppercase">
               AMRAP{totalBlocks > 1 ? ` — Runde ${forTimeCurrentBlock + 1}/${totalBlocks}` : ''}
             </div>
-            <div className="rd-timer font-oswald font-bold" style={{ fontSize: 'min(8vw, 2.75rem)' }}>
-              {formatTime(forTimeElapsed)}
-            </div>
+            {roundTimerActive ? (
+              <div className="rd-timer-label font-oswald text-[11px] uppercase text-gray-500">
+                Vergangen {formatTime(forTimeElapsed)}
+              </div>
+            ) : (
+              <div className="rd-timer font-oswald font-bold" style={{ fontSize: 'min(8vw, 2.75rem)' }}>
+                {formatTime(forTimeElapsed)}
+              </div>
+            )}
           </div>
 
-          {/* Round countdown timer */}
+          {/* Gesamtzeit-Countdown — grosser Timer, laeuft runter */}
           {roundTimerActive && (
             <div className={`flex flex-col items-center ${roundTimerExpired ? 'text-red-400' : forTimeRoundTimeRemaining <= 30 ? 'text-yellow-400' : 'text-hclub-magenta'}`}>
-              <div className="rd-timer-label text-[10px] font-oswald uppercase">
-                Rundenzeit
+              <div className="rd-timer-label text-[10px] md:text-xs font-oswald uppercase tracking-widest">
+                Restzeit
               </div>
-              <div className={`font-oswald font-bold ${roundTimerExpired ? 'heartbeat' : 'rd-timer-accent'}`}
-                style={{ fontSize: 'min(10vw, 3.25rem)', textShadow: roundTimerExpired ? '0 0 30px #f87171' : forTimeRoundTimeRemaining <= 30 ? '0 0 20px #facc15' : undefined }}>
+              <div className={`font-oswald font-bold leading-none ${roundTimerExpired ? 'heartbeat' : 'rd-timer-accent'}`}
+                style={{ fontSize: 'min(17vw, 6.5rem)', textShadow: roundTimerExpired ? '0 0 40px #f87171' : forTimeRoundTimeRemaining <= 30 ? '0 0 26px #facc15' : '0 0 22px rgba(255,0,255,0.4)' }}>
                 {formatTime(forTimeRoundTimeRemaining)}
               </div>
             </div>
@@ -961,118 +967,50 @@ export default function LiveWorkoutPage() {
           <div className="flex h-full" style={{ minWidth: config.numGroups > 4 ? `${config.numGroups * 160}px` : '100%' }}>
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const exercises = currentBlockData?.exercises?.[gIdx] || [];
-              const currentIdx = forTimeCurrentExIndex[gIdx] || 0;
-              const isFinished = forTimeGroupFinished[gIdx];
-              const groupRounds = forTimeGroupRounds[gIdx] || 0;
-
-              const currentExName = exercises[currentIdx]?.name || '';
 
               return (
                 <div key={gIdx}
-                  className={`rd-col ${isFinished ? '' : 'rd-col-active cursor-pointer'} flex-1 flex flex-col relative`}
+                  className="rd-col rd-col-active flex-1 flex flex-col relative"
                   style={{
-                    backgroundColor: isFinished ? '#07160a' : undefined,
                     borderRight: gIdx < config.numGroups - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
                     minWidth: config.numGroups > 4 ? '160px' : undefined,
                   }}
-                  onClick={() => !isFinished && forTimeAdvanceGroup(gIdx)}
                 >
-                  {/* Current exercise image — Schein in der Übungsfarbe */}
-                  {!isFinished && (
-                    <div className="px-3 pt-2 shrink-0 flex justify-center">
-                      <div className="rd-img-frame rd-img-color" style={{ width: '100%', maxWidth: config.numGroups > 4 ? 130 : 180, aspectRatio: '4 / 3', ['--ex-color' as string]: getExerciseColor(currentExName) }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={getExerciseImage(currentExName)} alt={currentExName}
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
-                      </div>
-                    </div>
-                  )}
-
                   {/* Group header */}
-                  <div className="px-3 pt-2 pb-1 border-b border-white/5 shrink-0">
-                    <div className="font-oswald text-xs uppercase tracking-widest text-gray-500 flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        Gruppe {gIdx + 1}
-                        {roundTimerActive && groupRounds > 0 && (
-                          <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold tracking-normal">
-                            {groupRounds} {groupRounds === 1 ? 'Durchgang' : 'Durchgänge'}
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-cyan-500 text-[10px]">({gIdx + 1})</span>
+                  <div className="px-3 pt-3 pb-2 border-b border-white/5 shrink-0 text-center">
+                    <div className="font-oswald text-sm md:text-base uppercase tracking-widest text-gray-300">
+                      Gruppe {gIdx + 1}
                     </div>
-                    {!isFinished && (
-                      <div className="mt-1 flex gap-1">
-                        {exercises.map((_, idx) => (
-                          <div key={idx} className="h-1 rounded-full flex-1 transition-all"
-                            style={{
-                              backgroundColor: idx < currentIdx ? '#22c55e' : idx === currentIdx ? getExerciseColor(exercises[idx]?.name || '') : '#333',
-                              opacity: idx === currentIdx ? 1 : 0.6,
-                            }} />
-                        ))}
-                      </div>
-                    )}
                   </div>
 
-                  {/* Exercise list — alle gleichzeitig sichtbar */}
-                  <div className="flex-1 overflow-y-auto py-2">
-                    {isFinished ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className={`font-oswald ${config.numGroups > 5 ? 'text-2xl' : 'text-4xl md:text-5xl'} uppercase tracking-wider text-green-400`}>
-                          Fertig!
-                        </div>
-                      </div>
+                  {/* Übersicht — alle Übungen gleichwertig sichtbar */}
+                  <div className="flex-1 overflow-y-auto py-2 flex flex-col justify-center">
+                    {exercises.length === 0 ? (
+                      <div className="text-center text-gray-600 font-oswald uppercase text-sm">—</div>
                     ) : (
                       exercises.map((ex, eIdx) => {
-                        const isDone = eIdx < currentIdx;
-                        const isCurrent = eIdx === currentIdx;
                         const exerciseColor = getExerciseColor(ex.name);
-
                         return (
                           <div key={eIdx}
-                            className={`mx-2 mb-2 rounded-lg px-3 py-2 transition-all ${
-                              isDone
-                                ? 'opacity-30 line-through'
-                                : isCurrent
-                                ? 'ring-1 ring-white/20'
-                                : 'opacity-60'
-                            }`}
+                            className="mx-2 mb-2 rounded-lg px-3 py-2"
                             style={{
-                              backgroundColor: isCurrent
-                                ? `${exerciseColor}18`
-                                : isDone ? 'transparent' : 'rgba(255,255,255,0.03)',
-                              borderLeft: isCurrent ? `3px solid ${exerciseColor}` : '3px solid transparent',
+                              backgroundColor: `${exerciseColor}18`,
+                              borderLeft: `3px solid ${exerciseColor}`,
                             }}
                           >
                             <div
                               className={`font-oswald uppercase tracking-wide ${
-                                isCurrent
-                                  ? config.numGroups > 5 ? 'text-base md:text-lg' : 'text-lg md:text-2xl'
-                                  : config.numGroups > 5 ? 'text-sm md:text-base' : 'text-base md:text-lg'
+                                config.numGroups > 5 ? 'text-base md:text-xl' : 'text-xl md:text-3xl'
                               }`}
-                              style={{ color: isCurrent ? exerciseColor : isDone ? '#555' : exerciseColor }}
+                              style={{ color: exerciseColor }}
                             >
                               {formatExerciseLabel(ex)}
                             </div>
-                            {isCurrent && (
-                              <div className="text-gray-500 text-[10px] font-oswald uppercase mt-0.5">
-                                Aktuell
-                              </div>
-                            )}
                           </div>
                         );
                       })
                     )}
                   </div>
-
-                  {/* Click hint */}
-                  {!isFinished && (
-                    <div className="px-3 pb-2 shrink-0">
-                      <div className="text-center text-gray-600 text-xs font-oswald uppercase border border-white/5 rounded py-1">
-                        Klick / Taste {gIdx + 1}
-                      </div>
-                    </div>
-                  )}
 
                 </div>
               );
@@ -1094,7 +1032,7 @@ export default function LiveWorkoutPage() {
             </button>
             <span className="text-gray-400 text-sm">{workout.trainer_name}</span>
           </div>
-          <span className="text-gray-500 text-xs">Taste 1-{config.numGroups} = Übung abhaken</span>
+          <span className="font-oswald text-lg tracking-wider text-gray-500">H-<span className="text-hclub-magenta">CLUB</span></span>
         </div>
       </div>
     );
@@ -1275,10 +1213,20 @@ export default function LiveWorkoutPage() {
               })}
             </div>
           </div>
-          <button onClick={() => setTimeRemaining(0)}
-            className="shrink-0 px-8 py-2.5 bg-green-600 hover:bg-green-500 text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-colors">
-            Weiter &rarr;
-          </button>
+          <div className="shrink-0 flex items-center gap-3">
+            <button onClick={() => setTimeRemaining((t) => Math.max(0, t - 15))}
+              className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-colors">
+              -15s
+            </button>
+            <button onClick={() => setTimeRemaining(0)}
+              className="px-8 py-2.5 bg-green-600 hover:bg-green-500 text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-colors">
+              Weiter &rarr;
+            </button>
+            <button onClick={() => setTimeRemaining((t) => t + 15)}
+              className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-colors">
+              +15s
+            </button>
+          </div>
         </div>
       )}
 
@@ -1391,16 +1339,16 @@ export default function LiveWorkoutPage() {
               height: clamp(5px, 2.2cqmin, 12px);
               border-radius: 9999px;
             }
-            /* "NÄCHSTE"-Box: skaliert mit, max. 2 Zeilen */
+            /* "NÄCHSTE"-Box: groesser, aus der Ferne lesbar, max. 2 Zeilen */
             .work-col-next {
               display: flex;
               align-items: center;
               justify-content: center;
               text-align: center;
               max-width: 100%;
-              font-size: clamp(11px, 4.5cqmin, 26px);
+              font-size: clamp(15px, 7cqmin, 44px);
               line-height: 1.1;
-              padding: 0.4em 0.7em;
+              padding: 0.35em 0.7em;
               border-radius: 8px;
               background: rgba(255,255,255,0.04);
               border: 1px solid rgba(255,255,255,0.08);
