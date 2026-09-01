@@ -26,6 +26,24 @@ export interface ExerciseEntry {
   reps?: number;       // number of repetitions
   distance?: string;   // e.g. "500m", "50m"
   duration?: number;   // seconds (for timed holds like planks in fortime mode)
+  /**
+   * Freitext-Notiz statt einer Uebung.
+   *
+   * Guido, 01.09.2026: „Waere es moeglich bei Bedarf ein Notizfeld einzufuegen"
+   * — mit dem Beispiel „Bei jeder neuen Runde die Distanz um die Haelfte
+   * reduzieren!". Solche Ansagen passen in keine Uebungszeile und gingen bisher
+   * verloren.
+   *
+   * ⛔ Bewusst ein FELD am bestehenden Eintrag statt eines eigenen Typs: Die
+   * Reihenfolge in der Gruppe traegt die Bedeutung („diese Notiz gilt ab hier"),
+   * und mit einer zweiten Liste muesste man sie an jeder Stelle wieder
+   * zusammenfuehren. Alle bestehenden Workouts bleiben unveraendert gueltig —
+   * ohne dieses Feld ist der Eintrag eine Uebung wie bisher.
+   *
+   * ⚠️ Ist es gesetzt, traegt `name` den Notiztext, und `reps`/`distance`/
+   * `duration` sind bedeutungslos.
+   */
+  isNote?: boolean;
 }
 
 export interface AmrapBlock {

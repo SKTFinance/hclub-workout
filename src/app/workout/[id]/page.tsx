@@ -357,6 +357,37 @@ export default function WorkoutEditorPage() {
     setForTimeBlocks([...blocks, newBlock]);
   }
 
+  /**
+   * Einen ganzen Block samt allen Gruppen kopieren.
+   *
+   * Guido, 01.09.2026: „Es waere eine grosse Erleichterung, wenn es moeglich
+   * waere einzelne Bloecke zu markieren und zu kopieren. Dann muss man bei
+   * vielen Gruppen speziell im AMRAP die Bloecke nicht immer neu eingeben."
+   *
+   * ⛔ Tiefe Kopie ueber JSON, wie im ganzen Rest dieser Datei: Eine flache
+   * Kopie teilte die Uebungslisten mit dem Original — wer danach im neuen Block
+   * etwas aenderte, aenderte es unbemerkt auch im alten.
+   *
+   * Der neue Block wird DIREKT hinter dem Original eingefuegt, nicht ans Ende:
+   * Wer kopiert, will meistens variieren, und dann gehoert das Ergebnis dorthin,
+   * wo man gerade arbeitet.
+   */
+  function duplicateForTimeBlock(blockIndex: number) {
+    const blocks: ForTimeBlock[] = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    const original = blocks[blockIndex];
+    if (!original) return;
+    blocks.splice(blockIndex + 1, 0, JSON.parse(JSON.stringify(original)));
+    setForTimeBlocks(blocks);
+  }
+
+  /** Eine Notizzeile in eine Gruppe einfuegen. */
+  function addForTimeBlockNote(blockIndex: number, groupIndex: number) {
+    const blocks = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
+    blocks[blockIndex].exercises[groupIndex].push({ name: '', isNote: true });
+    setForTimeBlocks(blocks);
+  }
+
   function removeForTimeBlock(blockIndex: number) {
     const blocks = getForTimeBlocks();
     if (blocks.length <= 1) return;
@@ -900,6 +931,10 @@ export default function WorkoutEditorPage() {
                   <h3 className="font-oswald text-xl uppercase tracking-wider text-cyan-400">
                     Runde {bIdx + 1}
                   </h3>
+                  <button onClick={() => duplicateForTimeBlock(bIdx)}
+                    className="text-xs text-cyan-400 hover:text-white font-oswald uppercase px-2 py-1 border border-cyan-400/30 rounded-lg">
+                    Runde kopieren
+                  </button>
                   {getForTimeBlocks().length > 1 && (
                     <button onClick={() => removeForTimeBlock(bIdx)}
                       className="text-xs text-red-400 hover:text-red-300 font-oswald uppercase px-2 py-1 border border-red-400/30 rounded-lg">
@@ -924,6 +959,23 @@ export default function WorkoutEditorPage() {
                         </h4>
                         {exercises.map((ex, eIdx) => {
                           const measureType = ex.distance ? 'distance' : ex.duration ? 'duration' : 'reps';
+                          // Eine Notiz ist keine Uebung: kein Uebungs-Auswahlfeld,
+                          // keine Wiederholungen, keine Meter. Nur Text.
+                          if (ex.isNote) {
+                            return (
+                              <div key={eIdx} className="mb-3 p-2 bg-yellow-400/5 rounded-lg border border-yellow-400/30">
+                                <div className="flex gap-2 items-center min-w-0">
+                                  <span className="flex-shrink-0 text-yellow-400 text-xs font-oswald uppercase">Notiz</span>
+                                  <input type="text" value={ex.name}
+                                    placeholder="z.B. Bei jeder Runde die Distanz halbieren"
+                                    onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { name: e.target.value })}
+                                    className="flex-1 min-w-0 px-2 py-1 bg-hclub-black border border-yellow-400/30 rounded text-white text-xs focus:outline-none focus:border-yellow-400" />
+                                  <button onClick={() => removeForTimeBlockExercise(bIdx, gIdx, eIdx)}
+                                    className="flex-shrink-0 text-red-400 hover:text-red-300 text-sm px-1">x</button>
+                                </div>
+                              </div>
+                            );
+                          }
                           return (
                             <div key={eIdx} className="mb-3 p-2 bg-hclub-black/50 rounded-lg border border-hclub-gray/30">
                               <div className="flex gap-2 mb-2 items-center min-w-0">
@@ -963,8 +1015,12 @@ export default function WorkoutEditorPage() {
                             </div>
                           );
                         })}
-                        <button onClick={() => addForTimeBlockExercise(bIdx, gIdx)}
-                          className="text-xs text-cyan-400 hover:text-white transition-colors font-oswald uppercase mt-2">+ Übung</button>
+                        <div className="flex gap-3 mt-2">
+                          <button onClick={() => addForTimeBlockExercise(bIdx, gIdx)}
+                            className="text-xs text-cyan-400 hover:text-white transition-colors font-oswald uppercase">+ Übung</button>
+                          <button onClick={() => addForTimeBlockNote(bIdx, gIdx)}
+                            className="text-xs text-yellow-400 hover:text-white transition-colors font-oswald uppercase">+ Notiz</button>
+                        </div>
                         <div className="flex gap-2 mt-2 min-w-0">
                           <input type="text" value={customForTimeExercise[`${bIdx}-${gIdx}`] || ''}
                             onChange={(e) => setCustomForTimeExercise(prev => ({ ...prev, [`${bIdx}-${gIdx}`]: e.target.value }))}

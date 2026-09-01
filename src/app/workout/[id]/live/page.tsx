@@ -465,7 +465,14 @@ export default function LiveWorkoutPage() {
     const exercises = currentBlock.exercises?.[groupIndex] || [];
 
     setForTimeCurrentExIndex(prev => {
-      const nextIdx = (prev[groupIndex] || 0) + 1;
+      // ⛔ NOTIZEN UEBERSPRINGEN. Eine Notiz ist kein Schritt, den man abhakt —
+      // sie stuende sonst als „aktuelle Uebung" da und muesste weggetippt
+      // werden, obwohl gar nichts zu tun ist. Die Schleife laeuft weiter, bis
+      // eine echte Uebung kommt oder die Liste zu Ende ist.
+      let nextIdx = (prev[groupIndex] || 0) + 1;
+      while (nextIdx < exercises.length && exercises[nextIdx]?.isNote) {
+        nextIdx += 1;
+      }
       if (nextIdx >= exercises.length) {
         // AMRAP mit Rundentimer: Gruppe ist durch → Durchgang zählen und wieder vorne anfangen,
         // bis der Rundentimer abläuft (echtes AMRAP). Ohne Timer: Gruppe gilt als fertig.
@@ -961,7 +968,10 @@ export default function LiveWorkoutPage() {
           <div className="flex h-full" style={{ minWidth: config.numGroups > 4 ? `${config.numGroups * 160}px` : '100%' }}>
             {Array.from({ length: config.numGroups }, (_, gIdx) => {
               const exercises = currentBlockData?.exercises?.[gIdx] || [];
-              const currentIdx = forTimeCurrentExIndex[gIdx] || 0;
+              // Steht der Zeiger auf einer Notiz (etwa weil sie ganz oben liegt),
+      // gilt die erste echte Uebung danach als aktuell.
+      let currentIdx = forTimeCurrentExIndex[gIdx] || 0;
+      while (currentIdx < exercises.length && exercises[currentIdx]?.isNote) currentIdx += 1;
               const isFinished = forTimeGroupFinished[gIdx];
               const groupRounds = forTimeGroupRounds[gIdx] || 0;
 
@@ -1024,6 +1034,32 @@ export default function LiveWorkoutPage() {
                       </div>
                     ) : (
                       exercises.map((ex, eIdx) => {
+                        // ⛔ EINE NOTIZ IST KEINE UEBUNG. Sie wird nicht
+                        // abgehakt, nicht durchgestrichen und zaehlt nicht zum
+                        // Fortschritt — sie steht als Ansage da, solange der
+                        // Block laeuft. Guido, 01.09.2026: „Bei jeder neuen
+                        // Runde die Distanz um die Haelfte reduzieren!" Eine
+                        // solche Regel gilt fuer den ganzen Block, nicht fuer
+                        // einen Schritt darin.
+                        if (ex.isNote) {
+                          if (!ex.name.trim()) return null;
+                          return (
+                            <div key={eIdx}
+                              className="mx-2 mb-2 rounded-lg px-3 py-2"
+                              style={{
+                                backgroundColor: 'rgba(250,204,21,0.10)',
+                                borderLeft: '3px solid #facc15',
+                              }}
+                            >
+                              <div className={`font-oswald tracking-wide text-yellow-300 ${
+                                config.numGroups > 5 ? 'text-xs md:text-sm' : 'text-sm md:text-base'
+                              }`}>
+                                {ex.name}
+                              </div>
+                            </div>
+                          );
+                        }
+
                         const isDone = eIdx < currentIdx;
                         const isCurrent = eIdx === currentIdx;
                         const exerciseColor = getExerciseColor(ex.name);
