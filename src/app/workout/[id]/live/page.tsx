@@ -1256,12 +1256,39 @@ export default function LiveWorkoutPage() {
       {phase === 'roundRest' && (
         <div className="rest-wrap">
           <h2 className="rest-head font-oswald uppercase tracking-widest text-orange-400">Rundenpause</h2>
-          <p className="rest-sub font-oswald uppercase tracking-wider text-gray-400">Nächste: Runde {currentRound + 1}</p>
+          {/*
+            ⛔⛔ IM AMRAP-MODUS STEHEN DIE UEBUNGEN WOANDERS.
+            Guido, 01.09.2026: „Die Anzeige passt nicht zu dem Workout, das sind
+            nicht die kommenden Uebungen." Sein Workout hatte Run / Sandbag
+            Lunges / Rowing / Skierg — die Pause zeigte Burpees und dreimal Wall
+            Balls.
+
+            Die Ursache: Diese Anzeige las IMMER `config.rounds`, und das ist die
+            Struktur des Intervall-Modus. Im AMRAP-Modus (intern `fortime`)
+            liegen die Uebungen in `forTimeBlocks`. `rounds` ist dort entweder
+            leer — dann stand „Uebung" da — oder es enthaelt ALTE Eintraege aus
+            einer frueheren Fassung des Workouts, als es noch als Intervall
+            angelegt war. Genau das hat Guido gesehen: Reste eines anderen
+            Workouts, die aussahen wie eine Ansage.
+
+            ⚠️ Auch die Unterzeile war falsch: „Naechste: Runde N" gibt es im
+            AMRAP nicht, dort sind es BLOECKE. Bei einem Ein-Block-Workout stand
+            „Naechste: Runde 1", obwohl gar keine folgte.
+          */}
+          <p className="rest-sub font-oswald uppercase tracking-wider text-gray-400">
+            {workoutMode === 'fortime'
+              ? `Nächster Block: ${forTimeCurrentBlock + 1} von ${getForTimeBlocks(config).length}`
+              : `Nächste: Runde ${currentRound + 1}`}
+          </p>
           <div className="rest-grid-wrap">
             <div className="rest-grid">
               {Array.from({ length: config.numGroups }, (_, gIdx) => {
-                const nextExercises = config.rounds[currentRound]?.[gIdx] || [];
-                const nextEx = nextExercises[0] || 'Übung';
+                // `forTimeCurrentBlock` steht beim Betreten der Pause bereits auf
+                // dem NAECHSTEN Block (siehe die Auto-Weiterschaltung oben) — es
+                // wird also wirklich das gezeigt, was als Naechstes kommt.
+                const nextEx = workoutMode === 'fortime'
+                  ? (getForTimeBlocks(config)[forTimeCurrentBlock]?.exercises?.[gIdx]?.[0]?.name || 'Übung')
+                  : (config.rounds[currentRound]?.[gIdx]?.[0] || 'Übung');
                 return (
                   <div key={gIdx} className="rest-card rd-col rd-col-active">
                     <div className="rest-card-label text-gray-400 font-oswald uppercase tracking-wider">G{String.fromCharCode(65 + gIdx)}</div>
@@ -1391,19 +1418,20 @@ export default function LiveWorkoutPage() {
               height: clamp(5px, 2.2cqmin, 12px);
               border-radius: 9999px;
             }
-            /* "NÄCHSTE"-Box: skaliert mit, max. 2 Zeilen */
+            /* "NÄCHSTE"-Box: groesser fuer TV-Lesbarkeit (Guido-Feedback), max. 2 Zeilen */
             .work-col-next {
               display: flex;
               align-items: center;
               justify-content: center;
               text-align: center;
               max-width: 100%;
-              font-size: clamp(11px, 4.5cqmin, 26px);
+              font-size: clamp(16px, 7cqmin, 40px);
+              font-weight: 600;
               line-height: 1.1;
-              padding: 0.4em 0.7em;
+              padding: 0.45em 0.8em;
               border-radius: 8px;
-              background: rgba(255,255,255,0.04);
-              border: 1px solid rgba(255,255,255,0.08);
+              background: rgba(255,255,255,0.06);
+              border: 1px solid rgba(255,255,255,0.12);
             }
             .work-col-next > span {
               display: -webkit-box;
