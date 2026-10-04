@@ -32,6 +32,8 @@ export default function WorkoutEditorPage() {
   const [saving, setSaving] = useState(false);
   const [customExercise, setCustomExercise] = useState('');
   const [customForTimeExercise, setCustomForTimeExercise] = useState<Record<string, string>>({});
+  // AMRAP: eine einzelne Gruppe in der Ablage, zum Einfuegen in beliebige Runden/Gruppen
+  const [groupClipboard, setGroupClipboard] = useState<{ exercises: ExerciseEntry[]; label: string } | null>(null);
   const [expandedRoundSettings, setExpandedRoundSettings] = useState<Record<number, boolean>>({});
   const [expandedGroupSettings, setExpandedGroupSettings] = useState<Record<string, boolean>>({});
   // Local string states for number inputs
@@ -509,6 +511,37 @@ export default function WorkoutEditorPage() {
     const original = blocks[blockIndex];
     if (!original) return;
     blocks.splice(blockIndex + 1, 0, JSON.parse(JSON.stringify(original)));
+    setForTimeBlocks(blocks);
+  }
+
+  /**
+   * Eine einzelne Gruppe kopieren und woanders einfuegen (Baukasten).
+   *
+   * Guido, 04.10.2026: „ich will das kopieren im baukastenprinzip, und nicht die
+   * gesamte runde, damit ich die reihenfolge veraendern kann" — Runde 1 hat in
+   * Gruppe 1 die Uebungen xyz, Runde 2 hat sie in Gruppe 2. „Runde kopieren"
+   * nimmt alle Gruppen mit und laesst sie an derselben Stelle.
+   *
+   * Die Ablage bleibt nach dem Einfuegen gefuellt, damit man dieselbe Gruppe in
+   * mehrere Runden setzen kann. Tiefe Kopie aus demselben Grund wie oben.
+   */
+  function copyForTimeGroup(blockIndex: number, groupIndex: number) {
+    const exercises = getForTimeBlocks()[blockIndex]?.exercises?.[groupIndex] || [];
+    setGroupClipboard({
+      exercises: JSON.parse(JSON.stringify(exercises)),
+      label: `Runde ${blockIndex + 1} · Gruppe ${groupIndex + 1}`,
+    });
+  }
+
+  function pasteForTimeGroup(blockIndex: number, groupIndex: number) {
+    if (!groupClipboard) return;
+    const blocks: ForTimeBlock[] = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    const target = blocks[blockIndex]?.exercises?.[groupIndex] || [];
+    // Eine frisch angelegte Runde traegt je Gruppe den Platzhalter „Wall Balls 10" — den ohne Rueckfrage ueberschreiben
+    const nurPlatzhalter = target.length === 1 && target[0].name === 'Wall Balls' && target[0].reps === 10 && !target[0].distance && !target[0].duration;
+    const hatInhalt = !nurPlatzhalter && target.some((ex) => ex.isNote ? ex.name.trim() !== '' : !!ex.name);
+    if (hatInhalt && !window.confirm(`Runde ${blockIndex + 1} · Gruppe ${groupIndex + 1} ersetzen durch ${groupClipboard.label}?`)) return;
+    blocks[blockIndex].exercises[groupIndex] = JSON.parse(JSON.stringify(groupClipboard.exercises));
     setForTimeBlocks(blocks);
   }
 
@@ -1111,6 +1144,17 @@ export default function WorkoutEditorPage() {
             </div>
 
             {/* AMRAP Blocks (Runden) */}
+            {groupClipboard && (
+              <div className="sticky top-2 z-20 mb-4 flex flex-wrap items-center gap-3 px-4 py-2 rounded-xl border border-green-500/50 bg-hclub-dark/95 text-sm">
+                <span className="text-green-400 font-oswald uppercase tracking-wider text-xs">In der Ablage</span>
+                <span className="text-white">
+                  {groupClipboard.label} · {groupClipboard.exercises.filter((ex) => !ex.isNote).map((ex) => ex.name).join(', ') || 'leer'}
+                </span>
+                <span className="text-gray-500 text-xs">Bei jeder Gruppe auf „Einfügen“ tippen</span>
+                <button onClick={() => setGroupClipboard(null)}
+                  className="ml-auto text-xs text-gray-400 hover:text-white font-oswald uppercase">Ablage leeren</button>
+              </div>
+            )}
             {getForTimeBlocks().map((block, bIdx) => (
               <div key={bIdx} className="mb-8">
                 <div className="flex items-center gap-3 mb-4">
@@ -1140,9 +1184,25 @@ export default function WorkoutEditorPage() {
                     const exercises = block.exercises?.[gIdx] || [];
                     return (
                       <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 min-w-0 overflow-hidden">
-                        <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400 mb-3">
-                          Gruppe {gIdx + 1}
-                        </h4>
+                        <div className="flex items-center justify-between mb-3 gap-2">
+                          <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400">
+                            Gruppe {gIdx + 1}
+                          </h4>
+                          <div className="flex items-center gap-1.5">
+                            <button onClick={() => copyForTimeGroup(bIdx, gIdx)}
+                              title="Diese Gruppe in die Ablage kopieren"
+                              className="text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border border-hclub-gray/50 text-gray-400 hover:text-cyan-300 hover:border-cyan-500 hover:bg-cyan-900/20">
+                              Kopieren
+                            </button>
+                            {groupClipboard && (
+                              <button onClick={() => pasteForTimeGroup(bIdx, gIdx)}
+                                title={`${groupClipboard.label} hier einfügen`}
+                                className="text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border border-green-500/60 text-green-400 hover:text-white hover:bg-green-900/30">
+                                Einfügen
+                              </button>
+                            )}
+                          </div>
+                        </div>
                         {exercises.map((ex, eIdx) => {
                           const measureType = ex.distance ? 'distance' : ex.duration ? 'duration' : 'reps';
                           // Eine Notiz ist keine Uebung: kein Uebungs-Auswahlfeld,
