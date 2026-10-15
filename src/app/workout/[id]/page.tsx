@@ -289,7 +289,7 @@ export default function WorkoutEditorPage() {
   function promptDuplicateGroup(roundIndex: number, groupIndex: number) {
     const exCount = (config.rounds[roundIndex]?.[groupIndex] || []).length;
     const answer = window.prompt(
-      `Gruppe ${groupIndex + 1} duplizieren.\n\nWillst du die Anordnung um X verschieben?\n(1 = jede Übung rückt eine Position weiter, 2 = zwei, … · leer/0 = exakte Kopie)`,
+      `Duplicate group ${groupIndex + 1}.\n\nShift the order by X positions?\n(1 = each exercise moves one position, 2 = two, … · empty/0 = exact copy)`,
       '0'
     );
     if (answer === null) return; // cancelled
@@ -531,7 +531,7 @@ export default function WorkoutEditorPage() {
     const exercises = getForTimeBlocks()[blockIndex]?.exercises?.[groupIndex] || [];
     setGroupClipboard({
       exercises: JSON.parse(JSON.stringify(exercises)),
-      label: `Runde ${blockIndex + 1} · Gruppe ${groupIndex + 1}`,
+      label: `Round ${blockIndex + 1} · Group ${groupIndex + 1}`,
     });
   }
 
@@ -542,7 +542,7 @@ export default function WorkoutEditorPage() {
     // Eine frisch angelegte Runde traegt je Gruppe den Platzhalter „Wall Balls 10" — den ohne Rueckfrage ueberschreiben
     const nurPlatzhalter = target.length === 1 && target[0].name === 'Wall Balls' && target[0].reps === 10 && !target[0].distance && !target[0].duration;
     const hatInhalt = !nurPlatzhalter && target.some((ex) => ex.isNote ? ex.name.trim() !== '' : !!ex.name);
-    if (hatInhalt && !window.confirm(`Runde ${blockIndex + 1} · Gruppe ${groupIndex + 1} ersetzen durch ${groupClipboard.label}?`)) return;
+    if (hatInhalt && !window.confirm(`Replace round ${blockIndex + 1} · group ${groupIndex + 1} with ${groupClipboard.label}?`)) return;
     blocks[blockIndex].exercises[groupIndex] = JSON.parse(JSON.stringify(groupClipboard.exercises));
     setForTimeBlocks(blocks);
   }
@@ -618,7 +618,7 @@ export default function WorkoutEditorPage() {
             setForTimeDrag({ b: blockIndex, g: groupIndex, e: exIndex });
           }}
           onDragEnd={() => { setForTimeDrag(null); setForTimeDragOver(null); }}
-          title="Ziehen zum Umsortieren"
+          title="Drag to reorder"
           className="hidden sm:flex w-6 h-8 items-center justify-center cursor-grab active:cursor-grabbing text-gray-500 hover:text-hclub-magenta select-none"
         >
           <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -628,10 +628,10 @@ export default function WorkoutEditorPage() {
           </svg>
         </div>
         <div className="flex flex-col">
-          <button type="button" aria-label="Nach oben" title="Nach oben" disabled={exIndex === 0}
+          <button type="button" aria-label="Move up" title="Move up" disabled={exIndex === 0}
             onClick={() => moveForTimeBlockExercise(blockIndex, groupIndex, exIndex, exIndex - 1)}
             className="w-8 h-5 sm:w-6 sm:h-4 flex items-center justify-center text-gray-400 hover:text-hclub-magenta disabled:opacity-20 text-xs leading-none">&#9650;</button>
-          <button type="button" aria-label="Nach unten" title="Nach unten" disabled={exIndex === count - 1}
+          <button type="button" aria-label="Move down" title="Move down" disabled={exIndex === count - 1}
             onClick={() => moveForTimeBlockExercise(blockIndex, groupIndex, exIndex, exIndex + 1)}
             className="w-8 h-5 sm:w-6 sm:h-4 flex items-center justify-center text-gray-400 hover:text-hclub-magenta disabled:opacity-20 text-xs leading-none">&#9660;</button>
         </div>
@@ -730,7 +730,7 @@ export default function WorkoutEditorPage() {
           ))}
         </optgroup>
         {allExerciseOptions.fromLib.length > 0 && (
-          <optgroup label="Bibliothek">
+          <optgroup label="Library">
             {allExerciseOptions.fromLib.map((n) => (
               <option key={n} value={n}>{n}</option>
             ))}
@@ -746,7 +746,7 @@ export default function WorkoutEditorPage() {
   if (!workout) {
     return (
       <div className="min-h-screen bg-hclub-black flex items-center justify-center text-gray-400">
-        Laden...
+        Loading...
       </div>
     );
   }
@@ -761,7 +761,7 @@ export default function WorkoutEditorPage() {
               onClick={() => router.push('/dashboard')}
               className="text-gray-400 hover:text-white transition-colors font-oswald uppercase tracking-wider text-sm whitespace-nowrap py-2"
             >
-              &larr; Zurück
+              &larr; Back
             </button>
             <h1 className="font-oswald text-xl sm:text-2xl font-bold tracking-wider whitespace-nowrap">
               HYB<span className="text-hclub-magenta">RYD</span>
@@ -774,14 +774,14 @@ export default function WorkoutEditorPage() {
               className="px-4 sm:px-5 py-2.5 bg-hclub-gray hover:bg-gray-600 text-white font-oswald uppercase
                          tracking-wider rounded-lg transition-colors text-sm disabled:opacity-50"
             >
-              {saving ? 'Speichern...' : 'Speichern'}
+              {saving ? 'Saving...' : 'Save'}
             </button>
             <button
               onClick={startWorkout}
               className="px-4 sm:px-5 py-2.5 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald
                          uppercase tracking-wider rounded-lg transition-colors text-sm"
             >
-              Starten
+              Start
             </button>
           </div>
         </div>
@@ -792,7 +792,7 @@ export default function WorkoutEditorPage() {
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div>
             <label className="block text-sm text-gray-400 mb-1 font-oswald uppercase tracking-wider">
-              Workout Name
+              Workout name
             </label>
             <input
               type="text"
@@ -808,7 +808,7 @@ export default function WorkoutEditorPage() {
         <div className="grid md:grid-cols-3 gap-4 mb-8">
           <div>
             <label className="block text-sm text-gray-400 mb-1 font-oswald uppercase tracking-wider">
-              Workout-Modus
+              Workout mode
             </label>
             <select
               value={workoutMode}
@@ -816,7 +816,7 @@ export default function WorkoutEditorPage() {
               className="w-full px-4 py-2 bg-hclub-dark border border-hclub-gray rounded-lg text-white
                          focus:outline-none focus:border-hclub-magenta transition-colors"
             >
-              <option value="timed">Zeitbasiert (Timer)</option>
+              <option value="timed">Timed (timer)</option>
               <option value="fortime">AMRAP</option>
             </select>
           </div>
@@ -829,7 +829,7 @@ export default function WorkoutEditorPage() {
                 className="w-5 h-5 accent-hclub-magenta rounded"
               />
               <span className="text-sm font-oswald uppercase tracking-wider text-gray-300">
-                Öffentlich (andere Trainer sehen es)
+                Public (other trainers can see it)
               </span>
             </label>
           </div>
@@ -841,32 +841,32 @@ export default function WorkoutEditorPage() {
             {/* Timing settings */}
             <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8">
               <h3 className="font-oswald text-lg uppercase tracking-wider mb-4">
-                Zeiteinstellungen
+                Time settings
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Gruppen</label>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Groups</label>
                   <input type="text" inputMode="numeric" pattern="[0-9]*" value={groupsInput}
                     onChange={(e) => { setGroupsInput(e.target.value); const val = parseInt(e.target.value); if (!isNaN(val) && val >= 1 && val <= 10) updateConfig({ numGroups: val }); }}
                     onBlur={() => { const val = parseInt(groupsInput); const c = isNaN(val) || val < 1 ? 1 : Math.min(10, val); setGroupsInput(String(c)); updateConfig({ numGroups: c }); }}
                     className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-hclub-magenta" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Runden</label>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Rounds</label>
                   <input type="text" inputMode="numeric" pattern="[0-9]*" value={roundsInput}
                     onChange={(e) => { setRoundsInput(e.target.value); const val = parseInt(e.target.value); if (!isNaN(val) && val >= 1 && val <= 20) updateConfig({ numRounds: val }); }}
                     onBlur={() => { const val = parseInt(roundsInput); const c = isNaN(val) || val < 1 ? 1 : Math.min(20, val); setRoundsInput(String(c)); updateConfig({ numRounds: c }); }}
                     className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-hclub-magenta" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Rundenpause (s)</label>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Round rest (s)</label>
                   <input type="text" inputMode="numeric" pattern="[0-9]*" value={roundRestInput}
                     onChange={(e) => { setRoundRestInput(e.target.value); const val = parseInt(e.target.value); if (!isNaN(val) && val >= 0) updateConfig({ roundRestTime: Math.min(600, val) }); }}
                     onBlur={() => { const val = parseInt(roundRestInput); const c = isNaN(val) || val < 0 ? 0 : Math.min(600, val); setRoundRestInput(String(c)); updateConfig({ roundRestTime: c }); }}
                     className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-hclub-magenta" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Warmup (s)</label>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Warm-up (s)</label>
                   <input type="text" inputMode="numeric" pattern="[0-9]*" value={warmupInput}
                     onChange={(e) => { setWarmupInput(e.target.value); const val = parseInt(e.target.value); if (!isNaN(val) && val >= 0) updateConfig({ warmupTime: Math.min(300, val) }); }}
                     onBlur={() => { const val = parseInt(warmupInput); const c = isNaN(val) || val < 0 ? 0 : Math.min(300, val); setWarmupInput(String(c)); updateConfig({ warmupTime: c }); }}
@@ -880,7 +880,7 @@ export default function WorkoutEditorPage() {
               <button onClick={randomFill}
                 className="px-8 py-3 bg-cyan-900/40 hover:bg-hclub-magenta border border-cyan-500/50 hover:border-hclub-magenta
                            text-cyan-300 hover:text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-all duration-300">
-                Zufällig befüllen
+                Fill randomly
               </button>
             </div>
 
@@ -896,7 +896,7 @@ export default function WorkoutEditorPage() {
               <div key={roundIndex} className="mb-8">
                 <div className="flex items-center gap-3 mb-4">
                   <h3 className="font-oswald text-xl uppercase tracking-wider text-hclub-magenta">
-                    Runde {roundIndex + 1}
+                    Round {roundIndex + 1}
                   </h3>
                   <button
                     onClick={() => toggleRoundSettings(roundIndex)}
@@ -906,7 +906,7 @@ export default function WorkoutEditorPage() {
                         : 'border-hclub-gray text-gray-400 hover:text-white hover:border-gray-500'
                     }`}
                   >
-                    {isExpanded ? 'Zeiten' : 'Zeiten'}
+                    {isExpanded ? 'Times' : 'Times'}
                     {roundHasCustomSettings && ' *'}
                   </button>
                   {roundHasCustomSettings && !isExpanded && (
@@ -918,29 +918,29 @@ export default function WorkoutEditorPage() {
                     onClick={() => duplicateRound(roundIndex)}
                     className="text-xs px-3 py-1 rounded-lg font-oswald uppercase tracking-wider transition-colors border
                                border-hclub-gray text-gray-400 hover:text-cyan-300 hover:border-cyan-500 hover:bg-cyan-900/20"
-                    title="Runde kopieren"
+                    title="Copy round"
                   >
-                    Runde kopieren
+                    Copy round
                   </button>
                 </div>
 
                 {isExpanded && (
                   <div className="bg-hclub-dark/50 border border-hclub-gray/50 rounded-lg p-4 mb-4 flex flex-wrap gap-4 items-end">
                     <div>
-                      <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Arbeitszeit (s)</label>
+                      <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Work time (s)</label>
                       <input type="number" min={5} max={600} step={5} value={effectiveWorkTime}
                         onChange={(e) => { const val = parseInt(e.target.value) || config.workTime; updateRoundSetting(roundIndex, 'workTime', val === config.workTime ? undefined : val); }}
                         className="w-24 px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center text-sm focus:outline-none focus:border-hclub-magenta" />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Pause (s)</label>
+                      <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Rest (s)</label>
                       <input type="number" min={0} max={300} step={5} value={effectiveRestTime}
                         onChange={(e) => { const val = parseInt(e.target.value) || 0; updateRoundSetting(roundIndex, 'restTime', val === config.restTime ? undefined : val); }}
                         className="w-24 px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center text-sm focus:outline-none focus:border-hclub-magenta" />
                     </div>
                     {roundHasCustomSettings && (
                       <button onClick={() => { setConfig((prev) => { const rs = { ...(prev.roundSettings || {}) }; delete rs[roundIndex]; return { ...prev, roundSettings: rs }; }); }}
-                        className="text-xs text-red-400 hover:text-red-300 font-oswald uppercase px-3 py-2">Zurücksetzen</button>
+                        className="text-xs text-red-400 hover:text-red-300 font-oswald uppercase px-3 py-2">Reset</button>
                     )}
                   </div>
                 )}
@@ -966,16 +966,16 @@ export default function WorkoutEditorPage() {
                     <div key={groupIndex} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 min-w-0 overflow-hidden">
                       <div className="flex items-center justify-between mb-3 gap-2">
                         <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400">
-                          Gruppe {groupIndex + 1}
+                          Group {groupIndex + 1}
                         </h4>
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => promptDuplicateGroup(roundIndex, groupIndex)}
-                            title="Gruppe duplizieren (mit optionaler Rotation)"
+                            title="Duplicate group (with optional rotation)"
                             className="text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border
                                        border-hclub-gray/50 text-gray-400 hover:text-cyan-300 hover:border-cyan-500 hover:bg-cyan-900/20"
                           >
-                            Duplizieren
+                            Duplicate
                           </button>
                           <button
                             onClick={() => toggleGroupSettings(roundIndex, groupIndex)}
@@ -985,7 +985,7 @@ export default function WorkoutEditorPage() {
                                 : 'border-hclub-gray/50 text-gray-500 hover:text-gray-300'
                             }`}
                           >
-                            {groupHasCustomTime ? `${groupWorkTime}s/${groupRestTime}s` : 'Zeit'}
+                            {groupHasCustomTime ? `${groupWorkTime}s/${groupRestTime}s` : 'Custom'}
                           </button>
                         </div>
                       </div>
@@ -993,13 +993,13 @@ export default function WorkoutEditorPage() {
                       {isGroupExpanded && (
                         <div className="bg-hclub-black/50 border border-hclub-gray/30 rounded-lg p-3 mb-3 flex flex-wrap gap-3 items-end">
                           <div>
-                            <label className="block text-[10px] text-gray-500 mb-1 font-oswald uppercase">Arbeit (s)</label>
+                            <label className="block text-[10px] text-gray-500 mb-1 font-oswald uppercase">Work (s)</label>
                             <input type="number" min={5} max={600} step={5} value={groupWorkTime}
                               onChange={(e) => { const val = parseInt(e.target.value) || effectiveWorkTime; updateGroupTimeSetting(roundIndex, groupIndex, 'workTime', val === effectiveWorkTime ? undefined : val); }}
                               className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-center text-xs focus:outline-none focus:border-cyan-500" />
                           </div>
                           <div>
-                            <label className="block text-[10px] text-gray-500 mb-1 font-oswald uppercase">Pause (s)</label>
+                            <label className="block text-[10px] text-gray-500 mb-1 font-oswald uppercase">Rest (s)</label>
                             <input type="number" min={0} max={300} step={5} value={groupRestTime}
                               onChange={(e) => { const val = parseInt(e.target.value) || 0; updateGroupTimeSetting(roundIndex, groupIndex, 'restTime', val === effectiveRestTime ? undefined : val); }}
                               className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-center text-xs focus:outline-none focus:border-cyan-500" />
@@ -1058,7 +1058,7 @@ export default function WorkoutEditorPage() {
                                 setDragExercise({ round: roundIndex, group: groupIndex, ex: exIdx });
                               }}
                               onDragEnd={() => { setDragExercise(null); setDragOverExercise(null); }}
-                              title="Ziehen zum Umsortieren"
+                              title="Drag to reorder"
                               className="flex-shrink-0 w-6 h-9 flex items-center justify-center cursor-grab active:cursor-grabbing text-gray-500 hover:text-hclub-magenta select-none"
                             >
                               <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -1071,7 +1071,7 @@ export default function WorkoutEditorPage() {
                             {isAdmin && (
                               <button type="button"
                                 onClick={() => setIconPickerOpen(isPickerOpen ? null : { round: roundIndex, group: groupIndex, ex: exIdx })}
-                                title="Icon waehlen"
+                                title="Choose icon"
                                 className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
                                   isPickerOpen ? 'border-hclub-magenta bg-hclub-magenta/10'
                                   : overrideKey ? 'border-hclub-magenta/50 bg-hclub-dark'
@@ -1087,7 +1087,7 @@ export default function WorkoutEditorPage() {
                             )}
                             {renderExerciseSelect(exercise, (v) => setExercise(roundIndex, groupIndex, exIdx, v))}
                             <button onClick={() => removeExerciseFromGroup(roundIndex, groupIndex, exIdx)}
-                              className="flex-shrink-0 px-2 text-red-400 hover:text-red-300 text-sm" title="Entfernen">x</button>
+                              className="flex-shrink-0 px-2 text-red-400 hover:text-red-300 text-sm" title="Remove">x</button>
                           </div>
                           {isAdmin && isPickerOpen && (
                             <div className="mt-1 p-2 bg-hclub-black border border-hclub-magenta/40 rounded-lg overflow-hidden">
@@ -1115,12 +1115,12 @@ export default function WorkoutEditorPage() {
                       })}
                       <div className="flex gap-2 mt-2">
                         <button onClick={() => addExerciseToGroup(roundIndex, groupIndex)}
-                          className="text-xs text-hclub-magenta hover:text-white transition-colors font-oswald uppercase">+ Übung</button>
+                          className="text-xs text-hclub-magenta hover:text-white transition-colors font-oswald uppercase">+ Exercise</button>
                       </div>
                       <div className="flex gap-2 mt-2 min-w-0">
                         <input type="text" value={customExercise}
                           onChange={(e) => setCustomExercise(e.target.value)}
-                          placeholder="Eigene Übung..."
+                          placeholder="Custom exercise..."
                           className="flex-1 min-w-0 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-hclub-magenta"
                           onKeyDown={(e) => { if (e.key === 'Enter') addCustomExercise(roundIndex, groupIndex); }} />
                         <button onClick={() => addCustomExercise(roundIndex, groupIndex)}
@@ -1142,30 +1142,30 @@ export default function WorkoutEditorPage() {
           <>
             <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8">
               <h3 className="font-oswald text-lg uppercase tracking-wider mb-4 text-cyan-400">
-                AMRAP Einstellungen
+                AMRAP settings
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Gruppen</label>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Groups</label>
                   <input type="number" min={1} max={10}
                     value={config.numGroups}
                     onChange={(e) => { const val = Math.max(1, Math.min(10, parseInt(e.target.value) || 1)); updateConfig({ numGroups: val }); }}
                     className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-cyan-400" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Warmup (s)</label>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Warm-up (s)</label>
                   <input type="number" min={0} max={300}
                     value={config.warmupTime}
                     onChange={(e) => { const val = Math.max(0, Math.min(300, parseInt(e.target.value) || 0)); updateConfig({ warmupTime: val }); }}
                     className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-cyan-400" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Rundenpause (s)</label>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Round rest (s)</label>
                   <input type="number" min={0} max={600}
                     value={config.roundRestTime ?? 60}
                     onChange={(e) => { const val = Math.max(0, Math.min(600, parseInt(e.target.value) || 0)); updateConfig({ roundRestTime: val }); }}
                     className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-cyan-400" />
-                  <p className="text-[11px] text-gray-500 mt-1 font-oswald">Pause zwischen den Runden · 0 = Standard 60 Sek.</p>
+                  <p className="text-[11px] text-gray-500 mt-1 font-oswald">Rest between rounds · 0 = default 60 sec.</p>
                 </div>
               </div>
 
@@ -1180,7 +1180,7 @@ export default function WorkoutEditorPage() {
                       <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${forTimeRoundTimerEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
                     </div>
                     <span className="font-oswald uppercase tracking-wider text-sm text-gray-300">
-                      Timer pro Runde
+                      Timer per round
                     </span>
                   </label>
                   {forTimeRoundTimerEnabled && (
@@ -1193,18 +1193,18 @@ export default function WorkoutEditorPage() {
                         onChange={(e) => setForTimeRoundTimerMinutes(Math.max(1, Math.min(120, parseInt(e.target.value) || 12)))}
                         className="w-20 px-2 py-1 bg-hclub-black border border-cyan-500/60 rounded-lg text-white text-center text-sm focus:outline-none focus:border-cyan-400"
                       />
-                      <span className="text-gray-400 text-sm font-oswald uppercase">Minuten</span>
+                      <span className="text-gray-400 text-sm font-oswald uppercase">Minutes</span>
                     </div>
                   )}
                 </div>
                 {forTimeRoundTimerEnabled && (
                   <p className="text-xs text-cyan-400/70 mt-2 font-oswald">
-                    Countdown läuft während die Gruppen ihre Übungen absolvieren.
+                    Countdown runs while the groups work through their exercises.
                   </p>
                 )}
                 {!forTimeRoundTimerEnabled && (
                   <p className="text-xs text-gray-500 mt-2 font-oswald">
-                    Kein Timer — Gruppen klicken selbst weiter (Taste 1–{config.numGroups})
+                    No timer — groups advance themselves (key 1–{config.numGroups})
                   </p>
                 )}
               </div>
@@ -1213,29 +1213,29 @@ export default function WorkoutEditorPage() {
             {/* AMRAP Blocks (Runden) */}
             {groupClipboard && (
               <div className="sticky top-2 z-20 mb-4 flex flex-wrap items-center gap-3 px-4 py-2 rounded-xl border border-green-500/50 bg-hclub-dark/95 text-sm">
-                <span className="text-green-400 font-oswald uppercase tracking-wider text-xs">In der Ablage</span>
+                <span className="text-green-400 font-oswald uppercase tracking-wider text-xs">On the clipboard</span>
                 <span className="text-white">
                   {groupClipboard.label} · {groupClipboard.exercises.filter((ex) => !ex.isNote).map((ex) => ex.name).join(', ') || 'leer'}
                 </span>
-                <span className="text-gray-500 text-xs">Bei jeder Gruppe auf „Einfügen“ tippen</span>
+                <span className="text-gray-500 text-xs">Tap "Paste" on each group</span>
                 <button onClick={() => setGroupClipboard(null)}
-                  className="ml-auto text-xs text-gray-400 hover:text-white font-oswald uppercase">Ablage leeren</button>
+                  className="ml-auto text-xs text-gray-400 hover:text-white font-oswald uppercase">Clear clipboard</button>
               </div>
             )}
             {getForTimeBlocks().map((block, bIdx) => (
               <div key={bIdx} className="mb-8">
                 <div className="flex items-center gap-3 mb-4">
                   <h3 className="font-oswald text-xl uppercase tracking-wider text-cyan-400">
-                    Runde {bIdx + 1}
+                    Round {bIdx + 1}
                   </h3>
                   <button onClick={() => duplicateForTimeBlock(bIdx)}
                     className="text-xs text-cyan-400 hover:text-white font-oswald uppercase px-2 py-1 border border-cyan-400/30 rounded-lg">
-                    Runde kopieren
+                    Copy round
                   </button>
                   {getForTimeBlocks().length > 1 && (
                     <button onClick={() => removeForTimeBlock(bIdx)}
                       className="text-xs text-red-400 hover:text-red-300 font-oswald uppercase px-2 py-1 border border-red-400/30 rounded-lg">
-                      Runde entfernen
+                      Remove round
                     </button>
                   )}
                 </div>
@@ -1253,19 +1253,19 @@ export default function WorkoutEditorPage() {
                       <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 min-w-0 overflow-hidden">
                         <div className="flex items-center justify-between mb-3 gap-2">
                           <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400">
-                            Gruppe {gIdx + 1}
+                            Group {gIdx + 1}
                           </h4>
                           <div className="flex items-center gap-1.5">
                             <button onClick={() => copyForTimeGroup(bIdx, gIdx)}
-                              title="Diese Gruppe in die Ablage kopieren"
+                              title="Copy this group to the clipboard"
                               className="text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border border-hclub-gray/50 text-gray-400 hover:text-cyan-300 hover:border-cyan-500 hover:bg-cyan-900/20">
-                              Kopieren
+                              Copy
                             </button>
                             {groupClipboard && (
                               <button onClick={() => pasteForTimeGroup(bIdx, gIdx)}
-                                title={`${groupClipboard.label} hier einfügen`}
+                                title={`${groupClipboard.label} paste here`}
                                 className="text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border border-green-500/60 text-green-400 hover:text-white hover:bg-green-900/30">
-                                Einfügen
+                                Paste
                               </button>
                             )}
                           </div>
@@ -1279,9 +1279,9 @@ export default function WorkoutEditorPage() {
                               <div key={eIdx} {...(({ dragClass, ...h }) => h)(forTimeRowProps(bIdx, gIdx, eIdx))} className={`mb-3 p-2 bg-yellow-400/5 rounded-lg border border-yellow-400/30 transition-all ${forTimeRowProps(bIdx, gIdx, eIdx).dragClass}`}>
                                 <div className="flex gap-2 items-center min-w-0">
                                   {renderForTimeMover(bIdx, gIdx, eIdx, exercises.length)}
-                                  <span className="flex-shrink-0 text-yellow-400 text-xs font-oswald uppercase">Notiz</span>
+                                  <span className="flex-shrink-0 text-yellow-400 text-xs font-oswald uppercase">Note</span>
                                   <input type="text" value={ex.name}
-                                    placeholder="z.B. Bei jeder Runde die Distanz halbieren"
+                                    placeholder="e.g. Halve the distance every round"
                                     onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { name: e.target.value })}
                                     className="flex-1 min-w-0 px-2 py-1 bg-hclub-black border border-yellow-400/30 rounded text-white text-xs focus:outline-none focus:border-yellow-400" />
                                   <button onClick={() => removeForTimeBlockExercise(bIdx, gIdx, eIdx)}
@@ -1307,12 +1307,12 @@ export default function WorkoutEditorPage() {
                                     else updateForTimeBlockExercise(bIdx, gIdx, eIdx, { duration: 30, distance: undefined, reps: undefined });
                                   }}
                                   className="px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-cyan-400">
-                                  <option value="reps">Wiederholungen</option>
-                                  <option value="distance">Meter</option>
-                                  <option value="duration">Sekunden</option>
+                                  <option value="reps">Reps</option>
+                                  <option value="distance">Meters</option>
+                                  <option value="duration">Seconds</option>
                                 </select>
                                 {measureType === 'distance' && (
-                                  <input type="text" value={ex.distance || ''} placeholder="z.B. 500m"
+                                  <input type="text" value={ex.distance || ''} placeholder="e.g. 500m"
                                     onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { distance: e.target.value || undefined })}
                                     className="w-24 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
                                 )}
@@ -1322,7 +1322,7 @@ export default function WorkoutEditorPage() {
                                     className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
                                 )}
                                 {measureType === 'duration' && (
-                                  <input type="number" min={1} value={ex.duration || ''} placeholder="Sek"
+                                  <input type="number" min={1} value={ex.duration || ''} placeholder="Sec"
                                     onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { duration: parseInt(e.target.value) || undefined })}
                                     className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
                                 )}
@@ -1332,14 +1332,14 @@ export default function WorkoutEditorPage() {
                         })}
                         <div className="flex gap-3 mt-2">
                           <button onClick={() => addForTimeBlockExercise(bIdx, gIdx)}
-                            className="text-xs text-cyan-400 hover:text-white transition-colors font-oswald uppercase">+ Übung</button>
+                            className="text-xs text-cyan-400 hover:text-white transition-colors font-oswald uppercase">+ Exercise</button>
                           <button onClick={() => addForTimeBlockNote(bIdx, gIdx)}
-                            className="text-xs text-yellow-400 hover:text-white transition-colors font-oswald uppercase">+ Notiz</button>
+                            className="text-xs text-yellow-400 hover:text-white transition-colors font-oswald uppercase">+ Note</button>
                         </div>
                         <div className="flex gap-2 mt-2 min-w-0">
                           <input type="text" value={customForTimeExercise[`${bIdx}-${gIdx}`] || ''}
                             onChange={(e) => setCustomForTimeExercise(prev => ({ ...prev, [`${bIdx}-${gIdx}`]: e.target.value }))}
-                            placeholder="Eigene Übung..."
+                            placeholder="Custom exercise..."
                             className="flex-1 min-w-0 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-cyan-400"
                             onKeyDown={(e) => { if (e.key === 'Enter') addCustomForTimeExercise(bIdx, gIdx); }} />
                           <button onClick={() => addCustomForTimeExercise(bIdx, gIdx)}
@@ -1357,7 +1357,7 @@ export default function WorkoutEditorPage() {
               <button onClick={addForTimeBlock}
                 className="px-8 py-3 bg-cyan-900/30 hover:bg-cyan-600 border border-cyan-500/50 hover:border-cyan-400
                            text-cyan-300 hover:text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-all duration-300">
-                + Runde hinzufügen
+                + Add round
               </button>
             </div>
           </>

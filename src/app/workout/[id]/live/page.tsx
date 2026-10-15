@@ -639,7 +639,7 @@ export default function LiveWorkoutPage() {
   if (!workout) {
     return (
       <div className="workout-fullscreen flex items-center justify-center">
-        <div className="text-gray-400 font-oswald text-2xl uppercase">Laden...</div>
+        <div className="text-gray-400 font-oswald text-2xl uppercase">Loading...</div>
       </div>
     );
   }
@@ -661,23 +661,23 @@ export default function LiveWorkoutPage() {
           workoutMode === 'fortime' ? 'text-cyan-400 bg-cyan-400/10' :
           'text-green-400 bg-green-400/10'
         }`}>
-          {workoutMode === 'fortime' ? 'AMRAP' : 'Zeitbasiert'}
+          {workoutMode === 'fortime' ? 'AMRAP' : 'Timed'}
         </div>
 
         <div className="grid grid-cols-3 gap-8 mb-12 text-center [@media(max-height:500px)]:mb-4">
           <div className="fade-in-up" style={{ animationDelay: '0.2s' }}>
             <div className="font-oswald text-4xl text-hclub-magenta">{config.numGroups}</div>
-            <div className="text-gray-400 text-sm font-oswald uppercase">Gruppen</div>
+            <div className="text-gray-400 text-sm font-oswald uppercase">Groups</div>
           </div>
           {workoutMode === 'timed' && (
             <>
               <div className="fade-in-up" style={{ animationDelay: '0.3s' }}>
                 <div className="font-oswald text-4xl text-hclub-magenta">{config.numRounds}</div>
-                <div className="text-gray-400 text-sm font-oswald uppercase">Runden</div>
+                <div className="text-gray-400 text-sm font-oswald uppercase">Rounds</div>
               </div>
               <div className="fade-in-up" style={{ animationDelay: '0.4s' }}>
                 <div className="font-oswald text-4xl text-hclub-magenta">{config.workTime}s</div>
-                <div className="text-gray-400 text-sm font-oswald uppercase">Arbeit</div>
+                <div className="text-gray-400 text-sm font-oswald uppercase">Work</div>
               </div>
             </>
           )}
@@ -687,18 +687,18 @@ export default function LiveWorkoutPage() {
                 <div className="font-oswald text-4xl text-hclub-magenta">
                   {getForTimeBlocks(config).length}
                 </div>
-                <div className="text-gray-400 text-sm font-oswald uppercase">Runden</div>
+                <div className="text-gray-400 text-sm font-oswald uppercase">Rounds</div>
               </div>
               <div className="fade-in-up" style={{ animationDelay: '0.4s' }}>
                 {config.forTimeRoundTimerEnabled ? (
                   <>
                     <div className="font-oswald text-4xl text-cyan-400">{config.forTimeRoundTimerMinutes || 12}</div>
-                    <div className="text-gray-400 text-sm font-oswald uppercase">Min/Runde</div>
+                    <div className="text-gray-400 text-sm font-oswald uppercase">Min/Round</div>
                   </>
                 ) : (
                   <>
                     <div className="font-oswald text-4xl text-cyan-400">AMRAP</div>
-                    <div className="text-gray-400 text-sm font-oswald uppercase">Modus</div>
+                    <div className="text-gray-400 text-sm font-oswald uppercase">Mode</div>
                   </>
                 )}
               </div>
@@ -710,15 +710,15 @@ export default function LiveWorkoutPage() {
           className="px-12 py-4 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald
                      text-2xl uppercase tracking-widest rounded-xl transition-colors fade-in-up glow-pulse"
           style={{ animationDelay: '0.5s' }}>
-          Workout Starten
+          Start Workout
         </button>
 
         <div className="absolute bottom-6 hidden md:flex gap-8 text-gray-500 text-sm pointer-events-none [@media(max-height:500px)]:hidden">
-          <span>LEERTASTE = Start/Pause</span>
-          <span>F = Vollbild</span>
-          <span>ESC = Beenden</span>
-          {workoutMode === 'timed' && <span>N = Überspringen</span>}
-          {workoutMode === 'fortime' && <span>1-{config.numGroups} = Gruppe weiter</span>}
+          <span>SPACE = Start/Pause</span>
+          <span>F = Fullscreen</span>
+          <span>ESC = Exit</span>
+          {workoutMode === 'timed' && <span>N = Skip</span>}
+          {workoutMode === 'fortime' && <span>1-{config.numGroups} = Next in group</span>}
         </div>
       </div>
     );
@@ -739,7 +739,7 @@ export default function LiveWorkoutPage() {
           </p>
           {totalTimeEstimate > 0 && (
             <div className="font-oswald text-hclub-magenta fade-in-up" style={{ animationDelay: '0.15s', fontSize: 'clamp(12px, 2vh, 18px)' }}>
-              Geschätzte Dauer: {formatTimeMinutes(totalTimeEstimate)}
+              Estimated duration: {formatTimeMinutes(totalTimeEstimate)}
             </div>
           )}
         </div>
@@ -755,10 +755,10 @@ export default function LiveWorkoutPage() {
               <div key={roundIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 fade-in-up"
                 style={{ animationDelay: `${0.2 + roundIdx * 0.1}s`, opacity: 0 }}>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className={`font-oswald uppercase tracking-wider text-hclub-magenta ${config.numRounds === 1 ? 'text-xl' : 'text-lg'}`}>Runde {roundIdx + 1}</h3>
+                  <h3 className={`font-oswald uppercase tracking-wider text-hclub-magenta ${config.numRounds === 1 ? 'text-xl' : 'text-lg'}`}>Round {roundIdx + 1}</h3>
                   <div className="flex gap-3 text-xs font-oswald uppercase">
-                    <span className="text-green-400">{getWorkTimeForRound(config, roundIdx)}s Arbeit</span>
-                    <span className="text-blue-400">{getRestTimeForRound(config, roundIdx)}s Pause</span>
+                    <span className="text-green-400">{getWorkTimeForRound(config, roundIdx)}s Work</span>
+                    <span className="text-blue-400">{getRestTimeForRound(config, roundIdx)}s Rest</span>
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -788,13 +788,13 @@ export default function LiveWorkoutPage() {
           <div className="w-full max-w-5xl mb-2 space-y-4">
             {config.forTimeRoundTimerEnabled && (
               <div className="text-center text-cyan-400 font-oswald uppercase tracking-wider mb-2">
-                Timer pro Runde: {config.forTimeRoundTimerMinutes || 12} Minuten
+                Timer per round: {config.forTimeRoundTimerMinutes || 12} Minutes
               </div>
             )}
             {getForTimeBlocks(config).map((block, bIdx) => (
               <div key={bIdx} className="bg-hclub-dark border border-cyan-500/30 rounded-xl p-5 fade-in-up" style={{ animationDelay: `${0.2 + bIdx * 0.1}s`, opacity: 0 }}>
                 <h3 className="font-oswald text-lg uppercase tracking-wider text-cyan-400 mb-3">
-                  {getForTimeBlocks(config).length > 1 ? `Runde ${bIdx + 1}` : 'AMRAP'}
+                  {getForTimeBlocks(config).length > 1 ? `Round ${bIdx + 1}` : 'AMRAP'}
                 </h3>
                 <div className="overflow-x-auto">
                 <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${config.numGroups}, minmax(90px, 1fr))`, minWidth: config.numGroups > 4 ? `${config.numGroups * 110}px` : undefined }}>
@@ -824,11 +824,11 @@ export default function LiveWorkoutPage() {
         <div className="shrink-0 flex gap-4 justify-center items-center px-4 py-3 border-t border-hclub-gray/40 bg-black/40">
           <button onClick={() => setPhase('idle')}
             className="px-8 py-3 bg-hclub-gray hover:bg-hclub-magenta/30 text-white font-oswald text-lg md:text-xl uppercase tracking-wider rounded-xl transition-colors">
-            Zurück
+            Back
           </button>
           <button onClick={startWorkout}
             className="px-12 py-3 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald text-lg md:text-xl uppercase tracking-widest rounded-xl transition-colors glow-pulse">
-            Los geht&apos;s!
+            Let&apos;s go!
           </button>
         </div>
       </div>
@@ -870,15 +870,15 @@ export default function LiveWorkoutPage() {
           <div className="burst rounded-full border-2 border-hclub-magenta" style={{ width: 100, height: 100, animationDelay: '0s' }} />
           <div className="burst rounded-full border border-cyan-500" style={{ width: 80, height: 80, animationDelay: '0.3s', position: 'absolute' }} />
         </div>
-        <h1 className="font-oswald text-7xl md:text-9xl font-bold text-hclub-magenta uppercase tracking-wider mb-8 power-pulse relative z-10">Fertig!</h1>
+        <h1 className="font-oswald text-7xl md:text-9xl font-bold text-hclub-magenta uppercase tracking-wider mb-8 power-pulse relative z-10">Done!</h1>
         <h2 className="font-oswald text-3xl uppercase tracking-wider text-gray-300 mb-4 relative z-10">{workout.name}</h2>
         {workoutMode === 'fortime' && (
-          <p className="font-oswald text-2xl text-cyan-400 mb-4 relative z-10">Zeit: {formatTime(forTimeElapsed)}</p>
+          <p className="font-oswald text-2xl text-cyan-400 mb-4 relative z-10">Time: {formatTime(forTimeElapsed)}</p>
         )}
-        <p className="text-gray-400 text-lg mb-12 relative z-10">Gut gemacht!</p>
+        <p className="text-gray-400 text-lg mb-12 relative z-10">Great work!</p>
         <button onClick={() => setPhase('idle')}
           className="px-8 py-3 bg-hclub-gray hover:bg-hclub-magenta text-white font-oswald text-xl uppercase tracking-wider rounded-xl transition-colors relative z-10">
-          Zurück
+          Back
         </button>
         <div className="absolute bottom-6 right-6">
           <span className="font-oswald text-xl tracking-wider text-gray-500">HYB<span className="text-hclub-magenta">RYD</span></span>
@@ -893,19 +893,19 @@ export default function LiveWorkoutPage() {
       <div className="workout-fullscreen flex flex-col items-center justify-center" style={{ paddingBottom: "15vh" }}>
         {isPaused && (
           <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50 cursor-pointer" onClick={() => setIsPaused(false)}>
-            <span className="font-oswald text-6xl uppercase tracking-wider text-yellow-400">Pausiert</span>
-            <span className="absolute bottom-24 text-gray-400 font-oswald text-lg uppercase tracking-wider">Tippe zum Fortsetzen</span>
+            <span className="font-oswald text-6xl uppercase tracking-wider text-yellow-400">Paused</span>
+            <span className="absolute bottom-24 text-gray-400 font-oswald text-lg uppercase tracking-wider">Tap to resume</span>
           </div>
         )}
         <div className="breathe text-center">
           <h1 className="font-oswald text-5xl md:text-7xl uppercase tracking-widest text-hclub-magenta mb-8 text-center">Warmup</h1>
           <div className="font-oswald text-[10rem] md:text-[14rem] leading-none text-white text-center">{formatTime(timeRemaining)}</div>
         </div>
-        <p className="text-gray-400 text-xl mt-8 font-oswald uppercase tracking-wider text-center">Mach dich bereit!</p>
+        <p className="text-gray-400 text-xl mt-8 font-oswald uppercase tracking-wider text-center">Get ready!</p>
         <button onClick={() => setIsPaused(p => !p)}
           className="absolute bottom-16 left-4 z-50 w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90"
           style={{ backgroundColor: isPaused ? '#FFD700' : 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', border: isPaused ? '2px solid #FFD700' : '2px solid rgba(255,255,255,0.2)' }}
-          title={isPaused ? 'Fortsetzen' : 'Pausieren'}>
+          title={isPaused ? 'Resume' : 'Pause'}>
           {isPaused ? (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="black"><polygon points="6,4 20,12 6,20" /></svg>
           ) : (
@@ -930,7 +930,7 @@ export default function LiveWorkoutPage() {
       <div className="workout-fullscreen rd-live-bg flex flex-col">
         {isPaused && (
           <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50 cursor-pointer" onClick={() => setIsPaused(false)}>
-            <span className="font-oswald text-6xl uppercase tracking-wider text-yellow-400">Pausiert</span>
+            <span className="font-oswald text-6xl uppercase tracking-wider text-yellow-400">Paused</span>
           </div>
         )}
 
@@ -938,7 +938,7 @@ export default function LiveWorkoutPage() {
         <div className="rd-topbar flex items-center justify-between px-4 py-2 md:py-3 shrink-0 relative z-10">
           <div className="flex flex-col">
             <div className="rd-timer-label font-oswald text-[10px] uppercase">
-              AMRAP{totalBlocks > 1 ? ` — Runde ${forTimeCurrentBlock + 1}/${totalBlocks}` : ''}
+              AMRAP{totalBlocks > 1 ? ` — Round ${forTimeCurrentBlock + 1}/${totalBlocks}` : ''}
             </div>
             {roundTimerActive ? (
               <div className="rd-timer-label font-oswald text-[11px] uppercase text-gray-500">
@@ -955,7 +955,7 @@ export default function LiveWorkoutPage() {
           {roundTimerActive && (
             <div className={`flex flex-col items-center ${roundTimerExpired ? 'text-red-400' : forTimeRoundTimeRemaining <= 30 ? 'text-yellow-400' : 'text-hclub-magenta'}`}>
               <div className="rd-timer-label text-[10px] md:text-xs font-oswald uppercase tracking-widest">
-                Restzeit
+                Time left
               </div>
               <div className={`font-oswald font-bold leading-none ${roundTimerExpired ? 'heartbeat' : 'rd-timer-accent'}`}
                 style={{ fontSize: 'min(17vw, 6.5rem)', textShadow: roundTimerExpired ? '0 0 40px #f87171' : forTimeRoundTimeRemaining <= 30 ? '0 0 26px #facc15' : '0 0 22px rgba(25,157,169,0.4)' }}>
@@ -986,7 +986,7 @@ export default function LiveWorkoutPage() {
                   {/* Group header */}
                   <div className="px-3 pt-3 pb-2 border-b border-white/5 shrink-0 text-center">
                     <div className="font-oswald text-sm md:text-base uppercase tracking-widest text-gray-300">
-                      Gruppe {gIdx + 1}
+                      Group {gIdx + 1}
                     </div>
                   </div>
 
@@ -1079,7 +1079,7 @@ export default function LiveWorkoutPage() {
       {/* Pause overlay */}
       {isPaused && (
         <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50">
-          <span className="font-oswald text-6xl uppercase tracking-wider text-yellow-400">Pausiert</span>
+          <span className="font-oswald text-6xl uppercase tracking-wider text-yellow-400">Paused</span>
         </div>
       )}
 
@@ -1088,7 +1088,7 @@ export default function LiveWorkoutPage() {
         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div className="round-announce font-oswald font-bold text-hclub-magenta uppercase"
                style={{ fontSize: 'min(30vw, 25vh)', textShadow: '0 0 40px rgba(25,157,169,0.5)', lineHeight: 1 }}>
-            Runde {announceRound}
+            Round {announceRound}
           </div>
         </div>
       )}
@@ -1097,12 +1097,12 @@ export default function LiveWorkoutPage() {
       <div className="rd-topbar grid grid-cols-3 items-center px-4 py-2 md:py-3 shrink-0 relative z-10">
         <div className="flex items-center gap-3">
           <div className="font-oswald text-sm uppercase tracking-wider">
-            {phase === 'rest' && <span className="text-yellow-400">Pause</span>}
-            {phase === 'roundRest' && <span className="text-orange-400">Rundenpause</span>}
-            {phase === 'work' && <span className="text-hclub-magenta rd-timer-accent">Arbeit</span>}
+            {phase === 'rest' && <span className="text-yellow-400">Rest</span>}
+            {phase === 'roundRest' && <span className="text-orange-400">Round rest</span>}
+            {phase === 'work' && <span className="text-hclub-magenta rd-timer-accent">Work</span>}
           </div>
           <div className="rd-chip font-oswald text-sm md:text-base tracking-wider text-gray-200 px-2.5 py-0.5 rounded-full whitespace-nowrap">
-            Runde {currentRound + 1}/{config.numRounds}
+            Round {currentRound + 1}/{config.numRounds}
           </div>
         </div>
 
@@ -1120,8 +1120,8 @@ export default function LiveWorkoutPage() {
             <button onClick={skipToNext}
               className="px-3 py-1 bg-hclub-gray hover:bg-orange-900/60 text-gray-300 hover:text-orange-300 text-xs
                          font-oswald uppercase rounded-lg transition-colors border border-hclub-gray hover:border-orange-500/50"
-              title="Überspringen (N)">
-              Weiter &rarr;
+              title="Skip (N)">
+              Next &rarr;
             </button>
           )}
         </div>
@@ -1229,7 +1229,7 @@ export default function LiveWorkoutPage() {
       {/* Round rest display — kein doppelter Timer (oben bleibt Referenz), fit-to-viewport */}
       {phase === 'roundRest' && (
         <div className="rest-wrap">
-          <h2 className="rest-head font-oswald uppercase tracking-widest text-orange-400">Rundenpause</h2>
+          <h2 className="rest-head font-oswald uppercase tracking-widest text-orange-400">Round rest</h2>
           {/*
             ⛔⛔ IM AMRAP-MODUS STEHEN DIE UEBUNGEN WOANDERS.
             Guido, 01.09.2026: „Die Anzeige passt nicht zu dem Workout, das sind
@@ -1251,8 +1251,8 @@ export default function LiveWorkoutPage() {
           */}
           <p className="rest-sub font-oswald uppercase tracking-wider text-gray-400">
             {workoutMode === 'fortime'
-              ? `Nächster Block: ${forTimeCurrentBlock + 1} von ${getForTimeBlocks(config).length}`
-              : `Nächste: Runde ${currentRound + 1}`}
+              ? `Next block: ${forTimeCurrentBlock + 1} of ${getForTimeBlocks(config).length}`
+              : `Next: Round ${currentRound + 1}`}
           </p>
           <div className="rest-grid-wrap">
             <div className="rest-grid">
@@ -1261,8 +1261,8 @@ export default function LiveWorkoutPage() {
                 // dem NAECHSTEN Block (siehe die Auto-Weiterschaltung oben) — es
                 // wird also wirklich das gezeigt, was als Naechstes kommt.
                 const nextEx = workoutMode === 'fortime'
-                  ? (getForTimeBlocks(config)[forTimeCurrentBlock]?.exercises?.[gIdx]?.[0]?.name || 'Übung')
-                  : (config.rounds[currentRound]?.[gIdx]?.[0] || 'Übung');
+                  ? (getForTimeBlocks(config)[forTimeCurrentBlock]?.exercises?.[gIdx]?.[0]?.name || 'Exercise')
+                  : (config.rounds[currentRound]?.[gIdx]?.[0] || 'Exercise');
                 if (workoutMode === 'fortime') {
                   // AMRAP: vor der naechsten Runde den GANZEN Zirkel der Gruppe zeigen (Phil, 15.10.2026)
                   const zirkel = (getForTimeBlocks(config)[forTimeCurrentBlock]?.exercises?.[gIdx] || []).filter((ex) => ex.name?.trim());
@@ -1300,7 +1300,7 @@ export default function LiveWorkoutPage() {
             </button>
             <button onClick={() => setTimeRemaining(0)}
               className="px-8 py-2.5 bg-green-600 hover:bg-green-500 text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-colors">
-              Weiter &rarr;
+              Next &rarr;
             </button>
             <button onClick={() => setTimeRemaining((t) => t + 15)}
               className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-colors">
@@ -1313,12 +1313,12 @@ export default function LiveWorkoutPage() {
       {/* Rest between exercises — kein doppelter Timer, fit-to-viewport */}
       {phase === 'rest' && (
         <div className="rest-wrap">
-          <h2 className="rest-head font-oswald uppercase tracking-widest text-yellow-400">Pause</h2>
+          <h2 className="rest-head font-oswald uppercase tracking-widest text-yellow-400">Rest</h2>
           <div className="rest-grid-wrap">
             <div className="rest-grid">
               {Array.from({ length: config.numGroups }, (_, gIdx) => {
                 const exercises = config.rounds[currentRound]?.[gIdx] || [];
-                const nextEx = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
+                const nextEx = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Exercise';
                 return (
                   <div key={gIdx} className="rest-card rd-col rd-col-active">
                     <div className="rest-card-label text-gray-400 font-oswald uppercase tracking-wider">G{gIdx + 1}</div>
@@ -1446,7 +1446,7 @@ export default function LiveWorkoutPage() {
           <div className="work-groups-grid">
           {Array.from({ length: config.numGroups }, (_, groupIndex) => {
             const exercises = config.rounds[currentRound]?.[groupIndex] || [];
-            const currentExercise = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
+            const currentExercise = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Exercise';
             const exerciseColor = getExerciseColor(currentExercise);
             const nextExercise = getNextExercise(config, groupIndex);
             const exerciseImage = getExerciseImage(currentExercise);
@@ -1465,7 +1465,7 @@ export default function LiveWorkoutPage() {
                 <div className="work-col-inner">
                   {/* Group label */}
                   <div className="work-col-label font-oswald uppercase tracking-widest text-gray-400">
-                    Gruppe {groupIndex + 1}
+                    Group {groupIndex + 1}
                     {hasGroupCustomTime && <span className="text-hclub-magenta ml-2">({groupWorkTime}s)</span>}
                   </div>
 
@@ -1500,7 +1500,7 @@ export default function LiveWorkoutPage() {
                   {/* Next exercise preview */}
                   {nextExercise ? (
                     <div className="work-col-next font-oswald uppercase tracking-wider">
-                      <span><span className="text-gray-400">Nächste: </span>
+                      <span><span className="text-gray-400">Next: </span>
                       <span style={{ color: getExerciseColor(nextExercise) }}>{nextExercise}</span></span>
                     </div>
                   ) : <div />}
@@ -1529,7 +1529,7 @@ export default function LiveWorkoutPage() {
         </div>
         {phase === 'work' && (
           <div className="text-gray-500 text-sm font-oswald uppercase">
-            Übung {currentExerciseIndex + 1}/{getMaxExercisesInRound(config, currentRound)}
+            Exercise {currentExerciseIndex + 1}/{getMaxExercisesInRound(config, currentRound)}
           </div>
         )}
         <span className="font-oswald text-lg tracking-wider text-gray-500">HYB<span className="text-hclub-magenta">RYD</span></span>

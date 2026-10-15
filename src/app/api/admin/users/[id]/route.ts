@@ -32,14 +32,14 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   if (!(await isAdmin())) {
-    return NextResponse.json({ error: 'Kein Zugriff' }, { status: 403 });
+    return NextResponse.json({ error: 'No access' }, { status: 403 });
   }
 
   const { id } = await params;
   const { password } = await request.json();
 
   if (!password || password.length < 6) {
-    return NextResponse.json({ error: 'Passwort muss mindestens 6 Zeichen haben' }, { status: 400 });
+    return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
   }
 
   const { error } = await getAdminClient().auth.admin.updateUserById(id, { password });
@@ -57,7 +57,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   if (!(await isAdmin())) {
-    return NextResponse.json({ error: 'Kein Zugriff' }, { status: 403 });
+    return NextResponse.json({ error: 'No access' }, { status: 403 });
   }
 
   const { id } = await params;
@@ -66,7 +66,7 @@ export async function DELETE(
   const supabase = await createServerClient();
   const { data: { user: currentUser } } = await supabase.auth.getUser();
   if (currentUser?.id === id) {
-    return NextResponse.json({ error: 'Du kannst deinen eigenen Account nicht löschen' }, { status: 400 });
+    return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 });
   }
 
   const { error } = await getAdminClient().auth.admin.deleteUser(id);

@@ -67,13 +67,13 @@ function ImagePickerDropdown({
     >
       <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm text-gray-300 font-oswald uppercase tracking-wider">Foto wählen</p>
+          <p className="text-sm text-gray-300 font-oswald uppercase tracking-wider">Choose photo</p>
           <button
             type="button"
             onClick={() => setOpen(false)}
             className="text-gray-400 hover:text-white text-sm font-oswald uppercase"
           >
-            Schließen
+            Close
           </button>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 overflow-y-auto pr-1">
@@ -113,7 +113,7 @@ function ImagePickerDropdown({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title="Foto auswählen"
+        title="Select photo"
         className="w-12 h-9 flex items-center justify-center border border-hclub-gray rounded bg-hclub-black overflow-hidden hover:border-hclub-magenta transition-colors"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -246,7 +246,7 @@ export default function SettingsPage() {
     if (!trimmed) return;
 
     if (defaultExerciseNames.has(trimmed) || customExercises.some((e) => e.name === trimmed)) {
-      alert('Diese Übung existiert bereits.');
+      alert('This exercise already exists.');
       return;
     }
 
@@ -272,7 +272,7 @@ export default function SettingsPage() {
   }
 
   async function deleteCustomExercise(exerciseName: string) {
-    if (!confirm(`"${exerciseName}" wirklich löschen?`)) return;
+    if (!confirm(`Really delete "${exerciseName}"?`)) return;
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -310,7 +310,7 @@ export default function SettingsPage() {
     }
 
     if (defaultExerciseNames.has(trimmed) || customExercises.some((e) => e.name === trimmed)) {
-      alert('Eine Übung mit diesem Namen existiert bereits.');
+      alert('An exercise with this name already exists.');
       return;
     }
 
@@ -418,7 +418,7 @@ export default function SettingsPage() {
                 onClick={() => setEditingExercise(null)}
                 className="text-gray-400 hover:text-gray-300 text-sm font-oswald uppercase"
               >
-                Abb.
+                Cancel
               </button>
             </div>
           ) : (
@@ -448,14 +448,14 @@ export default function SettingsPage() {
               <button
                 onClick={() => startRename(exerciseName)}
                 className="px-2 py-1 text-blue-400 hover:text-blue-300 text-xs font-oswald uppercase"
-                title="Umbenennen"
+                title="Rename"
               >
-                Umben.
+                Rename
               </button>
               <button
                 onClick={() => deleteCustomExercise(exerciseName)}
                 className="px-2 py-1 text-red-400 hover:text-red-300 text-xs font-oswald uppercase"
-                title="Löschen"
+                title="Delete"
               >
                 X
               </button>
@@ -475,10 +475,10 @@ export default function SettingsPage() {
               onClick={() => router.push('/dashboard')}
               className="text-gray-400 hover:text-white transition-colors font-oswald uppercase tracking-wider text-sm"
             >
-              &larr; Zurück
+              &larr; Back
             </button>
             <h1 className="font-oswald text-2xl font-bold tracking-wider">
-              Einstellungen
+              Settings
             </h1>
           </div>
           <button
@@ -487,7 +487,7 @@ export default function SettingsPage() {
             className="px-5 py-2 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald
                        uppercase tracking-wider rounded-lg transition-colors text-sm disabled:opacity-50"
           >
-            {saving ? 'Speichern...' : saved ? 'Gespeichert!' : 'Speichern'}
+            {saving ? 'Saving...' : saved ? 'Saved!' : 'Save'}
           </button>
         </div>
       </header>
@@ -496,16 +496,16 @@ export default function SettingsPage() {
         {/* Trainer Name */}
         <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8">
           <h2 className="font-oswald text-xl uppercase tracking-wider mb-4">
-            Trainer-Name
+            Trainer name
           </h2>
-          <p className="text-sm text-gray-400 mb-3">Dieser Name wird bei deinen Workouts in der Bibliothek angezeigt.</p>
+          <p className="text-sm text-gray-400 mb-3">This name is shown on your workouts in the library.</p>
           <div className="flex gap-3 items-end">
             <div className="flex-1">
               <input
                 type="text"
                 value={trainerName}
                 onChange={(e) => { setTrainerName(e.target.value); setTrainerNameSaved(false); }}
-                placeholder="Dein Name als Trainer"
+                placeholder="Your name as trainer"
                 className="w-full bg-hclub-black border border-hclub-gray rounded-lg px-3 py-2 text-white
                            placeholder:text-gray-600 focus:border-hclub-magenta focus:outline-none font-oswald tracking-wider"
               />
@@ -515,7 +515,7 @@ export default function SettingsPage() {
               className="px-4 py-2 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald
                          uppercase tracking-wider rounded-lg transition-colors text-sm"
             >
-              {trainerNameSaved ? '✓ Gespeichert' : 'Speichern'}
+              {trainerNameSaved ? '✓ Saved' : 'Save'}
             </button>
           </div>
         </div>
@@ -523,7 +523,7 @@ export default function SettingsPage() {
         {/* Add custom exercise */}
         <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8">
           <h2 className="font-oswald text-xl uppercase tracking-wider mb-4">
-            Eigene Übung hinzufügen
+            Add custom exercise
           </h2>
           <div className="flex gap-3 items-end flex-wrap">
             <div className="flex-1 min-w-[200px]">
@@ -537,14 +537,14 @@ export default function SettingsPage() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') addCustomExercise();
                 }}
-                placeholder="z.B. Kettlebell Clean"
+                placeholder="e.g. Kettlebell Clean"
                 className="w-full px-4 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white
                            placeholder-gray-500 focus:outline-none focus:border-hclub-magenta transition-colors"
               />
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">
-                Farbe
+                Color
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -564,7 +564,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">
-                Foto
+                Photo
               </label>
               <ImagePickerDropdown
                 currentSlug={newExerciseImage}
@@ -576,7 +576,7 @@ export default function SettingsPage() {
               className="px-6 py-2 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald
                          uppercase tracking-wider rounded-lg transition-colors whitespace-nowrap"
             >
-              + Hinzufügen
+              + Add
             </button>
           </div>
         </div>
@@ -585,7 +585,7 @@ export default function SettingsPage() {
         {customExercises.length > 0 && (
           <div className="mb-8">
             <h3 className="font-oswald text-lg text-hclub-magenta uppercase tracking-wider mb-3">
-              Eigene Übungen
+              Custom exercises
             </h3>
             <div className="space-y-2">
               {customExercises.map((exercise) =>
@@ -597,12 +597,12 @@ export default function SettingsPage() {
 
         {/* HYROX exercises */}
         <h2 className="font-oswald text-xl uppercase tracking-wider mb-6">
-          Übungsfarben
+          Exercise colors
         </h2>
 
         <div className="space-y-2">
           <h3 className="font-oswald text-lg text-hclub-magenta uppercase tracking-wider mt-6 mb-3">
-            HYROX Übungen
+            HYROX exercises
           </h3>
           {ALL_DEFAULT_EXERCISES.filter((e) => e.category === 'hyrox').map((exercise) =>
             renderExerciseRow(exercise.name, exercise.color, false)
@@ -610,7 +610,7 @@ export default function SettingsPage() {
 
           {/* Training */}
           <h3 className="font-oswald text-lg text-hclub-magenta uppercase tracking-wider mt-8 mb-3">
-            Training Übungen
+            Training exercises
           </h3>
           {ALL_DEFAULT_EXERCISES.filter((e) => e.category === 'training').map((exercise) =>
             renderExerciseRow(exercise.name, exercise.color, false)

@@ -29,7 +29,7 @@ async function isAdmin(): Promise<boolean> {
 // GET: Liste aller User
 export async function GET() {
   if (!(await isAdmin())) {
-    return NextResponse.json({ error: 'Kein Zugriff' }, { status: 403 });
+    return NextResponse.json({ error: 'No access' }, { status: 403 });
   }
 
   const { data: { users }, error } = await getAdminClient().auth.admin.listUsers();
@@ -52,13 +52,13 @@ export async function GET() {
 // POST: Neuen User anlegen
 export async function POST(request: NextRequest) {
   if (!(await isAdmin())) {
-    return NextResponse.json({ error: 'Kein Zugriff' }, { status: 403 });
+    return NextResponse.json({ error: 'No access' }, { status: 403 });
   }
 
   const { email, password } = await request.json();
 
   if (!email || !password) {
-    return NextResponse.json({ error: 'Email und Passwort erforderlich' }, { status: 400 });
+    return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
   }
 
   const { data, error } = await getAdminClient().auth.admin.createUser({

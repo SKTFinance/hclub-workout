@@ -51,12 +51,12 @@ export default function AdminPage() {
     // Admin-Check via API
     const res = await fetch('/api/admin/users');
     if (res.status === 403) {
-      setError('Kein Zugriff — nur für Administratoren.');
+      setError('No access — administrators only.');
       setLoading(false);
       return;
     }
     if (!res.ok) {
-      setError('Fehler beim Laden der Benutzerliste.');
+      setError('Failed to load the user list.');
       setLoading(false);
       return;
     }
@@ -83,11 +83,11 @@ export default function AdminPage() {
     setCreateLoading(false);
 
     if (!res.ok) {
-      setCreateError(data.error || 'Fehler beim Anlegen');
+      setCreateError(data.error || 'Failed to create user');
       return;
     }
 
-    setCreateSuccess(`User ${newEmail} erfolgreich angelegt`);
+    setCreateSuccess(`User ${newEmail} created successfully`);
     setNewEmail('');
     setNewPassword('');
     checkAdminAndLoad();
@@ -108,23 +108,23 @@ export default function AdminPage() {
     setEditLoading(false);
 
     if (!res.ok) {
-      setEditError(data.error || 'Fehler beim Ändern');
+      setEditError(data.error || 'Failed to update');
       return;
     }
 
-    setEditSuccess('Passwort erfolgreich geändert');
+    setEditSuccess('Password changed successfully');
     setEditUserId(null);
     setEditPassword('');
   }
 
   async function handleDeleteUser(userId: string, email: string) {
-    if (!confirm(`User "${email}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
+    if (!confirm(`Really delete user "${email}"? This action cannot be undone.`)) return;
 
     const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
     const data = await res.json();
 
     if (!res.ok) {
-      alert(data.error || 'Fehler beim Löschen');
+      alert(data.error || 'Failed to delete');
       return;
     }
 
@@ -140,7 +140,7 @@ export default function AdminPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-hclub-black flex items-center justify-center">
-        <p className="text-gray-400 font-oswald uppercase tracking-wider">Laden...</p>
+        <p className="text-gray-400 font-oswald uppercase tracking-wider">Loading...</p>
       </div>
     );
   }
@@ -149,9 +149,9 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen bg-hclub-black flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-red-400 font-oswald text-xl uppercase tracking-wider mb-4">{error || 'Kein Zugriff'}</p>
+          <p className="text-red-400 font-oswald text-xl uppercase tracking-wider mb-4">{error || 'No access'}</p>
           <a href="/dashboard" className="text-hclub-magenta hover:underline font-oswald uppercase tracking-wider text-sm">
-            Zurück zum Dashboard
+            Back to dashboard
           </a>
         </div>
       </div>
@@ -167,7 +167,7 @@ export default function AdminPage() {
             <a href="/dashboard" className="font-oswald text-3xl font-bold tracking-wider">
               HYB<span className="text-hclub-magenta">RYD</span>
             </a>
-            <span className="text-gray-500 font-oswald uppercase tracking-wider text-sm">/ Benutzerverwaltung</span>
+            <span className="text-gray-500 font-oswald uppercase tracking-wider text-sm">/ User management</span>
           </div>
           <div className="flex items-center gap-4">
             <a href="/dashboard" className="text-gray-400 hover:text-hclub-magenta transition-colors text-sm font-oswald uppercase tracking-wider">
@@ -177,7 +177,7 @@ export default function AdminPage() {
               onClick={handleLogout}
               className="text-gray-400 hover:text-red-400 transition-colors text-sm font-oswald uppercase tracking-wider"
             >
-              Abmelden
+              Sign out
             </button>
           </div>
         </div>
@@ -188,11 +188,11 @@ export default function AdminPage() {
         {/* Neuen User anlegen */}
         <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-6 fade-in-up" style={{ opacity: 0, animationDelay: '0s' }}>
           <h2 className="font-oswald text-xl uppercase tracking-wider mb-4 text-hclub-magenta">
-            Neuen User anlegen
+            Create new user
           </h2>
           <form onSubmit={handleCreateUser} className="flex flex-wrap gap-3 items-end">
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">E-Mail</label>
+              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">Email</label>
               <input
                 type="email"
                 value={newEmail}
@@ -204,7 +204,7 @@ export default function AdminPage() {
               />
             </div>
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">Passwort</label>
+              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">Password</label>
               <input
                 type="password"
                 value={newPassword}
@@ -222,7 +222,7 @@ export default function AdminPage() {
               className="px-5 py-2 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald uppercase
                          tracking-wider rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap text-sm"
             >
-              {createLoading ? 'Anlegen...' : '+ User anlegen'}
+              {createLoading ? 'Creating...' : '+ Create user'}
             </button>
           </form>
           {createError && (
@@ -237,14 +237,14 @@ export default function AdminPage() {
         {editUserId && (
           <div className="bg-hclub-dark border border-hclub-magenta/40 rounded-xl p-6 fade-in-up" style={{ opacity: 0 }}>
             <h2 className="font-oswald text-xl uppercase tracking-wider mb-4">
-              Passwort ändern
+              Change password
             </h2>
             <p className="text-gray-400 text-sm mb-4">
               User: <span className="text-white">{users.find(u => u.id === editUserId)?.email}</span>
             </p>
             <div className="flex gap-3 items-end flex-wrap">
               <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">Neues Passwort</label>
+                <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">New password</label>
                 <input
                   type="password"
                   value={editPassword}
@@ -261,14 +261,14 @@ export default function AdminPage() {
                 className="px-5 py-2 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald uppercase
                            tracking-wider rounded-lg transition-colors disabled:opacity-50 text-sm"
               >
-                {editLoading ? 'Speichern...' : 'Speichern'}
+                {editLoading ? 'Saving...' : 'Save'}
               </button>
               <button
                 onClick={() => { setEditUserId(null); setEditPassword(''); setEditError(''); setEditSuccess(''); }}
                 className="px-5 py-2 bg-hclub-gray hover:bg-hclub-dark text-gray-400 font-oswald uppercase
                            tracking-wider rounded-lg transition-colors text-sm"
               >
-                Abbrechen
+                Cancel
               </button>
             </div>
             {editError && (
@@ -284,7 +284,7 @@ export default function AdminPage() {
         <div className="fade-in-up" style={{ opacity: 0, animationDelay: '0.1s' }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-oswald text-xl uppercase tracking-wider">
-              Alle User
+              All users
               <span className="ml-2 text-gray-500 text-base">({users.length})</span>
             </h2>
           </div>
@@ -305,9 +305,9 @@ export default function AdminPage() {
                     )}
                   </div>
                   <div className="text-gray-500 text-xs mt-0.5">
-                    Erstellt: {new Date(user.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    Created: {new Date(user.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     {user.last_sign_in_at && (
-                      <> &bull; Letzter Login: {new Date(user.last_sign_in_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
+                      <> &bull; Last login: {new Date(user.last_sign_in_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
                     )}
                   </div>
                 </div>
@@ -322,14 +322,14 @@ export default function AdminPage() {
                     }}
                     className="px-3 py-1.5 bg-hclub-gray hover:bg-hclub-magenta text-white text-xs font-oswald uppercase rounded-lg transition-colors"
                   >
-                    Passwort
+                    Password
                   </button>
                   {user.email !== 'guido@h-club.at' && (
                     <button
                       onClick={() => handleDeleteUser(user.id, user.email)}
                       className="px-3 py-1.5 bg-red-900/30 hover:bg-red-900/60 text-red-400 text-xs font-oswald uppercase rounded-lg transition-colors"
                     >
-                      Löschen
+                      Delete
                     </button>
                   )}
                 </div>

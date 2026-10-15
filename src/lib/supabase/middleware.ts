@@ -56,7 +56,7 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
   } catch (err) {
-    console.error('[middleware] Auth-Check fehlgeschlagen, Request wird durchgelassen:', err);
+    console.error('[middleware] Auth check failed, letting request through:', err);
     return supabaseResponse;
   }
 

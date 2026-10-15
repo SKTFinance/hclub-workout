@@ -149,7 +149,7 @@ export default function DashboardPage() {
     }
 
     const { data, error } = await supabase.from('hybryd_workouts').insert({
-      user_id: user.id, user_email: user.email, name: 'Neues Workout',
+      user_id: user.id, user_email: user.email, name: 'New Workout',
       trainer_name: trainerName || 'Trainer', config: defaultConfig,
       is_public: true, workout_mode: workoutMode,
     }).select().single();
@@ -163,14 +163,14 @@ export default function DashboardPage() {
     if (!user) return;
     const { error } = await supabase.from('hybryd_workouts').insert({
       user_id: user.id, user_email: user.email,
-      name: `${workout.name} (Kopie)`, trainer_name: trainerName || workout.trainer_name,
+      name: `${workout.name} (Copy)`, trainer_name: trainerName || workout.trainer_name,
       config: workout.config, is_public: true, workout_mode: workout.workout_mode || 'timed',
     }).select().single();
     if (!error) loadWorkouts();
   }
 
   async function deleteWorkout(id: string) {
-    if (!confirm('Workout wirklich löschen?')) return;
+    if (!confirm('Really delete this workout?')) return;
     await supabase.from('hybryd_workouts').delete().eq('id', id);
     loadWorkouts();
   }
@@ -182,7 +182,7 @@ export default function DashboardPage() {
   }
 
   function getModeLabel(mode?: WorkoutMode): string {
-    switch (mode) { case 'amrap': return 'AMRAP'; case 'fortime': return 'AMRAP'; default: return 'Zeit'; }
+    switch (mode) { case 'amrap': return 'AMRAP'; case 'fortime': return 'AMRAP'; default: return 'Timed'; }
   }
   function getModeColor(mode?: WorkoutMode): string {
     switch (mode) { case 'amrap': return 'text-orange-400'; case 'fortime': return 'text-cyan-400'; default: return 'text-green-400'; }
@@ -212,7 +212,7 @@ export default function DashboardPage() {
             <div className="text-gray-500 text-xs truncate">
               {workout.trainer_name}
               {!isOwn && workout.user_email && ` (${workout.user_email})`}
-              {' '}&bull; {new Date(workout.updated_at).toLocaleDateString('de-DE')}
+              {' '}&bull; {new Date(workout.updated_at).toLocaleDateString('en-GB')}
             </div>
           </div>
           <div className="flex gap-1 shrink-0">
@@ -223,7 +223,7 @@ export default function DashboardPage() {
             <button onClick={() => window.open(`/workout/${workout.id}/live`, '_blank')}
               className="px-2 py-1 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white text-xs font-oswald uppercase rounded transition-colors">Start</button>
             <button onClick={() => duplicateWorkout(workout)}
-              className="px-2 py-1 bg-hclub-gray hover:bg-cyan-900/60 text-gray-400 text-xs font-oswald uppercase rounded transition-colors">Kopie</button>
+              className="px-2 py-1 bg-hclub-gray hover:bg-cyan-900/60 text-gray-400 text-xs font-oswald uppercase rounded transition-colors">Copy</button>
             {isOwn && (
               <button onClick={() => deleteWorkout(workout.id)}
                 className="px-2 py-1 bg-red-900/30 hover:bg-red-900/60 text-red-400 text-xs font-oswald uppercase rounded transition-colors">X</button>
@@ -259,25 +259,25 @@ export default function DashboardPage() {
           )}
         </p>
         {!isOwn && workout.user_email && (
-          <p className="text-gray-500 text-xs mb-1">von {workout.user_email}</p>
+          <p className="text-gray-500 text-xs mb-1">by {workout.user_email}</p>
         )}
         <div className="flex items-center gap-2 mb-3">
           {workout.is_public && (
-            <span className="text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded font-oswald uppercase">Öffentlich</span>
+            <span className="text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded font-oswald uppercase">Public</span>
           )}
           <span className="text-gray-500 text-xs">
-            {new Date(workout.updated_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            {new Date(workout.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
         <div className="flex gap-2 flex-wrap">
           {isOwn && (
             <button onClick={() => router.push(`/workout/${workout.id}`)}
-              className="flex-1 px-3 py-2 bg-hclub-gray hover:bg-hclub-magenta text-white text-sm font-oswald uppercase tracking-wider rounded-lg transition-colors">Bearbeiten</button>
+              className="flex-1 px-3 py-2 bg-hclub-gray hover:bg-hclub-magenta text-white text-sm font-oswald uppercase tracking-wider rounded-lg transition-colors">Edit</button>
           )}
           <button onClick={() => window.open(`/workout/${workout.id}/live`, '_blank')}
-            className="flex-1 px-3 py-2 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white text-sm font-oswald uppercase tracking-wider rounded-lg transition-colors">Starten</button>
+            className="flex-1 px-3 py-2 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white text-sm font-oswald uppercase tracking-wider rounded-lg transition-colors">Start</button>
           <button onClick={() => duplicateWorkout(workout)}
-            className="px-3 py-2 bg-hclub-gray hover:bg-cyan-900/60 text-gray-300 hover:text-cyan-300 text-sm font-oswald uppercase rounded-lg transition-colors">Kopie</button>
+            className="px-3 py-2 bg-hclub-gray hover:bg-cyan-900/60 text-gray-300 hover:text-cyan-300 text-sm font-oswald uppercase rounded-lg transition-colors">Copy</button>
           {isOwn && (
             <button onClick={() => deleteWorkout(workout.id)}
               className="px-3 py-2 bg-red-900/30 hover:bg-red-900/60 text-red-400 text-sm font-oswald uppercase rounded-lg transition-colors">X</button>
@@ -297,11 +297,11 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4">
             {isAdmin && (
               <a href="/admin" className="text-hclub-magenta hover:text-white transition-colors text-sm font-oswald uppercase tracking-wider">
-                Benutzerverwaltung
+                User management
               </a>
             )}
-            <a href="/settings" className="text-gray-400 hover:text-hclub-magenta transition-colors text-sm font-oswald uppercase tracking-wider">Einstellungen</a>
-            <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 transition-colors text-sm font-oswald uppercase tracking-wider">Abmelden</button>
+            <a href="/settings" className="text-gray-400 hover:text-hclub-magenta transition-colors text-sm font-oswald uppercase tracking-wider">Settings</a>
+            <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 transition-colors text-sm font-oswald uppercase tracking-wider">Sign out</button>
           </div>
         </div>
       </header>
@@ -312,7 +312,7 @@ export default function DashboardPage() {
           {/* Search */}
           <div className="flex-1 min-w-[200px]">
             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Workout suchen..."
+              placeholder="Search workouts..."
               className="w-full px-4 py-2 bg-hclub-dark border border-hclub-gray rounded-lg text-white text-sm
                          placeholder-gray-500 focus:outline-none focus:border-hclub-magenta transition-colors" />
           </div>
@@ -324,7 +324,7 @@ export default function DashboardPage() {
                 className={`px-3 py-2 text-xs font-oswald uppercase tracking-wider transition-colors ${
                   filterMode === f ? 'bg-hclub-magenta text-white' : 'text-gray-400 hover:text-white'
                 }`}>
-                {f === 'mine' ? 'Meine' : f === 'all' ? 'Alle' : '\u2605'}
+                {f === 'mine' ? 'Mine' : f === 'all' ? 'All' : '\u2605'}
               </button>
             ))}
           </div>
@@ -333,8 +333,8 @@ export default function DashboardPage() {
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as WorkoutMode | 'all')}
             className="px-4 py-2.5 bg-hclub-dark border border-hclub-gray rounded-xl text-sm text-white font-oswald uppercase tracking-wider focus:outline-none focus:border-hclub-magenta hover:border-hclub-magenta/50 transition-colors appearance-none cursor-pointer"
             style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%239ca3af\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '36px' }}>
-            <option value="all">Alle Typen</option>
-            <option value="timed">⏱ Zeitbasiert</option>
+            <option value="all">All types</option>
+            <option value="timed">⏱ Timed</option>
             <option value="fortime">🔁 AMRAP</option>
           </select>
 
@@ -342,7 +342,7 @@ export default function DashboardPage() {
           <select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)}
             className="px-4 py-2.5 bg-hclub-dark border border-hclub-gray rounded-xl text-sm text-white font-oswald uppercase tracking-wider focus:outline-none focus:border-hclub-magenta hover:border-hclub-magenta/50 transition-colors appearance-none cursor-pointer"
             style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%239ca3af\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '36px' }}>
-            <option value="date">📅 Neueste</option>
+            <option value="date">📅 Newest</option>
             <option value="name">🔤 Name A-Z</option>
           </select>
 
@@ -363,45 +363,45 @@ export default function DashboardPage() {
         {!loading && (
           <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-4">
             {displayedWorkouts.length} Workout{displayedWorkouts.length !== 1 ? 's' : ''}
-            {searchQuery && ` fuer "${searchQuery}"`}
+            {searchQuery && ` for "${searchQuery}"`}
           </div>
         )}
 
         {/* Create new workout */}
         <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8 fade-in-up" style={{ opacity: 0, animationDelay: '0s' }}>
-          <h3 className="font-oswald text-lg uppercase tracking-wider mb-3">Neues Workout</h3>
+          <h3 className="font-oswald text-lg uppercase tracking-wider mb-3">New Workout</h3>
           <div className="flex gap-3 items-end flex-wrap">
             <div className="flex-1 min-w-[150px]">
               <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">Trainer</label>
               <input type="text" value={trainerName} onChange={(e) => setTrainerName(e.target.value)}
-                placeholder="Dein Name"
+                placeholder="Your name"
                 className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-hclub-magenta transition-colors" />
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">Modus</label>
+              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">Mode</label>
               <select value={workoutMode} onChange={(e) => setWorkoutMode(e.target.value as WorkoutMode)}
                 className="px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-sm focus:outline-none focus:border-hclub-magenta transition-colors">
-                <option value="timed">Zeitbasiert</option>
+                <option value="timed">Timed</option>
                 <option value="fortime">AMRAP</option>
               </select>
             </div>
             <button onClick={createWorkout}
               className="px-5 py-2 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald uppercase tracking-wider rounded-lg transition-colors whitespace-nowrap text-sm">
-              + Erstellen
+              + Create
             </button>
           </div>
         </div>
 
         {/* Workout list */}
         {loading ? (
-          <div className="text-center text-gray-400 py-12">Laden...</div>
+          <div className="text-center text-gray-400 py-12">Loading...</div>
         ) : displayedWorkouts.length === 0 ? (
           <div className="text-center text-gray-500 py-12">
-            <p className="font-oswald text-xl uppercase">Keine Workouts gefunden</p>
+            <p className="font-oswald text-xl uppercase">No workouts found</p>
             <p className="text-sm mt-2">
-              {filterMode === 'favorites' ? 'Markiere Workouts mit dem Stern als Favorit.' :
-               searchQuery ? 'Keine Ergebnisse fuer deine Suche.' :
-               'Erstelle dein erstes Workout oben.'}
+              {filterMode === 'favorites' ? 'Star a workout to mark it as a favourite.' :
+               searchQuery ? 'No results for your search.' :
+               'Create your first workout above.'}
             </p>
           </div>
         ) : viewMode === 'grid' ? (

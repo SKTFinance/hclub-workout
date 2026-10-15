@@ -1,7 +1,7 @@
 {
   "name": "HYBRYD Workout Timer",
   "short_name": "HYBRYD",
-  "description": "HYROX Workout Timer für Hybryd Mallorca",
+  "description": "HYROX workout timer for Hybryd Mallorca",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#000000",

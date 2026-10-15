@@ -40,7 +40,7 @@ export default function LoginPage() {
       router.push('/dashboard');
       router.refresh();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten';
+      const message = err instanceof Error ? err.message : 'Something went wrong';
       setError(message);
     } finally {
       setLoading(false);
@@ -65,7 +65,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-5 fade-in-up" style={{ opacity: 0, animationDelay: '0.7s' }}>
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1 uppercase tracking-wider font-oswald">
-              E-Mail
+              Email
             </label>
             <input
               type="email"
@@ -80,7 +80,7 @@ export default function LoginPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1 uppercase tracking-wider font-oswald">
-              Passwort
+              Password
             </label>
             <input
               type="password"
@@ -108,7 +108,7 @@ export default function LoginPage() {
                        text-lg uppercase tracking-wider rounded-lg transition-colors disabled:opacity-50
                        disabled:cursor-not-allowed"
           >
-            {loading ? 'Laden...' : isSignUp ? 'Registrieren' : 'Anmelden'}
+            {loading ? 'Loading...' : isSignUp ? 'Sign up' : 'Sign in'}
           </button>
         </form>
 
@@ -121,8 +121,8 @@ export default function LoginPage() {
             className="text-gray-400 hover:text-hclub-magenta text-sm transition-colors"
           >
             {isSignUp
-              ? 'Bereits registriert? Jetzt anmelden'
-              : 'Noch kein Konto? Jetzt registrieren'}
+              ? 'Already have an account? Sign in'
+              : 'No account yet? Sign up'}
           </button>
         </div>
       </div>

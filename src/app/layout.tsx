@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'HYBRYD Workout Timer',
-  description: 'HYROX Workout Timer für Hybryd Mallorca',
+  description: 'HYROX workout timer for Hybryd Mallorca',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -30,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de">
+    <html lang="en">
       <body className="bg-hclub-black text-hclub-white min-h-screen antialiased">
         {children}
       </body>
