@@ -44,6 +44,8 @@ export default function WorkoutEditorPage() {
   const [iconPickerOpen, setIconPickerOpen] = useState<{ round: number; group: number; ex: number } | null>(null);
   // Drag-and-drop state for reordering exercises within a group
   const [dragExercise, setDragExercise] = useState<{ round: number; group: number; ex: number } | null>(null);
+  const [forTimeDrag, setForTimeDrag] = useState<{ b: number; g: number; e: number } | null>(null);
+  const [forTimeDragOver, setForTimeDragOver] = useState<{ b: number; g: number; e: number } | null>(null);
   const [dragOverExercise, setDragOverExercise] = useState<{ round: number; group: number; ex: number } | null>(null);
   // Exercise library
   const [libraryExercises, setLibraryExercises] = useState<LibraryExercise[]>([]);
@@ -592,6 +594,71 @@ export default function WorkoutEditorPage() {
       blocks[blockIndex].exercises[groupIndex].splice(exIndex, 1);
     }
     setForTimeBlocks(blocks);
+  }
+
+  // AMRAP: Übung innerhalb einer Gruppe verschieben (Ziehen am Griff oder Pfeile, Pfeile für Touch)
+  function moveForTimeBlockExercise(blockIndex: number, groupIndex: number, fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    const blocks = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    const list = blocks[blockIndex]?.exercises?.[groupIndex];
+    if (!Array.isArray(list) || toIndex < 0 || toIndex >= list.length || fromIndex < 0 || fromIndex >= list.length) return;
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+    setForTimeBlocks(blocks);
+  }
+
+  function renderForTimeMover(blockIndex: number, groupIndex: number, exIndex: number, count: number) {
+    return (
+      <div className="flex-shrink-0 flex items-center gap-0.5">
+        <div
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', String(exIndex));
+            setForTimeDrag({ b: blockIndex, g: groupIndex, e: exIndex });
+          }}
+          onDragEnd={() => { setForTimeDrag(null); setForTimeDragOver(null); }}
+          title="Ziehen zum Umsortieren"
+          className="hidden sm:flex w-6 h-8 items-center justify-center cursor-grab active:cursor-grabbing text-gray-500 hover:text-hclub-magenta select-none"
+        >
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <circle cx="6" cy="4" r="1.6" /><circle cx="14" cy="4" r="1.6" />
+            <circle cx="6" cy="10" r="1.6" /><circle cx="14" cy="10" r="1.6" />
+            <circle cx="6" cy="16" r="1.6" /><circle cx="14" cy="16" r="1.6" />
+          </svg>
+        </div>
+        <div className="flex flex-col">
+          <button type="button" aria-label="Nach oben" title="Nach oben" disabled={exIndex === 0}
+            onClick={() => moveForTimeBlockExercise(blockIndex, groupIndex, exIndex, exIndex - 1)}
+            className="w-8 h-5 sm:w-6 sm:h-4 flex items-center justify-center text-gray-400 hover:text-hclub-magenta disabled:opacity-20 text-xs leading-none">&#9650;</button>
+          <button type="button" aria-label="Nach unten" title="Nach unten" disabled={exIndex === count - 1}
+            onClick={() => moveForTimeBlockExercise(blockIndex, groupIndex, exIndex, exIndex + 1)}
+            className="w-8 h-5 sm:w-6 sm:h-4 flex items-center justify-center text-gray-400 hover:text-hclub-magenta disabled:opacity-20 text-xs leading-none">&#9660;</button>
+        </div>
+      </div>
+    );
+  }
+
+  function forTimeRowProps(blockIndex: number, groupIndex: number, exIndex: number) {
+    const dragging = forTimeDrag?.b === blockIndex && forTimeDrag?.g === groupIndex && forTimeDrag?.e === exIndex;
+    const over = forTimeDragOver?.b === blockIndex && forTimeDragOver?.g === groupIndex && forTimeDragOver?.e === exIndex && !dragging;
+    return {
+      dragClass: `${dragging ? 'opacity-40' : ''} ${over ? 'ring-2 ring-hclub-magenta' : ''}`,
+      onDragOver: (e: React.DragEvent) => {
+        if (!forTimeDrag || forTimeDrag.b !== blockIndex || forTimeDrag.g !== groupIndex) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (!over) setForTimeDragOver({ b: blockIndex, g: groupIndex, e: exIndex });
+      },
+      onDrop: (e: React.DragEvent) => {
+        e.preventDefault();
+        if (forTimeDrag && forTimeDrag.b === blockIndex && forTimeDrag.g === groupIndex) {
+          moveForTimeBlockExercise(blockIndex, groupIndex, forTimeDrag.e, exIndex);
+        }
+        setForTimeDrag(null);
+        setForTimeDragOver(null);
+      },
+    };
   }
 
   async function saveWorkout() {
@@ -1209,8 +1276,9 @@ export default function WorkoutEditorPage() {
                           // keine Wiederholungen, keine Meter. Nur Text.
                           if (ex.isNote) {
                             return (
-                              <div key={eIdx} className="mb-3 p-2 bg-yellow-400/5 rounded-lg border border-yellow-400/30">
+                              <div key={eIdx} {...(({ dragClass, ...h }) => h)(forTimeRowProps(bIdx, gIdx, eIdx))} className={`mb-3 p-2 bg-yellow-400/5 rounded-lg border border-yellow-400/30 transition-all ${forTimeRowProps(bIdx, gIdx, eIdx).dragClass}`}>
                                 <div className="flex gap-2 items-center min-w-0">
+                                  {renderForTimeMover(bIdx, gIdx, eIdx, exercises.length)}
                                   <span className="flex-shrink-0 text-yellow-400 text-xs font-oswald uppercase">Notiz</span>
                                   <input type="text" value={ex.name}
                                     placeholder="z.B. Bei jeder Runde die Distanz halbieren"
@@ -1223,8 +1291,9 @@ export default function WorkoutEditorPage() {
                             );
                           }
                           return (
-                            <div key={eIdx} className="mb-3 p-2 bg-hclub-black/50 rounded-lg border border-hclub-gray/30">
+                            <div key={eIdx} {...(({ dragClass, ...h }) => h)(forTimeRowProps(bIdx, gIdx, eIdx))} className={`mb-3 p-2 bg-hclub-black/50 rounded-lg border border-hclub-gray/30 transition-all ${forTimeRowProps(bIdx, gIdx, eIdx).dragClass}`}>
                               <div className="flex gap-2 mb-2 items-center min-w-0">
+                                {renderForTimeMover(bIdx, gIdx, eIdx, exercises.length)}
                                 {renderExerciseSelect(ex.name, (v) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { name: v }))}
                                 <button onClick={() => removeForTimeBlockExercise(bIdx, gIdx, eIdx)}
                                   className="flex-shrink-0 text-red-400 hover:text-red-300 text-sm px-1">x</button>

@@ -767,9 +767,9 @@ export default function LiveWorkoutPage() {
                     const exercises = config.rounds[roundIdx]?.[gIdx] || [];
                     return (
                       <div key={gIdx}>
-                        <div className={`text-gray-500 font-oswald uppercase tracking-wider mb-1.5 ${config.numRounds === 1 ? 'text-sm' : 'text-xs'}`}>G{gIdx + 1}</div>
+                        <div className={`text-gray-500 font-oswald uppercase tracking-wider mb-1.5 ${config.numRounds === 1 ? 'text-base md:text-lg' : 'text-sm md:text-base'}`}>G{gIdx + 1}</div>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className={`rd-ex-row ${config.numRounds === 1 ? 'text-sm' : 'text-xs'}`} style={{ color: getExerciseColor(ex) }}>
+                          <div key={eIdx} className={`rd-ex-row ${config.numRounds === 1 ? 'text-base md:text-lg' : 'text-sm md:text-base'}`} style={{ color: getExerciseColor(ex) }}>
                             <span className="rd-ex-dot" />
                             <span>{ex}</span>
                           </div>
@@ -802,9 +802,9 @@ export default function LiveWorkoutPage() {
                     const exercises = block.exercises?.[gIdx] || [];
                     return (
                       <div key={gIdx}>
-                        <div className="text-gray-500 text-xs font-oswald uppercase mb-2">G{gIdx + 1} ({gIdx + 1})</div>
+                        <div className="text-gray-500 text-sm md:text-base font-oswald uppercase mb-2">G{gIdx + 1}</div>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className="rd-ex-row text-xs" style={{ color: getExerciseColor(ex.name) }}>
+                          <div key={eIdx} className="rd-ex-row text-base md:text-xl" style={{ color: getExerciseColor(ex.name) }}>
                             <span className="rd-ex-dot" />
                             <span>{formatExerciseLabel(ex)}</span>
                           </div>
@@ -1033,7 +1033,7 @@ export default function LiveWorkoutPage() {
                           >
                             <div
                               className={`font-oswald uppercase tracking-wide ${
-                                config.numGroups > 5 ? 'text-base md:text-xl' : 'text-xl md:text-3xl'
+                                config.numGroups > 5 ? 'text-lg md:text-2xl' : 'text-2xl md:text-4xl'
                               }`}
                               style={{ color: exerciseColor }}
                             >
@@ -1202,7 +1202,10 @@ export default function LiveWorkoutPage() {
             border-radius: 10px;
             box-sizing: border-box;
           }
-          .rest-card-label { font-size: clamp(8px, 5cqmin, 18px); line-height: 1; }
+          .rest-card-label { font-size: clamp(10px, 6cqmin, 22px); line-height: 1; }
+          .rest-card-list { grid-template-rows: auto 1fr; align-items: stretch; justify-items: stretch; }
+          .rest-list { display: flex; flex-direction: column; justify-content: safe center; gap: 0.8cqmin; min-height: 0; overflow-y: auto; }
+          .rest-list-item { font-size: clamp(9px, min(7cqmin, calc(78cqh / var(--n, 4))), 36px); line-height: 1.05; padding: 0.5cqmin 2cqmin; flex-shrink: 0; border-radius: 8px; overflow-wrap: anywhere; }
           .rest-card-img {
             height: 100%;
             max-height: 62cqmin;
@@ -1211,7 +1214,7 @@ export default function LiveWorkoutPage() {
           }
           .rest-card-img img { width: 100%; height: 100%; object-fit: cover; }
           .rest-card-name {
-            font-size: clamp(10px, 8cqmin, 26px);
+            font-size: clamp(13px, 10.5cqmin, 36px);
             line-height: 1.02;
             text-align: center;
             display: -webkit-box;
@@ -1260,9 +1263,26 @@ export default function LiveWorkoutPage() {
                 const nextEx = workoutMode === 'fortime'
                   ? (getForTimeBlocks(config)[forTimeCurrentBlock]?.exercises?.[gIdx]?.[0]?.name || 'Übung')
                   : (config.rounds[currentRound]?.[gIdx]?.[0] || 'Übung');
+                if (workoutMode === 'fortime') {
+                  // AMRAP: vor der naechsten Runde den GANZEN Zirkel der Gruppe zeigen (Phil, 15.10.2026)
+                  const zirkel = (getForTimeBlocks(config)[forTimeCurrentBlock]?.exercises?.[gIdx] || []).filter((ex) => ex.name?.trim());
+                  return (
+                    <div key={gIdx} className="rest-card rest-card-list rd-col rd-col-active">
+                      <div className="rest-card-label text-gray-400 font-oswald uppercase tracking-wider">G{gIdx + 1}</div>
+                      <div className="rest-list" style={{ ['--n' as string]: Math.max(zirkel.length, 1) }}>
+                        {zirkel.length === 0 ? <div className="rest-list-item text-gray-600 font-oswald uppercase">—</div> : zirkel.map((ex, eIdx) => (
+                          <div key={eIdx} className="rest-list-item font-oswald uppercase tracking-wide"
+                            style={ex.isNote ? { color: '#fde047', backgroundColor: 'rgba(250,204,21,0.10)', borderLeft: '3px solid #facc15' } : { color: getExerciseColor(ex.name), backgroundColor: `${getExerciseColor(ex.name)}18`, borderLeft: `3px solid ${getExerciseColor(ex.name)}` }}>
+                            {ex.isNote ? ex.name : formatExerciseLabel(ex)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
                 return (
                   <div key={gIdx} className="rest-card rd-col rd-col-active">
-                    <div className="rest-card-label text-gray-400 font-oswald uppercase tracking-wider">G{String.fromCharCode(65 + gIdx)}</div>
+                    <div className="rest-card-label text-gray-400 font-oswald uppercase tracking-wider">G{gIdx + 1}</div>
                     <div className="rest-card-img rd-img-frame rd-img-color" style={{ ['--ex-color' as string]: getExerciseColor(nextEx) }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={getExerciseImage(nextEx)} alt={nextEx} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
@@ -1301,7 +1321,7 @@ export default function LiveWorkoutPage() {
                 const nextEx = exercises[currentExerciseIndex] || exercises[exercises.length - 1] || 'Übung';
                 return (
                   <div key={gIdx} className="rest-card rd-col rd-col-active">
-                    <div className="rest-card-label text-gray-400 font-oswald uppercase tracking-wider">G{String.fromCharCode(65 + gIdx)}</div>
+                    <div className="rest-card-label text-gray-400 font-oswald uppercase tracking-wider">G{gIdx + 1}</div>
                     <div className="rest-card-img rd-img-frame rd-img-color" style={{ ['--ex-color' as string]: getExerciseColor(nextEx) }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={getExerciseImage(nextEx)} alt={nextEx} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/exercises/generic.jpg'; }} />
@@ -1368,7 +1388,7 @@ export default function LiveWorkoutPage() {
               overflow: hidden;
             }
             .work-col-label {
-              font-size: clamp(8px, 4.2cqmin, 20px);
+              font-size: clamp(10px, 5.4cqmin, 26px);
               line-height: 1;
             }
             /* Bild: Höhe an Kartenhöhe gekoppelt (cqh), Breite folgt via
@@ -1390,7 +1410,7 @@ export default function LiveWorkoutPage() {
               overflow: hidden;
               width: 100%;
               text-align: center;
-              font-size: clamp(13px, 7cqmin, 40px);
+              font-size: clamp(16px, 9cqmin, 54px);
               line-height: 1.02;
             }
             .work-col-dots { display: flex; }
