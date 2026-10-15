@@ -139,7 +139,7 @@ export default function SettingsPage() {
   const [images, setImages] = useState<Record<string, string>>({});
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
   const [newExerciseName, setNewExerciseName] = useState('');
-  const [newExerciseColor, setNewExerciseColor] = useState('#FF00FF');
+  const [newExerciseColor, setNewExerciseColor] = useState('#199DA9');
   const [newExerciseImage, setNewExerciseImage] = useState('__generic__');
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -182,7 +182,7 @@ export default function SettingsPage() {
     // Also save to user_metadata so it persists across devices
     await supabase.auth.updateUser({ data: { trainer_name: trainerName } });
     // Update all own workouts with the new trainer name
-    await supabase.from('workouts').update({ trainer_name: trainerName }).eq('user_id', user.id);
+    await supabase.from('hybryd_workouts').update({ trainer_name: trainerName }).eq('user_id', user.id);
     setTrainerNameSaved(true);
     setTimeout(() => setTrainerNameSaved(false), 2000);
   }, [supabase, trainerName]);
@@ -192,7 +192,7 @@ export default function SettingsPage() {
     if (!user) return;
 
     const { data } = await supabase
-      .from('exercise_settings')
+      .from('hybryd_exercise_settings')
       .select('*')
       .eq('user_id', user.id);
 
@@ -254,7 +254,7 @@ export default function SettingsPage() {
     if (!user) return;
 
     await supabase
-      .from('exercise_settings')
+      .from('hybryd_exercise_settings')
       .upsert(
         { user_id: user.id, exercise_name: trimmed, color: newExerciseColor },
         { onConflict: 'user_id,exercise_name' }
@@ -267,7 +267,7 @@ export default function SettingsPage() {
     setCustomExercises((prev) => [...prev, { name: trimmed, color: newExerciseColor }]);
     setSettings((prev) => ({ ...prev, [trimmed]: newExerciseColor }));
     setNewExerciseName('');
-    setNewExerciseColor('#FF00FF');
+    setNewExerciseColor('#199DA9');
     setNewExerciseImage('__generic__');
   }
 
@@ -278,7 +278,7 @@ export default function SettingsPage() {
     if (!user) return;
 
     await supabase
-      .from('exercise_settings')
+      .from('hybryd_exercise_settings')
       .delete()
       .eq('user_id', user.id)
       .eq('exercise_name', exerciseName);
@@ -317,16 +317,16 @@ export default function SettingsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const color = settings[oldName] || '#FF00FF';
+    const color = settings[oldName] || '#199DA9';
 
     await supabase
-      .from('exercise_settings')
+      .from('hybryd_exercise_settings')
       .delete()
       .eq('user_id', user.id)
       .eq('exercise_name', oldName);
 
     await supabase
-      .from('exercise_settings')
+      .from('hybryd_exercise_settings')
       .upsert(
         { user_id: user.id, exercise_name: trimmed, color },
         { onConflict: 'user_id,exercise_name' }
@@ -369,7 +369,7 @@ export default function SettingsPage() {
 
     for (const entry of entries) {
       await supabase
-        .from('exercise_settings')
+        .from('hybryd_exercise_settings')
         .upsert(entry, { onConflict: 'user_id,exercise_name' });
     }
 

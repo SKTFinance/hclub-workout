@@ -58,7 +58,7 @@ export default function WorkoutEditorPage() {
 
   const loadWorkout = useCallback(async () => {
     const { data } = await supabase
-      .from('workouts')
+      .from('hybryd_workouts')
       .select('*')
       .eq('id', id)
       .single();
@@ -84,7 +84,7 @@ export default function WorkoutEditorPage() {
 
   const loadLibrary = useCallback(async () => {
     const { data } = await supabase
-      .from('exercise_library')
+      .from('hybryd_exercise_library')
       .select('*')
       .order('name');
     if (data) setLibraryExercises(data as LibraryExercise[]);
@@ -94,7 +94,7 @@ export default function WorkoutEditorPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { data } = await supabase
-      .from('hclub_admins')
+      .from('hybryd_admins')
       .select('user_id')
       .eq('user_id', user.id)
       .maybeSingle();
@@ -115,10 +115,10 @@ export default function WorkoutEditorPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase.from('exercise_library').upsert({
+    await supabase.from('hybryd_exercise_library').upsert({
       user_id: user.id,
       name: exerciseName,
-      color: '#FF00FF',
+      color: '#199DA9',
     }, { onConflict: 'user_id,name' });
 
     loadLibrary();
@@ -670,7 +670,7 @@ export default function WorkoutEditorPage() {
       forTimeRoundTimerMinutes,
     };
     await supabase
-      .from('workouts')
+      .from('hybryd_workouts')
       .update({
         name,
         trainer_name: localStorage.getItem('hclub_trainer_name') || '',
@@ -764,7 +764,7 @@ export default function WorkoutEditorPage() {
               &larr; Zurück
             </button>
             <h1 className="font-oswald text-xl sm:text-2xl font-bold tracking-wider whitespace-nowrap">
-              H-<span className="text-hclub-magenta">CLUB</span>
+              HYB<span className="text-hclub-magenta">RYD</span>
             </h1>
           </div>
           <div className="flex gap-2 sm:gap-3">
@@ -878,8 +878,8 @@ export default function WorkoutEditorPage() {
             {/* Random fill button */}
             <div className="flex justify-center mb-8">
               <button onClick={randomFill}
-                className="px-8 py-3 bg-purple-900/40 hover:bg-hclub-magenta border border-purple-500/50 hover:border-hclub-magenta
-                           text-purple-300 hover:text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-all duration-300">
+                className="px-8 py-3 bg-cyan-900/40 hover:bg-hclub-magenta border border-cyan-500/50 hover:border-hclub-magenta
+                           text-cyan-300 hover:text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-all duration-300">
                 Zufällig befüllen
               </button>
             </div>
@@ -917,7 +917,7 @@ export default function WorkoutEditorPage() {
                   <button
                     onClick={() => duplicateRound(roundIndex)}
                     className="text-xs px-3 py-1 rounded-lg font-oswald uppercase tracking-wider transition-colors border
-                               border-hclub-gray text-gray-400 hover:text-purple-300 hover:border-purple-500 hover:bg-purple-900/20"
+                               border-hclub-gray text-gray-400 hover:text-cyan-300 hover:border-cyan-500 hover:bg-cyan-900/20"
                     title="Runde kopieren"
                   >
                     Runde kopieren
@@ -973,7 +973,7 @@ export default function WorkoutEditorPage() {
                             onClick={() => promptDuplicateGroup(roundIndex, groupIndex)}
                             title="Gruppe duplizieren (mit optionaler Rotation)"
                             className="text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border
-                                       border-hclub-gray/50 text-gray-400 hover:text-purple-300 hover:border-purple-500 hover:bg-purple-900/20"
+                                       border-hclub-gray/50 text-gray-400 hover:text-cyan-300 hover:border-cyan-500 hover:bg-cyan-900/20"
                           >
                             Duplizieren
                           </button>
@@ -1077,7 +1077,7 @@ export default function WorkoutEditorPage() {
                                   : overrideKey ? 'border-hclub-magenta/50 bg-hclub-dark'
                                   : 'border-hclub-gray bg-hclub-black hover:border-gray-500'
                                 }`}>
-                                <IconComponent size={22} color={isPickerOpen ? '#e91e8c' : '#9ca3af'} />
+                                <IconComponent size={22} color={isPickerOpen ? '#199DA9' : '#9ca3af'} />
                               </button>
                             )}
                             {!isAdmin && (

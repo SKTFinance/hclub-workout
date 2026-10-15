@@ -18,7 +18,7 @@ async function isAdmin(): Promise<boolean> {
   if (!user) return false;
 
   const { data } = await getAdminClient()
-    .from('hclub_admins')
+    .from('hybryd_admins')
     .select('user_id')
     .eq('user_id', user.id)
     .single();

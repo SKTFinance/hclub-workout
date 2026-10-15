@@ -1,15 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
   --color-hclub-black: #000000;
-  --color-hclub-dark: #121212;
-  --color-hclub-gray: #2A2A2A;
-  --color-hclub-magenta: #FF00FF;
-  --color-hclub-magenta-dark: #CC00CC;
+  --color-hclub-dark: #0a0a0a;
+  --color-hclub-gray: #2a2a2a;
+  --color-hclub-magenta: #199DA9;
+  --color-hclub-magenta-dark: #22BFCC;
   --color-hclub-white: #FFFFFF;
-  --font-oswald: 'Oswald', sans-serif;
-  --font-inter: 'Inter', system-ui, sans-serif;
+  --font-oswald: 'Bebas Neue', 'Oswald', sans-serif;
+  --font-inter: 'Manrope', system-ui, sans-serif;
 }
 
 body {
@@ -35,11 +35,11 @@ h1, h2, h3, h4, h5, h6, .font-oswald {
 @keyframes power-pulse {
   0%, 100% {
     transform: scale(1);
-    text-shadow: 0 0 20px #FF00FF, 0 0 40px #FF00FF;
+    text-shadow: 0 0 20px #199DA9, 0 0 40px #199DA9;
   }
   50% {
     transform: scale(1.1);
-    text-shadow: 0 0 40px #FF00FF, 0 0 80px #FF00FF, 0 0 120px #FF00FF;
+    text-shadow: 0 0 40px #199DA9, 0 0 80px #199DA9, 0 0 120px #199DA9;
   }
 }
 
@@ -90,8 +90,8 @@ h1, h2, h3, h4, h5, h6, .font-oswald {
 
 /* Glow effect for active exercise */
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(255,0,255,0.2); }
-  50% { box-shadow: 0 0 40px rgba(255,0,255,0.4), 0 0 80px rgba(255,0,255,0.2); }
+  0%, 100% { box-shadow: 0 0 20px rgba(25,157,169,0.2); }
+  50% { box-shadow: 0 0 40px rgba(25,157,169,0.4), 0 0 80px rgba(25,157,169,0.2); }
 }
 .glow-pulse { animation: glow-pulse 2s ease-in-out infinite; }
 
@@ -156,25 +156,25 @@ h1, h2, h3, h4, h5, h6, .font-oswald {
 }
 .edge-glow-top {
   top: 0; left: 0; right: 0; height: 60px;
-  background: linear-gradient(to bottom, rgba(255,0,255,0.4), transparent);
+  background: linear-gradient(to bottom, rgba(25,157,169,0.4), transparent);
 }
 .edge-glow-bottom {
   bottom: 0; left: 0; right: 0; height: 60px;
-  background: linear-gradient(to top, rgba(255,0,255,0.4), transparent);
+  background: linear-gradient(to top, rgba(25,157,169,0.4), transparent);
 }
 .edge-glow-left {
   top: 0; left: 0; bottom: 0; width: 60px;
-  background: linear-gradient(to right, rgba(255,0,255,0.4), transparent);
+  background: linear-gradient(to right, rgba(25,157,169,0.4), transparent);
 }
 .edge-glow-right {
   top: 0; right: 0; bottom: 0; width: 60px;
-  background: linear-gradient(to left, rgba(255,0,255,0.4), transparent);
+  background: linear-gradient(to left, rgba(25,157,169,0.4), transparent);
 }
 
 /* Background pulse for power timer */
 @keyframes bg-pulse-dark {
   0%, 100% { background-color: rgba(0,0,0,1); }
-  50% { background-color: rgba(30,0,30,1); }
+  50% { background-color: rgba(8,24,26,1); }
 }
 .bg-pulse-dark {
   animation: bg-pulse-dark 0.5s ease-in-out infinite;
@@ -219,7 +219,7 @@ h1, h2, h3, h4, h5, h6, .font-oswald {
   100% { background-position: 0% 50%; }
 }
 .login-bg {
-  background: linear-gradient(135deg, #000000, #0d0015, #120020, #0a000f, #000000);
+  background: linear-gradient(135deg, #000000, #04100f, #071a1c, #030b0c, #000000);
   background-size: 400% 400%;
   animation: login-gradient 15s ease infinite;
 }
@@ -227,8 +227,8 @@ h1, h2, h3, h4, h5, h6, .font-oswald {
 /* Logo glow on load */
 @keyframes logo-glow {
   0% { text-shadow: 0 0 10px transparent; opacity: 0; transform: scale(0.9); }
-  50% { text-shadow: 0 0 30px #FF00FF, 0 0 60px #FF00FF, 0 0 90px rgba(255,0,255,0.3); }
-  100% { text-shadow: 0 0 15px rgba(255,0,255,0.3); opacity: 1; transform: scale(1); }
+  50% { text-shadow: 0 0 30px #199DA9, 0 0 60px #199DA9, 0 0 90px rgba(25,157,169,0.3); }
+  100% { text-shadow: 0 0 15px rgba(25,157,169,0.3); opacity: 1; transform: scale(1); }
 }
 .logo-glow { animation: logo-glow 1.5s ease-out forwards; }
 
@@ -243,7 +243,7 @@ h1, h2, h3, h4, h5, h6, .font-oswald {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(90deg, #FF00FF, #CC00CC, #9900FF, #FF00FF);
+  background: linear-gradient(90deg, #199DA9, #22BFCC, #0E6F78, #199DA9);
   background-size: 300% 100%;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -263,7 +263,7 @@ h1, h2, h3, h4, h5, h6, .font-oswald {
   top: 0;
   left: 0;
   height: 4px;
-  background: linear-gradient(90deg, #FF00FF, #CC00CC);
+  background: linear-gradient(90deg, #199DA9, #22BFCC);
   transition: width 1s linear;
   z-index: 10;
 }
@@ -302,15 +302,15 @@ input, select, textarea {
 /* Ambient purple background for the live workout (ruhig, dezent) */
 .rd-live-bg {
   background:
-    radial-gradient(120% 80% at 50% -10%, rgba(255, 0, 255, 0.07), transparent 60%),
-    #050208;
+    radial-gradient(120% 80% at 50% -10%, rgba(25, 157, 169, 0.07), transparent 60%),
+    #050909;
 }
 
 /* Glassy top timer bar */
 .rd-topbar {
-  background: linear-gradient(180deg, rgba(20, 4, 24, 0.92), rgba(5, 2, 8, 0.35));
+  background: linear-gradient(180deg, rgba(6, 16, 18, 0.92), rgba(2, 8, 9, 0.35));
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 0, 255, 0.12);
+  border-bottom: 1px solid rgba(25, 157, 169, 0.12);
 }
 
 /* Big timer digits (dezenter Glow) */
@@ -318,21 +318,21 @@ input, select, textarea {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   color: #fff;
-  text-shadow: 0 0 14px rgba(255, 0, 255, 0.28);
+  text-shadow: 0 0 14px rgba(25, 157, 169, 0.28);
 }
 .rd-timer-label {
-  color: #c79ad2;
+  color: #9fd3d8;
   letter-spacing: 0.28em;
 }
 .rd-timer-accent {
-  color: #ff4df0;
-  text-shadow: 0 0 14px rgba(255, 0, 255, 0.35);
+  color: #22BFCC;
+  text-shadow: 0 0 14px rgba(25, 157, 169, 0.35);
 }
 
 /* Round/countdown pill chips */
 .rd-chip {
-  border: 1px solid rgba(255, 0, 255, 0.28);
-  background: rgba(255, 0, 255, 0.06);
+  border: 1px solid rgba(25, 157, 169, 0.28);
+  background: rgba(25, 157, 169, 0.06);
 }
 
 /* ===== Single, prominent full-width progress bar under the top bar ===== */
@@ -357,11 +357,11 @@ input, select, textarea {
 /* Group column card (ruhig, kein pulsierender Rand) */
 .rd-col {
   position: relative;
-  background: linear-gradient(180deg, rgba(20, 9, 24, 0.5), rgba(8, 4, 12, 0.72));
+  background: linear-gradient(180deg, rgba(8, 18, 20, 0.5), rgba(2, 8, 9, 0.72));
   transition: background 0.4s ease;
 }
 .rd-col-active {
-  background: linear-gradient(180deg, rgba(28, 11, 32, 0.6), rgba(10, 5, 15, 0.8));
+  background: linear-gradient(180deg, rgba(10, 20, 22, 0.6), rgba(10, 5, 15, 0.8));
 }
 
 /* Exercise image frame — dezenter, ruhiger Rahmen.
@@ -370,7 +370,7 @@ input, select, textarea {
   position: relative;
   border-radius: 16px;
   overflow: hidden;
-  background: #0a0410;
+  background: #070c0d;
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
 }
@@ -384,16 +384,16 @@ input, select, textarea {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 50%, rgba(5, 2, 8, 0.8) 100%);
+  background: linear-gradient(180deg, transparent 50%, rgba(2, 8, 9, 0.8) 100%);
   pointer-events: none;
 }
 
 /* Weicher, farbiger Schein rund um das Bild in der Übungsfarbe (subtil, statisch) */
 .rd-img-color {
-  border-color: color-mix(in srgb, var(--ex-color, #ff00ff) 45%, transparent);
+  border-color: color-mix(in srgb, var(--ex-color, #199DA9) 45%, transparent);
   box-shadow:
-    0 0 22px color-mix(in srgb, var(--ex-color, #ff00ff) 30%, transparent),
-    0 0 46px color-mix(in srgb, var(--ex-color, #ff00ff) 14%, transparent),
+    0 0 22px color-mix(in srgb, var(--ex-color, #199DA9) 30%, transparent),
+    0 0 46px color-mix(in srgb, var(--ex-color, #199DA9) 14%, transparent),
     0 6px 24px rgba(0, 0, 0, 0.55);
 }
 
@@ -404,9 +404,9 @@ input, select, textarea {
 
 /* Bottom controls glass */
 .rd-bottombar {
-  background: linear-gradient(0deg, rgba(20, 4, 24, 0.9), rgba(5, 2, 8, 0.3));
+  background: linear-gradient(0deg, rgba(6, 16, 18, 0.9), rgba(2, 8, 9, 0.3));
   backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 0, 255, 0.14);
+  border-top: 1px solid rgba(25, 157, 169, 0.14);
 }
 
 /* Summary exercise list rows: bullet + spacing + subtle divider */
@@ -420,7 +420,7 @@ input, select, textarea {
   min-height: 2.9em;
   box-sizing: border-box;
   padding: 4px 0;
-  border-top: 1px solid rgba(255, 0, 255, 0.1);
+  border-top: 1px solid rgba(25, 157, 169, 0.1);
 }
 .rd-ex-row:first-of-type {
   border-top: none;

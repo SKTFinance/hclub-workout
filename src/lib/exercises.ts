@@ -8,7 +8,7 @@ export const HYROX_EXERCISES: DefaultExercise[] = [
   { name: 'SkiErg', color: '#00BFFF', category: 'hyrox' },
   { name: 'Sled Push', color: '#FF4444', category: 'hyrox' },
   { name: 'Sled Pull', color: '#FF6B00', category: 'hyrox' },
-  { name: 'Burpee Broad Jump', color: '#FF00FF', category: 'hyrox' },
+  { name: 'Burpee Broad Jump', color: '#199DA9', category: 'hyrox' },
   { name: 'Rowing', color: '#00CED1', category: 'hyrox' },
   { name: "Farmer's Carry", color: '#8B4513', category: 'hyrox' },
   { name: 'Sandbag Lunges', color: '#DAA520', category: 'hyrox' },
@@ -37,5 +37,5 @@ export function getDefaultColor(exerciseName: string): string {
   const exercise = ALL_DEFAULT_EXERCISES.find(
     (e) => e.name.toLowerCase() === exerciseName.toLowerCase()
   );
-  return exercise?.color || '#FF00FF';
+  return exercise?.color || '#199DA9';
 }

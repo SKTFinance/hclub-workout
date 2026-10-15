@@ -43,7 +43,7 @@ export default function DashboardPage() {
   }, [trainerName]);
 
   const loadFavorites = useCallback(async () => {
-    const { data } = await supabase.from('workout_favorites').select('workout_id');
+    const { data } = await supabase.from('hybryd_workout_favorites').select('workout_id');
     if (data) {
       setFavorites(new Set(data.map((f: { workout_id: string }) => f.workout_id)));
     }
@@ -57,7 +57,7 @@ export default function DashboardPage() {
       fetch('/api/admin/users').then(res => { if (res.ok) setIsAdmin(true); });
     }
 
-    let query = supabase.from('workouts').select('*');
+    let query = supabase.from('hybryd_workouts').select('*');
 
     if (filterMode === 'mine' && user) {
       query = query.eq('user_id', user.id);
@@ -113,12 +113,12 @@ export default function DashboardPage() {
   async function toggleFavorite(workoutId: string) {
     const isFav = favorites.has(workoutId);
     if (isFav) {
-      await supabase.from('workout_favorites').delete().eq('workout_id', workoutId);
+      await supabase.from('hybryd_workout_favorites').delete().eq('workout_id', workoutId);
       setFavorites(prev => { const next = new Set(prev); next.delete(workoutId); return next; });
     } else {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      await supabase.from('workout_favorites').insert({ user_id: user.id, workout_id: workoutId });
+      await supabase.from('hybryd_workout_favorites').insert({ user_id: user.id, workout_id: workoutId });
       setFavorites(prev => new Set(prev).add(workoutId));
     }
   }
@@ -148,7 +148,7 @@ export default function DashboardPage() {
       };
     }
 
-    const { data, error } = await supabase.from('workouts').insert({
+    const { data, error } = await supabase.from('hybryd_workouts').insert({
       user_id: user.id, user_email: user.email, name: 'Neues Workout',
       trainer_name: trainerName || 'Trainer', config: defaultConfig,
       is_public: true, workout_mode: workoutMode,
@@ -161,7 +161,7 @@ export default function DashboardPage() {
   async function duplicateWorkout(workout: Workout) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { error } = await supabase.from('workouts').insert({
+    const { error } = await supabase.from('hybryd_workouts').insert({
       user_id: user.id, user_email: user.email,
       name: `${workout.name} (Kopie)`, trainer_name: trainerName || workout.trainer_name,
       config: workout.config, is_public: true, workout_mode: workout.workout_mode || 'timed',
@@ -171,7 +171,7 @@ export default function DashboardPage() {
 
   async function deleteWorkout(id: string) {
     if (!confirm('Workout wirklich löschen?')) return;
-    await supabase.from('workouts').delete().eq('id', id);
+    await supabase.from('hybryd_workouts').delete().eq('id', id);
     loadWorkouts();
   }
 
@@ -223,7 +223,7 @@ export default function DashboardPage() {
             <button onClick={() => window.open(`/workout/${workout.id}/live`, '_blank')}
               className="px-2 py-1 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white text-xs font-oswald uppercase rounded transition-colors">Start</button>
             <button onClick={() => duplicateWorkout(workout)}
-              className="px-2 py-1 bg-hclub-gray hover:bg-purple-900/60 text-gray-400 text-xs font-oswald uppercase rounded transition-colors">Kopie</button>
+              className="px-2 py-1 bg-hclub-gray hover:bg-cyan-900/60 text-gray-400 text-xs font-oswald uppercase rounded transition-colors">Kopie</button>
             {isOwn && (
               <button onClick={() => deleteWorkout(workout.id)}
                 className="px-2 py-1 bg-red-900/30 hover:bg-red-900/60 text-red-400 text-xs font-oswald uppercase rounded transition-colors">X</button>
@@ -277,7 +277,7 @@ export default function DashboardPage() {
           <button onClick={() => window.open(`/workout/${workout.id}/live`, '_blank')}
             className="flex-1 px-3 py-2 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white text-sm font-oswald uppercase tracking-wider rounded-lg transition-colors">Starten</button>
           <button onClick={() => duplicateWorkout(workout)}
-            className="px-3 py-2 bg-hclub-gray hover:bg-purple-900/60 text-gray-300 hover:text-purple-300 text-sm font-oswald uppercase rounded-lg transition-colors">Kopie</button>
+            className="px-3 py-2 bg-hclub-gray hover:bg-cyan-900/60 text-gray-300 hover:text-cyan-300 text-sm font-oswald uppercase rounded-lg transition-colors">Kopie</button>
           {isOwn && (
             <button onClick={() => deleteWorkout(workout.id)}
               className="px-3 py-2 bg-red-900/30 hover:bg-red-900/60 text-red-400 text-sm font-oswald uppercase rounded-lg transition-colors">X</button>
@@ -292,7 +292,7 @@ export default function DashboardPage() {
       <header className="border-b border-hclub-gray">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="font-oswald text-3xl font-bold tracking-wider">
-            H-<span className="text-hclub-magenta">CLUB</span>
+            HYB<span className="text-hclub-magenta">RYD</span>
           </h1>
           <div className="flex items-center gap-4">
             {isAdmin && (

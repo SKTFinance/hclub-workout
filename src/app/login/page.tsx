@@ -53,7 +53,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-10">
           <h1 className="font-oswald text-6xl font-bold tracking-wider logo-glow">
-            H-<span className="text-hclub-magenta">CLUB</span>
+            HYB<span className="text-hclub-magenta">RYD</span>
           </h1>
           <p className="text-gray-400 mt-2 text-sm uppercase tracking-[0.3em] font-oswald fade-in-up"
              style={{ opacity: 0, animationDelay: '0.5s' }}>
@@ -75,7 +75,7 @@ export default function LoginPage() {
               className="w-full px-4 py-3 bg-hclub-dark border border-hclub-gray rounded-lg
                          text-white placeholder-gray-500 focus:outline-none focus:border-hclub-magenta
                          transition-colors"
-              placeholder="trainer@h-club.at"
+              placeholder="coach@hybrydmallorca.com"
             />
           </div>
           <div>

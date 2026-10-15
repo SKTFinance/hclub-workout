@@ -16,7 +16,7 @@ import { getExerciseImage } from '@/lib/exerciseImages';
 
 type Phase = 'idle' | 'summary' | 'warmup' | 'countdown' | 'work' | 'rest' | 'roundRest' | 'finished';
 
-const PARTICLE_COLORS = ['#FF00FF', '#CC00CC', '#9900FF', '#FF66FF', '#FFD700', '#00BFFF', '#FF4444', '#32CD32'];
+const PARTICLE_COLORS = ['#199DA9', '#22BFCC', '#0E6F78', '#5FD3DD', '#FFD700', '#00BFFF', '#FF4444', '#32CD32'];
 
 export default function LiveWorkoutPage() {
   const params = useParams();
@@ -70,7 +70,7 @@ export default function LiveWorkoutPage() {
   // Load workout and exercise colors
   const loadData = useCallback(async () => {
     const { data: workoutData } = await supabase
-      .from('workouts')
+      .from('hybryd_workouts')
       .select('*')
       .eq('id', id)
       .single();
@@ -82,7 +82,7 @@ export default function LiveWorkoutPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const { data: settings } = await supabase
-        .from('exercise_settings')
+        .from('hybryd_exercise_settings')
         .select('*')
         .eq('user_id', user.id);
 
@@ -651,7 +651,7 @@ export default function LiveWorkoutPage() {
     return (
       <div className="workout-fullscreen flex flex-col items-center justify-center overflow-y-auto px-4 pb-[15vh] [@media(max-height:500px)]:justify-start [@media(max-height:500px)]:pt-4 [@media(max-height:500px)]:pb-4">
         <h1 className="font-oswald text-6xl md:text-8xl font-bold tracking-wider mb-4 logo-glow [@media(max-height:500px)]:text-4xl [@media(max-height:500px)]:mb-1">
-          H-<span className="text-hclub-magenta">CLUB</span>
+          HYB<span className="text-hclub-magenta">RYD</span>
         </h1>
         <h2 className="font-oswald text-3xl md:text-4xl uppercase tracking-wider text-gray-300 mb-2 text-center fade-in-up [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-0">
           {workout.name}
@@ -841,13 +841,13 @@ export default function LiveWorkoutPage() {
       <div className="workout-fullscreen flex flex-col items-center justify-center bg-pulse-dark">
         <div key={countdownValue} className="countdown-pop font-oswald font-bold text-hclub-magenta" style={{
           fontSize: 'min(50vw, 40vh)',
-          textShadow: '0 0 60px #FF00FF, 0 0 120px rgba(255,0,255,0.5)',
+          textShadow: '0 0 60px #199DA9, 0 0 120px rgba(25,157,169,0.5)',
           lineHeight: 1,
         }}>
           {countdownValue > 0 ? countdownValue : 'GO!'}
         </div>
         <div className="absolute bottom-6 right-6">
-          <span className="font-oswald text-xl tracking-wider text-gray-500">H-<span className="text-hclub-magenta">CLUB</span></span>
+          <span className="font-oswald text-xl tracking-wider text-gray-500">HYB<span className="text-hclub-magenta">RYD</span></span>
         </div>
       </div>
     );
@@ -868,7 +868,7 @@ export default function LiveWorkoutPage() {
         ))}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="burst rounded-full border-2 border-hclub-magenta" style={{ width: 100, height: 100, animationDelay: '0s' }} />
-          <div className="burst rounded-full border border-purple-500" style={{ width: 80, height: 80, animationDelay: '0.3s', position: 'absolute' }} />
+          <div className="burst rounded-full border border-cyan-500" style={{ width: 80, height: 80, animationDelay: '0.3s', position: 'absolute' }} />
         </div>
         <h1 className="font-oswald text-7xl md:text-9xl font-bold text-hclub-magenta uppercase tracking-wider mb-8 power-pulse relative z-10">Fertig!</h1>
         <h2 className="font-oswald text-3xl uppercase tracking-wider text-gray-300 mb-4 relative z-10">{workout.name}</h2>
@@ -881,7 +881,7 @@ export default function LiveWorkoutPage() {
           Zurück
         </button>
         <div className="absolute bottom-6 right-6">
-          <span className="font-oswald text-xl tracking-wider text-gray-500">H-<span className="text-hclub-magenta">CLUB</span></span>
+          <span className="font-oswald text-xl tracking-wider text-gray-500">HYB<span className="text-hclub-magenta">RYD</span></span>
         </div>
       </div>
     );
@@ -912,7 +912,7 @@ export default function LiveWorkoutPage() {
             <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><rect x="5" y="4" width="5" height="16" rx="1" /><rect x="14" y="4" width="5" height="16" rx="1" /></svg>
           )}
         </button>
-        <div className="absolute bottom-6 right-6"><span className="font-oswald text-xl tracking-wider text-gray-500">H-<span className="text-hclub-magenta">CLUB</span></span></div>
+        <div className="absolute bottom-6 right-6"><span className="font-oswald text-xl tracking-wider text-gray-500">HYB<span className="text-hclub-magenta">RYD</span></span></div>
         <div className="absolute bottom-6 left-6 text-gray-500">{workout.trainer_name}</div>
       </div>
     );
@@ -958,14 +958,14 @@ export default function LiveWorkoutPage() {
                 Restzeit
               </div>
               <div className={`font-oswald font-bold leading-none ${roundTimerExpired ? 'heartbeat' : 'rd-timer-accent'}`}
-                style={{ fontSize: 'min(17vw, 6.5rem)', textShadow: roundTimerExpired ? '0 0 40px #f87171' : forTimeRoundTimeRemaining <= 30 ? '0 0 26px #facc15' : '0 0 22px rgba(255,0,255,0.4)' }}>
+                style={{ fontSize: 'min(17vw, 6.5rem)', textShadow: roundTimerExpired ? '0 0 40px #f87171' : forTimeRoundTimeRemaining <= 30 ? '0 0 26px #facc15' : '0 0 22px rgba(25,157,169,0.4)' }}>
                 {formatTime(forTimeRoundTimeRemaining)}
               </div>
             </div>
           )}
 
           <div className="font-oswald text-lg tracking-wider text-gray-400">
-            H-<span className="text-hclub-magenta rd-timer-accent">CLUB</span>
+            HYB<span className="text-hclub-magenta rd-timer-accent">RYD</span>
           </div>
         </div>
 
@@ -1065,7 +1065,7 @@ export default function LiveWorkoutPage() {
             </button>
             <span className="text-gray-400 text-sm">{workout.trainer_name}</span>
           </div>
-          <span className="font-oswald text-lg tracking-wider text-gray-500">H-<span className="text-hclub-magenta">CLUB</span></span>
+          <span className="font-oswald text-lg tracking-wider text-gray-500">HYB<span className="text-hclub-magenta">RYD</span></span>
         </div>
       </div>
     );
@@ -1087,7 +1087,7 @@ export default function LiveWorkoutPage() {
       {showRoundAnnounce && (
         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div className="round-announce font-oswald font-bold text-hclub-magenta uppercase"
-               style={{ fontSize: 'min(30vw, 25vh)', textShadow: '0 0 40px rgba(255,0,255,0.5)', lineHeight: 1 }}>
+               style={{ fontSize: 'min(30vw, 25vh)', textShadow: '0 0 40px rgba(25,157,169,0.5)', lineHeight: 1 }}>
             Runde {announceRound}
           </div>
         </div>
@@ -1135,9 +1135,9 @@ export default function LiveWorkoutPage() {
           phase === 'roundRest' ? (config.roundRestTime || 60) : 0;
         const fillPct = phaseTotal > 0 ? Math.max(0, Math.min(100, (timeRemaining / phaseTotal) * 100)) : 0;
         const barColor =
-          phase === 'work' ? '#FF00FF' :
+          phase === 'work' ? '#199DA9' :
           phase === 'rest' ? '#FACC15' :
-          phase === 'roundRest' ? '#FB923C' : '#FF00FF';
+          phase === 'roundRest' ? '#FB923C' : '#199DA9';
         return (
           <div className="rd-progress-track">
             <div className="rd-progress-fill" style={{
@@ -1532,7 +1532,7 @@ export default function LiveWorkoutPage() {
             Übung {currentExerciseIndex + 1}/{getMaxExercisesInRound(config, currentRound)}
           </div>
         )}
-        <span className="font-oswald text-lg tracking-wider text-gray-500">H-<span className="text-hclub-magenta">CLUB</span></span>
+        <span className="font-oswald text-lg tracking-wider text-gray-500">HYB<span className="text-hclub-magenta">RYD</span></span>
       </div>
     </div>
   );

@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'H-CLUB Workout Timer',
-  description: 'HYROX Workout Timer für H-Club',
+  title: 'HYBRYD Workout Timer',
+  description: 'HYROX Workout Timer für Hybryd Mallorca',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'H-CLUB',
+    title: 'HYBRYD',
   },
   icons: {
     icon: '/icon-192.png',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#FF00FF',
+  themeColor: '#199DA9',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

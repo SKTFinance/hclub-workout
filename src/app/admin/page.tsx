@@ -165,7 +165,7 @@ export default function AdminPage() {
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <a href="/dashboard" className="font-oswald text-3xl font-bold tracking-wider">
-              H-<span className="text-hclub-magenta">CLUB</span>
+              HYB<span className="text-hclub-magenta">RYD</span>
             </a>
             <span className="text-gray-500 font-oswald uppercase tracking-wider text-sm">/ Benutzerverwaltung</span>
           </div>
@@ -198,7 +198,7 @@ export default function AdminPage() {
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 required
-                placeholder="trainer@h-club.at"
+                placeholder="coach@hybrydmallorca.com"
                 className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-sm
                            placeholder-gray-500 focus:outline-none focus:border-hclub-magenta transition-colors"
               />

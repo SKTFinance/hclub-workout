@@ -18,7 +18,7 @@ async function isAdmin(): Promise<boolean> {
   if (!user) return false;
 
   const { data } = await getAdminClient()
-    .from('hclub_admins')
+    .from('hybryd_admins')
     .select('user_id')
     .eq('user_id', user.id)
     .single();
@@ -38,7 +38,7 @@ export async function GET() {
   }
 
   const simplified = users
-    .filter((u) => u.email?.includes('@h-club'))
+    .filter((u) => u.email?.includes('@hybryd'))
     .map((u) => ({
       id: u.id,
       email: u.email,

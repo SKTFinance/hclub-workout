@@ -1,7 +1,7 @@
 {
-  "name": "H-CLUB Workout Timer",
-  "short_name": "H-CLUB",
-  "description": "HYROX Workout Timer für H-Club",
+  "name": "HYBRYD Workout Timer",
+  "short_name": "HYBRYD",
+  "description": "HYROX Workout Timer für Hybryd Mallorca",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#000000",
