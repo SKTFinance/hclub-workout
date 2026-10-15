@@ -649,22 +649,22 @@ export default function LiveWorkoutPage() {
   // =================== IDLE STATE ===================
   if (phase === 'idle') {
     return (
-      <div className="workout-fullscreen flex flex-col items-center justify-center" style={{ paddingBottom: "15vh" }}>
-        <h1 className="font-oswald text-6xl md:text-8xl font-bold tracking-wider mb-4 logo-glow">
+      <div className="workout-fullscreen flex flex-col items-center justify-center overflow-y-auto px-4 pb-[15vh] [@media(max-height:500px)]:justify-start [@media(max-height:500px)]:pt-4 [@media(max-height:500px)]:pb-4">
+        <h1 className="font-oswald text-6xl md:text-8xl font-bold tracking-wider mb-4 logo-glow [@media(max-height:500px)]:text-4xl [@media(max-height:500px)]:mb-1">
           H-<span className="text-hclub-magenta">CLUB</span>
         </h1>
-        <h2 className="font-oswald text-3xl md:text-4xl uppercase tracking-wider text-gray-300 mb-2 fade-in-up">
+        <h2 className="font-oswald text-3xl md:text-4xl uppercase tracking-wider text-gray-300 mb-2 text-center fade-in-up [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-0">
           {workout.name}
         </h2>
-        <p className="text-gray-400 text-lg mb-4 fade-in-up" style={{ animationDelay: '0.1s' }}>{workout.trainer_name}</p>
-        <div className={`font-oswald text-sm uppercase tracking-wider mb-8 px-3 py-1 rounded ${
+        <p className="text-gray-400 text-lg mb-4 fade-in-up [@media(max-height:500px)]:mb-1 [@media(max-height:500px)]:text-base" style={{ animationDelay: '0.1s' }}>{workout.trainer_name}</p>
+        <div className={`font-oswald text-sm uppercase tracking-wider mb-8 [@media(max-height:500px)]:mb-3 px-3 py-1 rounded ${
           workoutMode === 'fortime' ? 'text-cyan-400 bg-cyan-400/10' :
           'text-green-400 bg-green-400/10'
         }`}>
           {workoutMode === 'fortime' ? 'AMRAP' : 'Zeitbasiert'}
         </div>
 
-        <div className="grid grid-cols-3 gap-8 mb-12 text-center">
+        <div className="grid grid-cols-3 gap-8 mb-12 text-center [@media(max-height:500px)]:mb-4">
           <div className="fade-in-up" style={{ animationDelay: '0.2s' }}>
             <div className="font-oswald text-4xl text-hclub-magenta">{config.numGroups}</div>
             <div className="text-gray-400 text-sm font-oswald uppercase">Gruppen</div>
@@ -713,7 +713,7 @@ export default function LiveWorkoutPage() {
           Workout Starten
         </button>
 
-        <div className="absolute bottom-6 flex gap-8 text-gray-500 text-sm">
+        <div className="absolute bottom-6 hidden md:flex gap-8 text-gray-500 text-sm pointer-events-none [@media(max-height:500px)]:hidden">
           <span>LEERTASTE = Start/Pause</span>
           <span>F = Vollbild</span>
           <span>ESC = Beenden</span>
@@ -739,7 +739,7 @@ export default function LiveWorkoutPage() {
           </p>
           {totalTimeEstimate > 0 && (
             <div className="font-oswald text-hclub-magenta fade-in-up" style={{ animationDelay: '0.15s', fontSize: 'clamp(12px, 2vh, 18px)' }}>
-              Geschaetzte Dauer: {formatTimeMinutes(totalTimeEstimate)}
+              Geschätzte Dauer: {formatTimeMinutes(totalTimeEstimate)}
             </div>
           )}
         </div>
@@ -991,7 +991,7 @@ export default function LiveWorkoutPage() {
                   </div>
 
                   {/* Übersicht — alle Übungen gleichwertig sichtbar */}
-                  <div className="flex-1 overflow-y-auto py-2 flex flex-col justify-center">
+                  <div className="flex-1 overflow-y-auto py-2 flex flex-col [justify-content:safe_center]">
                     {exercises.length === 0 ? (
                       <div className="text-center text-gray-600 font-oswald uppercase text-sm">—</div>
                     ) : (
@@ -1101,7 +1101,7 @@ export default function LiveWorkoutPage() {
             {phase === 'roundRest' && <span className="text-orange-400">Rundenpause</span>}
             {phase === 'work' && <span className="text-hclub-magenta rd-timer-accent">Arbeit</span>}
           </div>
-          <div className="rd-chip font-oswald text-sm md:text-base tracking-wider text-gray-200 px-2.5 py-0.5 rounded-full">
+          <div className="rd-chip font-oswald text-sm md:text-base tracking-wider text-gray-200 px-2.5 py-0.5 rounded-full whitespace-nowrap">
             Runde {currentRound + 1}/{config.numRounds}
           </div>
         </div>

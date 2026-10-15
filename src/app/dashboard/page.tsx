@@ -182,7 +182,7 @@ export default function DashboardPage() {
   }
 
   function getModeLabel(mode?: WorkoutMode): string {
-    switch (mode) { case 'amrap': return 'AMRAP'; case 'fortime': return 'For Time'; default: return 'Zeit'; }
+    switch (mode) { case 'amrap': return 'AMRAP'; case 'fortime': return 'AMRAP'; default: return 'Zeit'; }
   }
   function getModeColor(mode?: WorkoutMode): string {
     switch (mode) { case 'amrap': return 'text-orange-400'; case 'fortime': return 'text-cyan-400'; default: return 'text-green-400'; }
@@ -335,8 +335,7 @@ export default function DashboardPage() {
             style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%239ca3af\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '36px' }}>
             <option value="all">Alle Typen</option>
             <option value="timed">⏱ Zeitbasiert</option>
-            <option value="amrap">🔁 AMRAP</option>
-            <option value="fortime">🏁 For Time</option>
+            <option value="fortime">🔁 AMRAP</option>
           </select>
 
           {/* Sort */}
@@ -383,8 +382,7 @@ export default function DashboardPage() {
               <select value={workoutMode} onChange={(e) => setWorkoutMode(e.target.value as WorkoutMode)}
                 className="px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-sm focus:outline-none focus:border-hclub-magenta transition-colors">
                 <option value="timed">Zeitbasiert</option>
-                <option value="amrap">AMRAP</option>
-                <option value="fortime">For Time</option>
+                <option value="fortime">AMRAP</option>
               </select>
             </div>
             <button onClick={createWorkout}

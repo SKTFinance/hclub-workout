@@ -45,7 +45,62 @@ const NAME_TO_SLUG: Record<string, string> = {
   'dumbbell shoulder press': 'shoulder-press',
   'db shoulder press': 'shoulder-press',
   'strict press': 'shoulder-press',
+  // Kniebeugen mit Kettlebell, Sit-ups
+  'goblet squat': 'goblet-squat',
+  'goblet squats': 'goblet-squat',
+  'goblet squats (kb)': 'goblet-squat',
+  'sit-ups': 'sit-ups',
+  'sit ups': 'sit-ups',
+  'situps': 'sit-ups',
 };
+
+// Trainer schreiben oft frei: „400m row", „20 WB --> 200m Ski", „1L Sled pull".
+// Ohne exakten Treffer suchen wir Stichworte; bei mehreren gewinnt das früheste
+// im Namen (bei gleicher Stelle das längere), also die zuerst genannte Übung.
+const KEYWORDS: [RegExp, string][] = [
+  [/sled\s*push|schlitten/, 'sled-push'],
+  [/sled\s*pull/, 'sled-pull'],
+  [/push[\s-]*ups?\b|liegestütz/, 'push-ups'],
+  [/\bpush\b/, 'sled-push'],
+  [/pull[\s-]*ups?\b|klimmz/, 'pull-ups'],
+  [/\bwb\b|wall\s*balls?/, 'wall-balls'],
+  [/\bbbj\b|broad\s*jump/, 'burpee-broad-jump'],
+  [/burpee/, 'burpees'],
+  [/\bski/, 'skierg'],
+  [/\brow(ing)?\b|rudern/, 'rowing'],
+  [/carry|farmer/, 'farmers-carry'],
+  [/(sand)?bag\s*lunge/, 'sandbag-lunges'],
+  [/lunge|ausfallschritt/, 'lunges'],
+  [/\brun\b|running|sprint|lauf/, 'run'],
+  [/thruster|squat[\w\s-]*press/, 'thrusters'],
+  [/back\s*squat/, 'back-squats'],
+  [/squat|kniebeug/, 'goblet-squat'],
+  [/shoulder\s*press|overhead\s*press|\bpress\b/, 'shoulder-press'],
+  [/sit[\s-]*ups?|crunch/, 'sit-ups'],
+  [/plank/, 'planks'],
+  [/box\s*jump/, 'box-jumps'],
+  [/swing/, 'kettlebell-swings'],
+  [/deadlift|kreuzheben/, 'deadlifts'],
+  [/battle\s*rope/, 'battle-ropes'],
+  [/bike/, 'assault-bike'],
+];
+
+function matchKeyword(key: string): string | null {
+  let best: { slug: string; pos: number; len: number } | null = null;
+  for (const [re, slug] of KEYWORDS) {
+    const m = re.exec(key);
+    if (!m) continue;
+    if (!best || m.index < best.pos || (m.index === best.pos && m[0].length > best.len)) {
+      best = { slug, pos: m.index, len: m[0].length };
+    }
+  }
+  return best ? best.slug : null;
+}
+
+function resolveSlug(exerciseName: string): string | null {
+  const key = exerciseName.trim().toLowerCase();
+  return NAME_TO_SLUG[key] || matchKeyword(key);
+}
 
 const GENERIC = '/exercises/generic.jpg';
 
@@ -74,7 +129,7 @@ export function slugToImageUrl(slug: string): string {
 }
 
 // Returns the image URL for an exercise.
-// Priority: user override (localStorage) > NAME_TO_SLUG mapping > generic.
+// Priority: user override (localStorage) > NAME_TO_SLUG mapping > Stichwort > generic.
 export function getExerciseImage(exerciseName: string | undefined | null): string {
   if (!exerciseName) return GENERIC;
   const key = exerciseName.trim().toLowerCase();
@@ -83,12 +138,12 @@ export function getExerciseImage(exerciseName: string | undefined | null): strin
   const override = overrides[key] ?? overrides[exerciseName.trim()];
   if (override) return slugToImageUrl(override);
 
-  const slug = NAME_TO_SLUG[key];
+  const slug = resolveSlug(exerciseName);
   return slug ? `/exercises/${slug}.jpg` : GENERIC;
 }
 
 // Resolves the default (non-override) slug for an exercise, or '__generic__'.
 export function getDefaultImageSlug(exerciseName: string | undefined | null): string {
   if (!exerciseName) return '__generic__';
-  return NAME_TO_SLUG[exerciseName.trim().toLowerCase()] || '__generic__';
+  return resolveSlug(exerciseName) || '__generic__';
 }

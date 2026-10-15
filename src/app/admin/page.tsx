@@ -149,7 +149,7 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen bg-hclub-black flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-red-400 font-oswald text-xl uppercase tracking-wider mb-4">{error}</p>
+          <p className="text-red-400 font-oswald text-xl uppercase tracking-wider mb-4">{error || 'Kein Zugriff'}</p>
           <a href="/dashboard" className="text-hclub-magenta hover:underline font-oswald uppercase tracking-wider text-sm">
             Zurück zum Dashboard
           </a>
