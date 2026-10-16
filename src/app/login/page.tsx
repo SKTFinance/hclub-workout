@@ -70,7 +70,7 @@ export default function LoginPage() {
               className="w-full px-4 py-3 bg-hclub-dark border border-hclub-gray rounded-lg
                          text-white placeholder-gray-500 focus:outline-none focus:border-hclub-magenta
                          transition-colors"
-              placeholder="HYBRYD"
+              placeholder="Password"
             />
           </div>
 
