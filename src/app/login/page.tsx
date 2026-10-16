@@ -4,10 +4,14 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
+// Demo für David (16.10.2026, Samuel TG 18016): Zugang nur mit dem Passwort „HYBRYD“, ohne Mailadresse.
+// Das Wort öffnet das gemeinsame Demo-Konto; es ist ohnehin öffentlich weitergegeben.
+const DEMO_WORT = 'HYBRYD';
+const DEMO_EMAIL = 'demo.hybryd@sktopenclaw.com';
+const DEMO_KONTO_PASSWORT = 'Hybryd-Demo-c0edd2';
+
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -19,24 +23,12 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (error) throw error;
-        const { error: loginError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (loginError) throw loginError;
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-      }
+      if (password.trim().toUpperCase() !== DEMO_WORT) throw new Error('Wrong password');
+      const { error } = await supabase.auth.signInWithPassword({
+        email: DEMO_EMAIL,
+        password: DEMO_KONTO_PASSWORT,
+      });
+      if (error) throw error;
       router.push('/dashboard');
       router.refresh();
     } catch (err: unknown) {
@@ -65,21 +57,6 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-5 fade-in-up" style={{ opacity: 0, animationDelay: '0.7s' }}>
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1 uppercase tracking-wider font-oswald">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-3 bg-hclub-dark border border-hclub-gray rounded-lg
-                         text-white placeholder-gray-500 focus:outline-none focus:border-hclub-magenta
-                         transition-colors"
-              placeholder="coach@hybrydmallorca.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1 uppercase tracking-wider font-oswald">
               Password
             </label>
             <input
@@ -87,11 +64,13 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              autoFocus
+              autoCapitalize="characters"
+              autoComplete="off"
               className="w-full px-4 py-3 bg-hclub-dark border border-hclub-gray rounded-lg
                          text-white placeholder-gray-500 focus:outline-none focus:border-hclub-magenta
                          transition-colors"
-              placeholder="••••••••"
+              placeholder="HYBRYD"
             />
           </div>
 
@@ -108,23 +87,10 @@ export default function LoginPage() {
                        text-lg uppercase tracking-wider rounded-lg transition-colors disabled:opacity-50
                        disabled:cursor-not-allowed"
           >
-            {loading ? 'Loading...' : isSignUp ? 'Sign up' : 'Sign in'}
+            {loading ? 'Loading...' : 'Sign in'}
           </button>
         </form>
 
-        <div className="mt-6 text-center fade-in-up" style={{ opacity: 0, animationDelay: '0.9s' }}>
-          <button
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError('');
-            }}
-            className="text-gray-400 hover:text-hclub-magenta text-sm transition-colors"
-          >
-            {isSignUp
-              ? 'Already have an account? Sign in'
-              : 'No account yet? Sign up'}
-          </button>
-        </div>
       </div>
     </div>
   );
