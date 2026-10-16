@@ -35,16 +35,17 @@ h1, h2, h3, h4, h5, h6, .font-oswald {
 @keyframes power-pulse {
   0%, 100% {
     transform: scale(1);
-    text-shadow: 0 0 20px #199DA9, 0 0 40px #199DA9;
+    text-shadow: 0 0 6px rgba(25,157,169,0.55), 0 0 18px rgba(25,157,169,0.35);
   }
   50% {
-    transform: scale(1.1);
-    text-shadow: 0 0 40px #199DA9, 0 0 80px #199DA9, 0 0 120px #199DA9;
+    transform: scale(1.06);
+    text-shadow: 0 0 10px rgba(25,157,169,0.7), 0 0 26px rgba(25,157,169,0.4);
   }
 }
 
 .power-pulse {
-  animation: power-pulse 0.5s ease-in-out infinite;
+  color: #fff;
+  animation: power-pulse 1.2s ease-in-out infinite;
 }
 
 @keyframes flash-bg {

@@ -870,7 +870,7 @@ export default function LiveWorkoutPage() {
           <div className="burst rounded-full border-2 border-hclub-magenta" style={{ width: 100, height: 100, animationDelay: '0s' }} />
           <div className="burst rounded-full border border-cyan-500" style={{ width: 80, height: 80, animationDelay: '0.3s', position: 'absolute' }} />
         </div>
-        <h1 className="font-oswald text-7xl md:text-9xl font-bold text-hclub-magenta uppercase tracking-wider mb-8 power-pulse relative z-10">Done!</h1>
+        <h1 className="font-oswald text-7xl md:text-9xl font-bold text-white uppercase tracking-wider mb-8 power-pulse relative z-10">Done!</h1>
         <h2 className="font-oswald text-3xl uppercase tracking-wider text-gray-300 mb-4 relative z-10">{workout.name}</h2>
         {workoutMode === 'fortime' && (
           <p className="font-oswald text-2xl text-cyan-400 mb-4 relative z-10">Time: {formatTime(forTimeElapsed)}</p>
