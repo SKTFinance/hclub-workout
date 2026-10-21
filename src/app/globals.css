@@ -739,12 +739,35 @@ input, select, textarea {
   .as-root[data-groups="1"] .as-list:has(> :nth-child(4)) {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: repeat(var(--n2), minmax(0, 1fr));
-    grid-auto-flow: column;
+    grid-auto-flow: row;
     column-gap: clamp(12px, 1.4vw, 22px);
   }
+  /* Ein Zirkel mit bis zu drei Stationen: große Kacheln nebeneinander, Bild oben. */
+  .as-root[data-groups="1"] .as-list:not(:has(> :nth-child(4))) {
+    grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+    column-gap: clamp(14px, 1.6vw, 26px);
+  }
+  .as-root[data-groups="1"] .as-list:not(:has(> :nth-child(4))) .as-card-btn {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: stretch;
+    padding: clamp(10px, 3cqi, 16px);
+    gap: clamp(12px, 3cqh, 22px);
+  }
+  .as-root[data-groups="1"] .as-list:not(:has(> :nth-child(4))) .as-img {
+    width: 100%; height: 100%; max-width: none; aspect-ratio: auto; border-radius: 12px;
+  }
+  .as-root[data-groups="1"] .as-list:not(:has(> :nth-child(4))) .as-body { padding: 0 4px 6px; gap: 10px; }
+  .as-root[data-groups="1"] .as-list:not(:has(> :nth-child(4))) .as-metric { font-size: min(13cqh, 17cqi); }
+  .as-root[data-groups="1"] .as-list:not(:has(> :nth-child(4))) .as-name { font-size: min(8cqh, 10cqi); }
+  .as-root[data-groups="1"] .as-list:not(:has(> :nth-child(4))) .as-now-tag { top: clamp(16px, 4cqi, 24px); right: clamp(16px, 4cqi, 24px); font-size: 15px; padding: 5px 12px; }
+  .as-root[data-groups="1"] .as-list:not(:has(> :nth-child(4))) .as-index,
+  .as-root[data-groups="1"] .as-list:not(:has(> :nth-child(4))) .as-weight { font-size: 15px; }
 }
 
 /* Zustände */
+.as-card.is-next
 .as-card.is-next .as-card-btn { opacity: 0.82; }
 .as-card.is-now .as-card-btn {
   transform: scale(1.02);
