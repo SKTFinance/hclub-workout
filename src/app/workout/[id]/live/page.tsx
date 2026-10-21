@@ -13,6 +13,7 @@ import {
   playRoundEndSound,
 } from '@/lib/sounds';
 import { getExerciseImage } from '@/lib/exerciseImages';
+import AmrapStage from '@/components/AmrapStage';
 
 type Phase = 'idle' | 'summary' | 'warmup' | 'countdown' | 'work' | 'rest' | 'roundRest' | 'finished';
 
@@ -69,6 +70,15 @@ export default function LiveWorkoutPage() {
 
   // Load workout and exercise colors
   const loadData = useCallback(async () => {
+    // Vorschau aus dem KI-Baukasten: Workout liegt nur im Browser (localStorage),
+    // nichts wird gespeichert oder aus der Datenbank gelesen.
+    if (id === 'preview') {
+      try {
+        const raw = localStorage.getItem('hybryd_preview_workout');
+        if (raw) setWorkout(JSON.parse(raw) as Workout);
+      } catch { /* leer lassen → „Loading" */ }
+      return;
+    }
     const { data: workoutData } = await supabase
       .from('hybryd_workouts')
       .select('*')
@@ -474,6 +484,17 @@ export default function LiveWorkoutPage() {
         nextIdx += 1;
       }
       if (nextIdx >= exercises.length) {
+        // For Time mit Rundenzahl („3 RFT"): bis zur Zielrunde wieder vorn beginnen,
+        // danach ist die Gruppe fertig — auch wenn ein Time-Cap läuft.
+        const target = workout.config.forTimeTargetRounds || 0;
+        if (target > 0) {
+          const done = (forTimeGroupRounds[groupIndex] || 0) + 1;
+          setForTimeGroupRounds(pr => ({ ...pr, [groupIndex]: done }));
+          playRoundEndSound();
+          if (done < target) return { ...prev, [groupIndex]: 0 };
+          setForTimeGroupFinished(pf => ({ ...pf, [groupIndex]: true }));
+          return prev;
+        }
         // AMRAP mit Rundentimer: Gruppe ist durch → Durchgang zählen und wieder vorne anfangen,
         // bis der Rundentimer abläuft (echtes AMRAP). Ohne Timer: Gruppe gilt als fertig.
         if (forTimeRoundTimerEnabled) {
@@ -633,6 +654,7 @@ export default function LiveWorkoutPage() {
     if (ex.reps) parts.push(`${ex.reps}x`);
     if (ex.duration) parts.push(`${ex.duration}s`);
     parts.push(ex.name);
+    if (ex.weight) parts.push(`· ${ex.weight}`);
     return parts.join(' ');
   }
 
@@ -921,153 +943,27 @@ export default function LiveWorkoutPage() {
   // =================== FORTIME / AMRAP WORK PHASE ===================
   // Alle Übungen aller Gruppen gleichzeitig sichtbar, keine Slideshow
   if (workoutMode === 'fortime' && phase === 'work') {
-    const currentBlockData = getForTimeBlocks(config)[forTimeCurrentBlock];
-    const totalBlocks = getForTimeBlocks(config).length;
-    const roundTimerActive = forTimeRoundTimerEnabled;
-    const roundTimerExpired = roundTimerActive && forTimeRoundTimeRemaining === 0;
-
+    const blocks = getForTimeBlocks(config);
+    const currentBlockData = blocks[forTimeCurrentBlock];
     return (
-      <div className="workout-fullscreen rd-live-bg flex flex-col">
-        {isPaused && (
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50 cursor-pointer" onClick={() => setIsPaused(false)}>
-            <span className="font-oswald text-6xl uppercase tracking-wider text-yellow-400">Paused</span>
-          </div>
-        )}
-
-        {/* Top bar: Gesamtzeit-Countdown prominent */}
-        <div className="rd-topbar flex items-center justify-between px-4 py-2 md:py-3 shrink-0 relative z-10">
-          <div className="flex flex-col">
-            <div className="rd-timer-label font-oswald text-[10px] uppercase">
-              AMRAP{totalBlocks > 1 ? ` — Round ${forTimeCurrentBlock + 1}/${totalBlocks}` : ''}
-            </div>
-            {roundTimerActive ? (
-              <div className="rd-timer-label font-oswald text-[11px] uppercase text-gray-500">
-                Vergangen {formatTime(forTimeElapsed)}
-              </div>
-            ) : (
-              <div className="rd-timer font-oswald font-bold" style={{ fontSize: 'min(8vw, 2.75rem)' }}>
-                {formatTime(forTimeElapsed)}
-              </div>
-            )}
-          </div>
-
-          {/* Gesamtzeit-Countdown — grosser Timer, laeuft runter */}
-          {roundTimerActive && (
-            <div className={`flex flex-col items-center ${roundTimerExpired ? 'text-red-400' : forTimeRoundTimeRemaining <= 30 ? 'text-yellow-400' : 'text-hclub-magenta'}`}>
-              <div className="rd-timer-label text-[10px] md:text-xs font-oswald uppercase tracking-widest">
-                Time left
-              </div>
-              <div className={`font-oswald font-bold leading-none ${roundTimerExpired ? 'heartbeat' : 'rd-timer-accent'}`}
-                style={{ fontSize: 'min(17vw, 6.5rem)', textShadow: roundTimerExpired ? '0 0 40px #f87171' : forTimeRoundTimeRemaining <= 30 ? '0 0 26px #facc15' : '0 0 22px rgba(25,157,169,0.4)' }}>
-                {formatTime(forTimeRoundTimeRemaining)}
-              </div>
-            </div>
-          )}
-
-          <div className="font-oswald text-lg tracking-wider text-gray-400">
-            HYB<span className="text-hclub-magenta rd-timer-accent">RYD</span>
-          </div>
-        </div>
-
-        {/* Group columns — alle Übungen gleichzeitig sichtbar */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden">
-          <div className="flex h-full" style={{ minWidth: config.numGroups > 4 ? `${config.numGroups * 160}px` : '100%' }}>
-            {Array.from({ length: config.numGroups }, (_, gIdx) => {
-              const exercises = currentBlockData?.exercises?.[gIdx] || [];
-
-              return (
-                <div key={gIdx}
-                  className="rd-col rd-col-active flex-1 flex flex-col relative"
-                  style={{
-                    borderRight: gIdx < config.numGroups - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                    minWidth: config.numGroups > 4 ? '160px' : undefined,
-                  }}
-                >
-                  {/* Group header */}
-                  <div className="px-3 pt-3 pb-2 border-b border-white/5 shrink-0 text-center">
-                    <div className="font-oswald text-sm md:text-base uppercase tracking-widest text-gray-300">
-                      Group {gIdx + 1}
-                    </div>
-                  </div>
-
-                  {/* Übersicht — alle Übungen gleichwertig sichtbar */}
-                  <div className="flex-1 overflow-y-auto py-2 flex flex-col [justify-content:safe_center]">
-                    {exercises.length === 0 ? (
-                      <div className="text-center text-gray-600 font-oswald uppercase text-sm">—</div>
-                    ) : (
-                      exercises.map((ex, eIdx) => {
-                        // ⛔ EINE NOTIZ IST KEINE UEBUNG. Sie wird nicht
-                        // abgehakt, nicht durchgestrichen und zaehlt nicht zum
-                        // Fortschritt — sie steht als Ansage da, solange der
-                        // Block laeuft. Guido, 01.09.2026: „Bei jeder neuen
-                        // Runde die Distanz um die Haelfte reduzieren!" Eine
-                        // solche Regel gilt fuer den ganzen Block, nicht fuer
-                        // einen Schritt darin.
-                        if (ex.isNote) {
-                          if (!ex.name.trim()) return null;
-                          return (
-                            <div key={eIdx}
-                              className="mx-2 mb-2 rounded-lg px-3 py-2"
-                              style={{
-                                backgroundColor: 'rgba(250,204,21,0.10)',
-                                borderLeft: '3px solid #facc15',
-                              }}
-                            >
-                              <div className={`font-oswald tracking-wide text-yellow-300 ${
-                                config.numGroups > 5 ? 'text-xs md:text-sm' : 'text-sm md:text-base'
-                              }`}>
-                                {ex.name}
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        const exerciseColor = getExerciseColor(ex.name);
-                        return (
-                          <div key={eIdx}
-                            className="mx-2 mb-2 rounded-lg px-3 py-2"
-                            style={{
-                              backgroundColor: `${exerciseColor}18`,
-                              borderLeft: `3px solid ${exerciseColor}`,
-                            }}
-                          >
-                            <div
-                              className={`font-oswald uppercase tracking-wide ${
-                                config.numGroups > 5 ? 'text-lg md:text-2xl' : 'text-2xl md:text-4xl'
-                              }`}
-                              style={{ color: exerciseColor }}
-                            >
-                              {formatExerciseLabel(ex)}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Bottom controls */}
-        <div className="rd-bottombar flex items-center justify-between px-4 py-2 shrink-0">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setIsPaused(p => !p)}
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
-              style={{ backgroundColor: isPaused ? '#FFD700' : 'rgba(255,255,255,0.15)', border: isPaused ? '2px solid #FFD700' : '2px solid rgba(255,255,255,0.2)' }}>
-              {isPaused ? (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="black"><polygon points="6,4 20,12 6,20" /></svg>
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><rect x="5" y="4" width="5" height="16" rx="1" /><rect x="14" y="4" width="5" height="16" rx="1" /></svg>
-              )}
-            </button>
-            <span className="text-gray-400 text-sm">{workout.trainer_name}</span>
-          </div>
-          <span className="font-oswald text-lg tracking-wider text-gray-500">HYB<span className="text-hclub-magenta">RYD</span></span>
-        </div>
-      </div>
+      <AmrapStage
+        title={workout.name}
+        formatLabel={config.formatLabel || (forTimeRoundTimerEnabled ? `AMRAP ${config.forTimeRoundTimerMinutes || 12}` : 'For Time')}
+        blockIndex={forTimeCurrentBlock}
+        totalBlocks={blocks.length}
+        numGroups={config.numGroups}
+        exercisesByGroup={currentBlockData?.exercises || {}}
+        currentIndex={forTimeCurrentExIndex}
+        groupRounds={forTimeGroupRounds}
+        groupFinished={forTimeGroupFinished}
+        targetRounds={config.forTimeTargetRounds}
+        roundTimer={{ enabled: forTimeRoundTimerEnabled, remaining: forTimeRoundTimeRemaining, total: forTimeRoundTimerSeconds }}
+        elapsed={forTimeElapsed}
+        isPaused={isPaused}
+        trainerName={workout.trainer_name}
+        onAdvance={forTimeAdvanceGroup}
+        onTogglePause={() => setIsPaused(p => !p)}
+      />
     );
   }
 

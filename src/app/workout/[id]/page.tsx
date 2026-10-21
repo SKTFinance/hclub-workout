@@ -1326,6 +1326,11 @@ export default function WorkoutEditorPage() {
                                     onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { duration: parseInt(e.target.value) || undefined })}
                                     className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
                                 )}
+                                {/* Last/Gewicht (optional), z. B. „24/16 kg" — erscheint auf der Stationskarte */}
+                                <input type="text" value={ex.weight || ''} placeholder="Load"
+                                  aria-label="Load"
+                                  onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { weight: e.target.value || undefined })}
+                                  className="w-24 min-w-0 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
                               </div>
                             </div>
                           );

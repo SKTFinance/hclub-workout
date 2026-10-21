@@ -26,6 +26,8 @@ export interface ExerciseEntry {
   reps?: number;       // number of repetitions
   distance?: string;   // e.g. "500m", "50m"
   duration?: number;   // seconds (for timed holds like planks in fortime mode)
+  /** Last/Gewicht als Freitext, z. B. "24/16 kg" (KI-Baukasten, 21.10.2026). Optional. */
+  weight?: string;
   /**
    * Freitext-Notiz statt einer Uebung.
    *
@@ -107,6 +109,13 @@ export interface WorkoutConfig {
   // ForTime (= AMRAP im UI) round timer
   forTimeRoundTimerEnabled?: boolean;
   forTimeRoundTimerMinutes?: number; // minutes per round
+  /**
+   * For Time mit Runden (z. B. „3 RFT"): Eine Gruppe beginnt den Zirkel von vorn,
+   * bis sie so viele Durchgänge hat; dann gilt sie als fertig. Ohne Feld wie bisher.
+   */
+  forTimeTargetRounds?: number;
+  /** Anzeigename des Formats aus dem KI-Baukasten, z. B. "AMRAP 12", "EMOM 10". */
+  formatLabel?: string;
 }
 
 export interface Workout {

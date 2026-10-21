@@ -367,6 +367,19 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* KI-Baukasten (21.10.2026): Übungen untereinander tippen → fertiges Workout */}
+        <button type="button" onClick={() => router.push('/workout/ai')}
+          className="ai-entry group w-full text-left mb-4 fade-in-up" style={{ opacity: 0, animationDelay: '0s' }}>
+          <span className="ai-entry-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" fill="currentColor"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" fill="currentColor" opacity=".6"/></svg>
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-oswald text-lg uppercase tracking-wider text-white">AI Workout Builder</span>
+            <span className="block text-sm text-gray-400">Type your movements line by line. Get a ready AMRAP, EMOM, For Time or interval workout.</span>
+          </span>
+          <span className="ai-entry-cta font-oswald uppercase tracking-wider text-sm">Build with AI <span aria-hidden="true">&rarr;</span></span>
+        </button>
+
         {/* Create new workout */}
         <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8 fade-in-up" style={{ opacity: 0, animationDelay: '0s' }}>
           <h3 className="font-oswald text-lg uppercase tracking-wider mb-3">New Workout</h3>
