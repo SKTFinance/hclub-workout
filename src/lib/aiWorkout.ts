@@ -39,6 +39,8 @@ export interface AiBlock {
 
 export interface AiDraft {
   name: string;
+  /** Hyrox oder CrossFit (V3). Bestimmt Übungsauswahl der KI und Darstellung. */
+  discipline?: 'hyrox' | 'crossfit';
   summary?: string;
   blocks: AiBlock[];
   restBetweenBlocksSeconds?: number;
@@ -106,7 +108,14 @@ Rules:
 - Rx weights (male/female) into weight, e.g. "24/16 kg". Convert lbs to kg rounded to common plates if given in lbs.
 - Only use parallel stations (more than one inner array) when the coach clearly describes several groups working at the same time ("Group 1 / Group 2", "Station A / Station B").
 - scaling: 1 to 3 short, practical scaling options (lighter weight, fewer reps, movement substitution). notes: only instructions the coach literally wrote that are not movements (e.g. "halve the distance every round"). Usually empty. Never describe the workout in notes.
-- Never invent extra movements. Never output empty stations.`;
+- Never invent extra movements. Never output empty stations.
+- Exception to "never invent": if the coach only DESCRIBES an idea ("30 minute hyrox engine with sled and wall balls", "short upper body burner with pauses") instead of listing movements, design a complete, sensible workout yourself that matches the description, including work/rest seconds, rounds, reps, distances and loads.
+- Spoken notes may be messy ("forty seconds on twenty off, four rounds"). Turn spoken numbers into numbers.`;
+
+export const DISCIPLINE_PROMPT: Record<'hyrox' | 'crossfit', string> = {
+  hyrox: `Workout type: HYROX. Build a HYROX-style workout. Prefer the HYROX stations and running: Run, SkiErg, Sled Push, Sled Pull, Burpee Broad Jumps, Row, Farmers Carry, Sandbag Lunges, Wall Balls (plus Echo Bike / Kettlebell work as accessory). Distances in metres (e.g. "1000m" SkiErg, "50m" Sled Push). A classic CrossFit movement (barbell, gymnastics) is fine ONLY if the coach names it or it clearly fits as a single accessory.`,
+  crossfit: `Workout type: CROSSFIT. Build a CrossFit-style workout with classic functional movements: barbell (Thrusters, Deadlifts, Cleans, Snatches, Front Squats), dumbbell/kettlebell, gymnastics (Pull-ups, Toes to Bar, Push-ups, Handstand Push-ups, Box Jumps, Double Unders), monostructural (Row, Echo Bike, Run). A HYROX station (Sled, SkiErg, Farmers Carry, Sandbag Lunges) is fine ONLY if the coach names it or it clearly fits as a single piece.`,
+};
 
 function cleanInt(n: unknown, min: number, max: number): number | undefined {
   const v = typeof n === 'number' ? Math.round(n) : parseInt(String(n ?? ''), 10);
@@ -165,7 +174,8 @@ export function sanitizeDraft(raw: unknown): AiDraft {
     .filter((b) => b.stations.length > 0);
 
   return {
-    name: cleanText(r.name, 40) || 'AI Workout',
+    name: cleanText(r.name, 40) || 'New Workout',
+    discipline: r.discipline === 'hyrox' || r.discipline === 'crossfit' ? r.discipline : undefined,
     summary: cleanText(r.summary, 200),
     blocks,
     restBetweenBlocksSeconds: cleanInt(r.restBetweenBlocksSeconds, 0, 900),
@@ -264,6 +274,7 @@ export function aiDraftToWorkout(draft: AiDraft): ConvertedWorkout {
       formatLabel: isAmrap ? `AMRAP ${minutes}` : `For Time${first.rounds && first.rounds > 1 ? ` · ${first.rounds} rounds` : ''}${minutes ? ` · cap ${minutes}` : ''}`,
     };
     if (!isAmrap && first.rounds && first.rounds > 1) config.forTimeTargetRounds = first.rounds;
+    if (draft.discipline) config.discipline = draft.discipline;
     return { name: draft.name, workout_mode: 'fortime', config, adjustments };
   }
 
@@ -324,5 +335,6 @@ export function aiDraftToWorkout(draft: AiDraft): ConvertedWorkout {
     rounds,
     formatLabel: b.format === 'EMOM' ? `EMOM ${b.minutes || ''}`.trim() : `${workTime}/${restTime} × ${b.rounds || 4}`,
   };
+  if (draft.discipline) config.discipline = draft.discipline;
   return { name: draft.name, workout_mode: 'timed', config, adjustments };
 }

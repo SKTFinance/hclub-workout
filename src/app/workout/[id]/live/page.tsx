@@ -18,6 +18,7 @@ import IntervalStage from '@/components/IntervalStage';
 import RemoteBadge from '@/components/RemoteBadge';
 import { DISCIPLINES, stationColor, workoutDiscipline } from '@/lib/discipline';
 import CrossTag from '@/components/CrossTag';
+import { getLocalWorkout, isLocalId } from '@/lib/localWorkouts';
 import { newCode, validCode, useRemoteHost, type RemoteCmd, type RemoteStatus } from '@/lib/remote';
 
 type Phase = 'idle' | 'summary' | 'warmup' | 'countdown' | 'work' | 'rest' | 'roundRest' | 'finished';
@@ -125,6 +126,12 @@ export default function LiveWorkoutPage() {
         const raw = id === 'preview' ? localStorage.getItem('hybryd_preview_workout') : sessionStorage.getItem(`hybryd_${id}`);
         if (raw) setWorkout(JSON.parse(raw) as Workout);
       } catch { /* leer lassen → „Loading" */ }
+      return;
+    }
+    // Vorschau-eigene Speicherung (V3): im Browser gespeicherte Workouts.
+    if (isLocalId(id)) {
+      const w = getLocalWorkout(id);
+      if (w) setWorkout(w);
       return;
     }
     const { data: workoutData } = await supabase

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { AI_SYSTEM_PROMPT, AI_WORKOUT_SCHEMA, sanitizeDraft } from '@/lib/aiWorkout';
+import { AI_SYSTEM_PROMPT, AI_WORKOUT_SCHEMA, DISCIPLINE_PROMPT, sanitizeDraft } from '@/lib/aiWorkout';
+
+type Discipline = 'hyrox' | 'crossfit';
 
 // KI-Workout-Baukasten: Freitext → strukturierter Entwurf (Gemini, JSON-Schema).
 // ⛔ Nur für angemeldete Trainer — sonst kann jeder fremd auf unsere Rechnung generieren.
@@ -12,15 +14,26 @@ export const maxDuration = 60;
 
 const MODELS = [process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash'].filter(Boolean) as string[];
 
-async function callGemini(model: string, key: string, text: string) {
+interface Audio { mime: string; data: string }
+
+async function callGemini(model: string, key: string, text: string, discipline: Discipline | null, audio: Audio | null) {
+  const sys = discipline ? `${AI_SYSTEM_PROMPT}\n\n${DISCIPLINE_PROMPT[discipline]}` : AI_SYSTEM_PROMPT;
+  const parts: object[] = [];
+  if (audio) {
+    // Gesprochene Notizen (MediaRecorder): Gemini hört direkt zu, keine eigene Transkription.
+    parts.push({ inlineData: { mimeType: audio.mime, data: audio.data } });
+    parts.push({ text: `The coach SPOKE the workout notes in the audio above${text ? ' and also typed:\n"""\n' + text + '\n"""' : ''}. Build the workout from it.` });
+  } else {
+    parts.push({ text: `Coach notes:\n"""\n${text}\n"""` });
+  }
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: AI_SYSTEM_PROMPT }] },
-        contents: [{ role: 'user', parts: [{ text: `Coach notes:\n"""\n${text}\n"""` }] }],
+        systemInstruction: { parts: [{ text: sys }] },
+        contents: [{ role: 'user', parts }],
         generationConfig: {
           temperature: 0.2,
           responseMimeType: 'application/json',
@@ -63,19 +76,28 @@ export async function POST(request: Request) {
   if (!key) return NextResponse.json({ error: 'AI is not configured on this server.' }, { status: 503 });
 
   let text = '';
+  let discipline: Discipline | null = null;
+  let audio: Audio | null = null;
   try {
     const body = await request.json();
     text = String(body?.text || '').slice(0, 4000).trim();
+    if (body?.discipline === 'hyrox' || body?.discipline === 'crossfit') discipline = body.discipline;
+    const a = body?.audio;
+    if (a && typeof a.data === 'string' && typeof a.mime === 'string' && /^audio\/[a-z0-9.+-]+/i.test(a.mime)) {
+      if (a.data.length > 3_000_000) return NextResponse.json({ error: 'Recording is too long. Keep it under a minute.' }, { status: 413 });
+      audio = { mime: a.mime.split(';')[0], data: a.data };
+    }
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
-  if (text.length < 3) return NextResponse.json({ error: 'Write at least one movement.' }, { status: 400 });
+  if (!audio && text.length < 3) return NextResponse.json({ error: 'Describe the workout in a few words.' }, { status: 400 });
 
   let lastErr: unknown = null;
   for (const model of MODELS) {
     try {
-      const raw = await callGemini(model, key, text);
+      const raw = await callGemini(model, key, text, discipline, audio);
       const draft = sanitizeDraft(raw);
+      if (discipline) draft.discipline = discipline;
       if (draft.blocks.length === 0) throw new Error('empty');
       return NextResponse.json({ draft });
     } catch (e) {

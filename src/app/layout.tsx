@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import './v3.css';
+import './create.css';
 
 export const metadata: Metadata = {
   title: 'HYBRYD Workout Timer',
