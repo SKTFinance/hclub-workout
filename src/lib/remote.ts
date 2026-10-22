@@ -114,11 +114,28 @@ export async function phoneUrlAsync(path: string): Promise<string> {
   if (!accessCache) {
     accessCache = fetch('/api/phone-access', { cache: 'no-store' })
       .then(r => (r.ok ? r.json() : { query: '' }))
-      .then((j: { query?: string }) => j.query || '')
+      .then((j: { query?: string }) => {
+        const q = j.query || '';
+        // Freigabe merken: kommt der TV später ohne Cookie zurück, gilt sie weiter.
+        const m = /_vercel_share=([^&]+)/.exec(q);
+        if (m) { try { localStorage.setItem('hy_vs', decodeURIComponent(m[1])); } catch { /* egal */ } }
+        return q;
+      })
       .catch(() => '');
   }
   const q = await accessCache;
-  return phoneUrl(path, q);
+  const url = phoneUrl(path, q);
+  // Ohne Freigabe landet ein Handy auf der Vercel-Anmeldung. Das sichtbar machen,
+  // statt einen QR-Code zu zeigen, der nicht funktioniert.
+  phoneAccessOk = /x-vercel-protection-bypass=|_vercel_share=/.test(url);
+  return url;
+}
+
+/** false = Vorschau ohne Freigabe-Token: der QR-Code würde am Handy die Vercel-Anmeldung zeigen. */
+export let phoneAccessOk = true;
+export function phoneAccessKnownBad(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname.endsWith('.vercel.app') && !phoneAccessOk;
 }
 
 // ---------- Freies Training: ein Kanal je TV-Code ----------

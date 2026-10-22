@@ -16,7 +16,7 @@ export default function Qr({ value, size = 220, label }: { value: string; size?:
     return { n, path: d };
   }, [value]);
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${n + 8} ${n + 8}`} role="img" aria-label={label || 'QR code'} shapeRendering="crispEdges">
+    <svg data-url={value} width={size} height={size} viewBox={`0 0 ${n + 8} ${n + 8}`} role="img" aria-label={label || 'QR code'} shapeRendering="crispEdges">
       <rect width={n + 8} height={n + 8} rx="2.2" fill="#F4F8F9" />
       <path d={path} fill="#071317" />
     </svg>
