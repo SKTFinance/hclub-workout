@@ -1418,3 +1418,8 @@ input, select, textarea {
 @media (prefers-reduced-motion: reduce) {
   .iv-root *, .iv-root *::before, .iv-root *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }
+
+.ai-coach { display: inline-flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 13px; color: var(--ai-muted); }
+.ai-coach span { font-family: var(--font-oswald); letter-spacing: 0.2em; text-transform: uppercase; font-size: 12px; color: var(--ai-accent); }
+.ai-coach input { background: rgba(0,0,0,0.3); border: 1px solid var(--ai-line); border-radius: 10px; padding: 8px 12px; color: var(--ai-text); font-size: 16px; min-width: 220px; }
+.ai-coach input:focus { outline: none; border-color: var(--ai-accent); }

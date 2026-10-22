@@ -60,6 +60,9 @@ export default function AiWorkoutPage() {
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<AiDraft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [coach, setCoach] = useState('');
+  useEffect(() => { try { setCoach(localStorage.getItem('hclub_trainer_name') || ''); } catch { /* egal */ } }, []);
+  function changeCoach(v: string) { setCoach(v); try { localStorage.setItem('hclub_trainer_name', v); } catch { /* egal */ } }
   const resultRef = useRef<HTMLDivElement>(null);
 
   // Entwurf überlebt ein Neuladen (nur in diesem Browser).
@@ -236,6 +239,10 @@ export default function AiWorkoutPage() {
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                   aria-label="Workout name"
                 />
+                <label className="ai-coach">
+                  <span>Coach</span>
+                  <input value={coach} onChange={(e) => changeCoach(e.target.value)} placeholder="Your name (shown on screen)" maxLength={40} />
+                </label>
                 {draft.summary && <p className="ai-summary">{draft.summary}</p>}
               </div>
 
