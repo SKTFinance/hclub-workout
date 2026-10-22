@@ -34,23 +34,45 @@ export function exerciseKind(name: string): Discipline {
   return HYROX_PATTERNS.some((r) => r.test(n)) ? 'hyrox' : 'crossfit';
 }
 
+// Übungen, die in BEIDEN Welten zu Hause sind (Rudern, Laufen, Wall Balls, Burpees,
+// Kettlebell, Echo Bike …): nie als „fremd" markieren.
+const SHARED_PATTERNS: RegExp[] = [
+  /\brow(ing|er)?\b/i, /\brun(ning)?\b|\d+\s*m\s*run/i, /\bwall\s*balls?\b|\bwb\b/i,
+  /\bburpees?\b(?!\s*broad)/i, /kettlebell|\bkb\b/i, /echo\s*bike|assault|air\s*bike|\bbike\b/i,
+  /\blunges?\b(?!.*sandbag)/i, /box\s*(jump|step)/i, /jump\s*rope|double\s*unders?|\bdu\b/i,
+];
+
+/**
+ * Art einer Übung, wenn sie NICHT zur Art des Workouts gehört (dann wird sie anders
+ * dargestellt), sonst null. Gemeinsame Übungen sind nie fremd.
+ */
+export function crossoverKind(name: string, workout: Discipline | undefined): Discipline | null {
+  if (!workout || !name) return null;
+  const n = name.toLowerCase();
+  const hyroxOnly = HYROX_PATTERNS.some((r) => r.test(n)) && !SHARED_PATTERNS.some((r) => r.test(n));
+  const shared = SHARED_PATTERNS.some((r) => r.test(n));
+  if (workout === 'crossfit') return hyroxOnly ? 'hyrox' : null;
+  return !hyroxOnly && !shared && !HYROX_PATTERNS.some((r) => r.test(n)) ? 'crossfit' : null;
+}
+
 /** true, wenn die Übung nicht zur Art des Workouts gehört (soll anders aussehen). */
 export function isCrossover(name: string, workout: Discipline | undefined): boolean {
-  if (!workout) return false;
-  return exerciseKind(name) !== workout;
+  return crossoverKind(name, workout) !== null;
 }
 
 // Stationsfarben: gleiche Helligkeit, klar verschiedene Farbtöne, auf dunklem Grund
 // lesbar. Reihenfolge so, dass Nachbarn sich stark unterscheiden.
+// Bewusst ohne Gelb und Koralle: das sind die Kennfarben von Hyrox und CrossFit.
+// Hellblau erst an vierter Stelle (Samuel: „alles in Hellblau").
 export const STATION_COLORS = [
-  '#4FC3F7', // himmelblau
+  '#5BE08F', // grün
   '#FF9F5A', // orange
   '#B79BFF', // violett
-  '#5BE08F', // grün
+  '#4FC3F7', // himmelblau
   '#FF7AB6', // pink
-  '#F2D04B', // gelb
   '#4DD9C7', // türkis
-  '#FF8A80', // koralle
+  '#C6E36B', // limette
+  '#9DB4FF', // kornblume
 ];
 
 export function stationColor(i: number): string {

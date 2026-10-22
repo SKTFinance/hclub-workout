@@ -1,0 +1,196 @@
+/* =====================================================================
+   Gestaltungssystem V3 (22.10.2026) – lädt nach globals.css und überschreibt.
+   Samuel: „Blau so stark beleuchtet, dass man die Schrift nicht lesen kann",
+   „alles in Hellblau, jede Übung in einer Farbe, ich kann nichts unterscheiden",
+   „Echo-Bike-Kopf abgeschnitten", „Hyrox und CrossFit anders darstellen".
+
+   Regeln:
+   1. Keine Leuchtschatten hinter Zahlen/Schrift. Zeiten sind fast weiß auf
+      ruhigem, neutralem Grund (Kontrast > 15:1).
+   2. Jede Übung trägt ihre Stationsfarbe (--st) als Nummer, Rahmen, Menge,
+      Fortschrittssegment. Die Farbe kommt aus src/lib/discipline.ts.
+   3. Die Art (Hyrox gelb, CrossFit koralle) steht als Kennzeichen im Kopf (--disc).
+      Übungen der anderen Art bekommen ein Schild in deren Farbe.
+   4. Bilder mit object-position oben, damit Köpfe sichtbar bleiben.
+   ===================================================================== */
+
+:root {
+  --v3-bg: #0b0e10;
+  --v3-surface: #14191c;
+  --v3-surface-2: #1a2024;
+  --v3-line: rgba(255, 255, 255, 0.08);
+  --v3-line-strong: rgba(255, 255, 255, 0.16);
+  --v3-text: #f3f5f6;
+  --v3-muted: #9aa5ab;
+  --v3-hyrox: #F5C84B;
+  --v3-crossfit: #FF6B57;
+}
+
+/* ---------- Intervall / EMOM: Grund und Uhr ---------- */
+.iv-root.is-work {
+  --iv-accent: var(--disc, #22BFCC);
+  --iv-accent-deep: color-mix(in srgb, var(--disc, #22BFCC) 70%, #000);
+  --iv-surface: var(--v3-surface);
+  --iv-text: var(--v3-text);
+  --iv-muted: var(--v3-muted);
+  --iv-line: var(--v3-line);
+  --iv-line-strong: var(--v3-line-strong);
+  background: var(--v3-bg);
+}
+.iv-root.is-rest {
+  --iv-accent: #c9d2ff;
+  --iv-accent-deep: #8e9ad6;
+  --iv-surface: #151826;
+  --iv-text: #eef0f8;
+  --iv-muted: #a2a8c2;
+  --iv-line: rgba(200, 210, 255, 0.09);
+  --iv-line-strong: rgba(200, 210, 255, 0.18);
+  background: #0d0f18;
+}
+.is-work .iv-time,
+.is-work .iv-time.is-last { text-shadow: none; }
+.is-work .iv-time.is-last { color: #FFB547; }
+.is-rest .iv-time { color: var(--iv-text); font-weight: 600; }
+.iv-phase-dot { box-shadow: none; }
+.is-work .iv-count-no { color: var(--iv-text); }
+
+/* Kopf: Art-Kennzeichen statt Leuchtpunkt */
+.iv-eyebrow { gap: 12px; color: var(--iv-muted); }
+.iv-disc {
+  display: inline-flex; align-items: center; padding: 3px 10px 2px; border-radius: 6px;
+  background: var(--disc, #22BFCC); color: var(--disc-ink, #071012);
+  font-size: 0.86em; letter-spacing: 0.16em; font-weight: 600;
+}
+.iv-format { color: var(--iv-text); }
+.iv-brand span { color: var(--iv-text); opacity: 0.55; }
+
+/* Fortschrittsbalken in der Farbe der aktuellen Art, kein Verlauf */
+.iv-bar-fill { background: var(--iv-accent); }
+.is-rest .iv-bar-fill { background: #8e9ad6; }
+
+/* ---------- Karten: Stationsfarbe ---------- */
+.iv-card { border-radius: 20px; border: 1px solid var(--v3-line); }
+.is-work .iv-card {
+  border: 2px solid color-mix(in srgb, var(--st, #4FC3F7) 70%, transparent);
+  box-shadow: none;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--st, #4FC3F7) 9%, transparent), transparent 46%),
+    var(--iv-surface);
+}
+.is-rest .iv-card { border: 1px solid var(--iv-line-strong); }
+
+.iv-station { display: inline-flex; align-items: baseline; gap: 10px; }
+.iv-station-no {
+  font-family: var(--font-oswald); font-variant-numeric: tabular-nums;
+  font-size: clamp(18px, 4.2cqh, 34px); line-height: 1; padding: 4px 12px 3px; border-radius: 10px;
+  background: var(--st, #4FC3F7); color: #0b0e10; font-weight: 600; letter-spacing: 0.04em;
+}
+.iv-station-of {
+  font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.2em;
+  font-size: clamp(11px, 2cqh, 16px); color: var(--iv-muted);
+}
+.iv-card-meta { display: inline-flex; align-items: center; gap: 10px; }
+.iv-cross {
+  font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.16em;
+  font-size: clamp(11px, 2cqh, 15px); padding: 3px 10px; border-radius: 99px;
+  color: var(--k); border: 1.5px solid var(--k);
+}
+
+.iv-metric { color: var(--st, var(--iv-accent)); }
+.is-rest .iv-metric { color: var(--st, var(--iv-accent)); }
+.iv-weight {
+  color: var(--st, var(--iv-accent));
+  background: color-mix(in srgb, var(--st, var(--iv-accent)) 12%, transparent);
+  border-color: color-mix(in srgb, var(--st, var(--iv-accent)) 32%, transparent);
+}
+.iv-up { color: var(--st, var(--iv-accent)); }
+
+/* Bilder: Kopf sichtbar, nicht überbelichten, kein Glanzstreifen */
+.iv-img img { object-position: center 15%; filter: brightness(1.18) contrast(1.04); }
+.iv-img-sheen { display: none; }
+
+/* Segmente: jede Station ihre Farbe */
+.iv-seg { background: rgba(255, 255, 255, 0.1); }
+.iv-seg.is-done { background: color-mix(in srgb, var(--sc) 45%, transparent); }
+.iv-seg.is-now { background: var(--sc); height: 7px; margin-top: -1px; }
+
+.iv-next-name::before {
+  content: ''; width: 10px; height: 10px; border-radius: 3px; background: var(--nc, #888); flex: none;
+}
+
+/* ---------- Countdown 3-2-1-GO: dunkler Grund, Zahl ohne Leuchten ---------- */
+.v3-count {
+  position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center;
+  background: var(--v3-bg); color: var(--v3-text);
+}
+.v3-count-inner { display: grid; justify-items: center; gap: 2vh; }
+.v3-count-label {
+  font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.4em;
+  font-size: clamp(14px, 2.6vh, 28px); color: var(--v3-muted); padding-left: 0.4em;
+}
+.v3-count-num {
+  font-family: var(--font-oswald); font-weight: 700; line-height: 0.9;
+  font-size: min(46vw, 52vh); color: var(--v3-text); font-variant-numeric: tabular-nums;
+}
+.v3-count-num.is-go { color: var(--disc, #22BFCC); }
+.v3-count-first {
+  display: flex; align-items: center; gap: 14px; padding: 10px 18px; border-radius: 14px;
+  background: var(--v3-surface); border: 1px solid var(--v3-line);
+  font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.06em;
+  font-size: clamp(16px, 2.6vh, 28px);
+}
+.v3-count-first i { font-style: normal; color: var(--v3-muted); font-size: 0.6em; letter-spacing: 0.3em; }
+.v3-count-ring {
+  position: absolute; inset: auto 0 0 0; height: 8px; background: var(--disc, #22BFCC);
+  transform-origin: left center; animation: v3-drain 1s linear both;
+}
+@keyframes v3-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* Aufwärmen: gleiche ruhige Fläche */
+.v3-warm .breathe h1 { color: var(--disc, #22BFCC); }
+
+/* ---------- Übersicht vor dem Start (Summary): Stationen unterscheidbar ---------- */
+.rd-ex-dot { box-shadow: none; border-radius: 4px; width: 22px; height: 22px; display: inline-grid; place-items: center;
+  font-family: var(--font-oswald); font-size: 12px; color: #0b0e10; background: var(--st, currentColor); }
+.rd-ex-row { color: var(--v3-text) !important; border-top-color: var(--v3-line); }
+.v3-cross-mini { margin-left: 6px; font-family: var(--font-oswald); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--k); color: var(--k); white-space: nowrap; }
+
+/* Countdown-Zahl: ruhiges Einblenden statt Federn */
+.v3-count-num.countdown-pop { animation: v3-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes v3-pop { from { opacity: 0; transform: scale(1.18); } to { opacity: 1; transform: none; } }
+
+/* ---------- AMRAP / For Time ---------- */
+.as-root {
+  --as-bg: var(--v3-bg);
+  --as-surface: var(--v3-surface);
+  --as-surface-2: var(--v3-surface-2);
+  --as-line: var(--v3-line);
+  --as-line-strong: var(--v3-line-strong);
+  --as-accent: var(--disc, #22BFCC);
+  --as-accent-deep: color-mix(in srgb, var(--disc, #22BFCC) 60%, #000);
+  --as-text: var(--v3-text);
+  --as-muted: var(--v3-muted);
+  background: var(--v3-bg);
+}
+.as-timer { text-shadow: none; }
+.as-index {
+  display: inline-grid; place-items: center; min-width: 2.2em; padding: 3px 6px 2px; border-radius: 6px;
+  background: color-mix(in srgb, var(--st, #4FC3F7) 22%, transparent); color: var(--st, #4FC3F7);
+  letter-spacing: 0.08em; font-weight: 600;
+}
+.as-card .as-metric { color: color-mix(in srgb, var(--st, #4FC3F7) 75%, var(--v3-muted)); }
+.as-card.is-now .as-metric { color: var(--st, #4FC3F7); }
+.as-card.is-now .as-index { background: var(--st, #4FC3F7); color: #0b0e10; }
+.as-card.is-now .as-card-btn {
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--st, #4FC3F7) 16%, transparent), transparent 60%),
+    var(--as-surface-2);
+  border: 2px solid var(--st, #4FC3F7);
+  box-shadow: none;
+}
+.as-card.is-now .as-img-sheen { animation: none; }
+.as-img img { object-position: center 15%; filter: saturate(0.9) brightness(0.92); }
+.as-seg.is-done { background: color-mix(in srgb, var(--sc, #4FC3F7) 45%, transparent); }
+.as-seg.is-now { background: var(--sc, #4FC3F7); }
+
+@media (prefers-reduced-motion: reduce) { .v3-count-ring { animation: none; } }

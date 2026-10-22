@@ -10,6 +10,8 @@
 // Animationen nur über transform/opacity; prefers-reduced-motion schaltet ab.
 
 import { getExerciseImage } from '@/lib/exerciseImages';
+import { DISCIPLINES, stationColor, IMAGE_FOCUS, type Discipline } from '@/lib/discipline';
+import CrossTag from '@/components/CrossTag';
 
 export type IntervalPhase = 'work' | 'rest' | 'roundRest';
 
@@ -30,6 +32,7 @@ export interface IntervalStageProps {
   groups: IntervalGroup[];
   isPaused: boolean;
   trainerName?: string;
+  discipline?: Discipline;
   onSkip: () => void;
   onAdjust: (deltaSeconds: number) => void;
   onTogglePause: () => void;
@@ -83,9 +86,16 @@ export default function IntervalStage(p: IntervalStageProps) {
 
   const phaseWord = p.phase === 'work' ? 'Work' : p.phase === 'roundRest' ? 'Round rest' : 'Rest';
   const tone = isWork ? 'is-work' : 'is-rest';
+  const disc = DISCIPLINES[p.discipline || 'crossfit'];
 
   return (
-    <div className={`workout-fullscreen iv-root ${tone}`} data-groups={p.groups.length} data-phase={p.phase}>
+    <div
+      className={`workout-fullscreen iv-root ${tone}`}
+      data-groups={p.groups.length}
+      data-phase={p.phase}
+      data-discipline={p.discipline || 'crossfit'}
+      style={{ ['--disc' as string]: disc.accent, ['--disc-ink' as string]: disc.ink }}
+    >
       {p.isPaused && (
         <button type="button" className="iv-pause" onClick={p.onTogglePause} aria-label="Resume">
           <span className="iv-pause-word">Paused</span>
@@ -95,7 +105,10 @@ export default function IntervalStage(p: IntervalStageProps) {
 
       <header className="iv-head">
         <div className="iv-head-left">
-          <div className="iv-eyebrow"><span className="iv-live-dot" aria-hidden="true" />{p.formatLabel}</div>
+          <div className="iv-eyebrow">
+            <span className="iv-disc">{disc.label}</span>
+            <span className="iv-format">{p.formatLabel}</span>
+          </div>
           <div className="iv-title">{p.title}</div>
         </div>
         <div className="iv-head-right">
@@ -146,17 +159,24 @@ export default function IntervalStage(p: IntervalStageProps) {
           const cur = parseLabel(items[at]);
           const nextRaw = at + 1 < items.length ? items[at + 1] : null;
           const next = nextRaw ? parseLabel(nextRaw) : null;
+          const st = stationColor(at);
           return (
-            <section key={gi} className="iv-card" style={{ ['--i' as string]: gi }} aria-label={`Group ${gi + 1}`}>
+            <section key={gi} className="iv-card" style={{ ['--i' as string]: gi, ['--st' as string]: st }} aria-label={`Group ${gi + 1}`}>
               <div className="iv-card-head">
-                <span className="iv-card-group">{p.groups.length > 1 ? <>Group <b>{gi + 1}</b></> : null}</span>
-                {isWork && <span className="iv-card-tag">Now</span>}
+                <span className="iv-station" aria-label={`Exercise ${at + 1} of ${items.length}`}>
+                  <span className="iv-station-no">{pad(at + 1)}</span>
+                  <span className="iv-station-of">of {pad(items.length)}</span>
+                </span>
+                <span className="iv-card-meta">
+                  <CrossTag name={items[at]} discipline={p.discipline} size="lg" />
+                  {p.groups.length > 1 ? <span className="iv-card-group">Group <b>{gi + 1}</b></span> : null}
+                </span>
               </div>
 
               <div className="iv-card-main">
                 <div className="iv-img" key={`${at}-${p.phase}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={getExerciseImage(items[at])} alt="" draggable={false} />
+                  <img src={getExerciseImage(items[at])} alt="" draggable={false} style={{ objectPosition: IMAGE_FOCUS }} />
                   <span className="iv-img-sheen" aria-hidden="true" />
                 </div>
                 <div className="iv-text" key={`t${at}-${p.phase}`}>
@@ -173,12 +193,12 @@ export default function IntervalStage(p: IntervalStageProps) {
 
               <div className="iv-segs" aria-label={`${at} of ${items.length} done`}>
                 {items.map((_, i) => (
-                  <span key={i} className={`iv-seg ${i < at ? 'is-done' : i === at ? 'is-now' : ''}`} />
+                  <span key={i} className={`iv-seg ${i < at ? 'is-done' : i === at ? 'is-now' : ''}`} style={{ ['--sc' as string]: stationColor(i) }} />
                 ))}
               </div>
 
               {isWork && (
-                <div className="iv-next">
+                <div className="iv-next" style={{ ['--nc' as string]: stationColor(at + 1) }}>
                   <span className="iv-next-label">Next</span>
                   <span className="iv-next-name">
                     {next ? <>{next.value ? `${next.value} ` : ''}{next.name}</> : <><CheckIcon /> Last one</>}

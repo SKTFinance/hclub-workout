@@ -18,6 +18,8 @@
 
 import type { ExerciseEntry } from '@/lib/types';
 import { getExerciseImage } from '@/lib/exerciseImages';
+import { DISCIPLINES, stationColor, IMAGE_FOCUS, type Discipline } from '@/lib/discipline';
+import CrossTag from '@/components/CrossTag';
 
 export interface AmrapStageProps {
   title: string;
@@ -34,6 +36,7 @@ export interface AmrapStageProps {
   elapsed: number;
   isPaused: boolean;
   trainerName?: string;
+  discipline?: Discipline;
   onAdvance: (groupIndex: number) => void;
   onTogglePause: () => void;
   onExit?: () => void;
@@ -77,7 +80,12 @@ export default function AmrapStage(p: AmrapStageProps) {
   const expired = p.roundTimer.enabled && p.roundTimer.remaining === 0;
 
   return (
-    <div className="workout-fullscreen as-root" data-groups={p.numGroups}>
+    <div
+      className="workout-fullscreen as-root"
+      data-groups={p.numGroups}
+      data-discipline={p.discipline || 'crossfit'}
+      style={{ ['--disc' as string]: DISCIPLINES[p.discipline || 'crossfit'].accent, ['--disc-ink' as string]: DISCIPLINES[p.discipline || 'crossfit'].ink }}
+    >
       {p.isPaused && (
         <button type="button" className="as-pause" onClick={p.onTogglePause} aria-label="Resume">
           <span className="as-pause-word">Paused</span>
@@ -89,7 +97,7 @@ export default function AmrapStage(p: AmrapStageProps) {
       <header className="as-head">
         <div className="as-head-left">
           <div className="as-eyebrow">
-            <span className="as-live-dot" aria-hidden="true" />
+            <span className="iv-disc">{DISCIPLINES[p.discipline || 'crossfit'].label}</span>
             {p.formatLabel}
             {p.totalBlocks > 1 && <span className="as-eyebrow-muted">Block {p.blockIndex + 1}/{p.totalBlocks}</span>}
           </div>
@@ -137,7 +145,7 @@ export default function AmrapStage(p: AmrapStageProps) {
               </div>
               <div className="as-segs" aria-label={`${doneCount} of ${stations.length} stations done`}>
                 {stations.map((s) => (
-                  <span key={s.i} className={`as-seg ${finished || s.i < cur ? 'is-done' : s.i === cur ? 'is-now' : ''}`} />
+                  <span key={s.i} className={`as-seg ${finished || s.i < cur ? 'is-done' : s.i === cur ? 'is-now' : ''}`} style={{ ['--sc' as string]: stationColor(stations.indexOf(s)) }} />
                 ))}
               </div>
 
@@ -147,7 +155,7 @@ export default function AmrapStage(p: AmrapStageProps) {
                   const m = metric(ex);
                   const isNow = state === 'now';
                   return (
-                    <li key={`${i}-${ex.name}`} className={`as-card is-${state}`} style={{ ['--i' as string]: pos }}>
+                    <li key={`${i}-${ex.name}`} className={`as-card is-${state}`} style={{ ['--i' as string]: pos, ['--st' as string]: stationColor(pos) }}>
                       <button
                         type="button"
                         className="as-card-btn"
@@ -157,7 +165,7 @@ export default function AmrapStage(p: AmrapStageProps) {
                       >
                         <span className="as-img">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={getExerciseImage(ex.name)} alt="" loading="eager" draggable={false} />
+                          <img src={getExerciseImage(ex.name)} alt="" loading="eager" draggable={false} style={{ objectPosition: IMAGE_FOCUS }} />
                           <span className="as-img-sheen" aria-hidden="true" />
                           {state === 'done' && <span className="as-img-check"><CheckIcon size={20} /></span>}
                         </span>
@@ -165,6 +173,7 @@ export default function AmrapStage(p: AmrapStageProps) {
                           <span className="as-meta">
                             <span className="as-index">{String(pos + 1).padStart(2, '0')}</span>
                             {ex.weight && <span className="as-weight">{ex.weight}</span>}
+                            <CrossTag name={ex.name} discipline={p.discipline} />
                           </span>
                           <span className="as-line">
                             {m && (

@@ -16,6 +16,8 @@ import { getExerciseImage } from '@/lib/exerciseImages';
 import AmrapStage from '@/components/AmrapStage';
 import IntervalStage from '@/components/IntervalStage';
 import RemoteBadge from '@/components/RemoteBadge';
+import { DISCIPLINES, stationColor, workoutDiscipline } from '@/lib/discipline';
+import CrossTag from '@/components/CrossTag';
 import { newCode, validCode, useRemoteHost, type RemoteCmd, type RemoteStatus } from '@/lib/remote';
 
 type Phase = 'idle' | 'summary' | 'warmup' | 'countdown' | 'work' | 'rest' | 'roundRest' | 'finished';
@@ -713,6 +715,11 @@ export default function LiveWorkoutPage() {
   }
 
   const config = workout.config;
+  const discipline = workoutDiscipline(config);
+  const discStyle = { ['--disc' as string]: DISCIPLINES[discipline].accent, ['--disc-ink' as string]: DISCIPLINES[discipline].ink } as React.CSSProperties;
+  const firstExercise: string | null = workoutMode === 'fortime'
+    ? (getForTimeBlocks(config)[0]?.exercises?.[0]?.[0]?.name || null)
+    : (config.rounds?.[0]?.[0]?.[0] || null);
 
   // =================== IDLE STATE ===================
   if (phase === 'idle') {
@@ -839,9 +846,9 @@ export default function LiveWorkoutPage() {
                       <div key={gIdx}>
                         <div className={`text-gray-500 font-oswald uppercase tracking-wider mb-1.5 ${config.numRounds === 1 ? 'text-base md:text-lg' : 'text-sm md:text-base'}`}>G{gIdx + 1}</div>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className={`rd-ex-row ${config.numRounds === 1 ? 'text-base md:text-lg' : 'text-sm md:text-base'}`} style={{ color: getExerciseColor(ex) }}>
-                            <span className="rd-ex-dot" />
-                            <span>{ex}</span>
+                          <div key={eIdx} className={`rd-ex-row ${config.numRounds === 1 ? 'text-base md:text-lg' : 'text-sm md:text-base'}`} style={{ ['--st' as string]: stationColor(eIdx) }}>
+                            <span className="rd-ex-dot">{eIdx + 1}</span>
+                            <span>{ex}<CrossTag name={ex} discipline={discipline} /></span>
                           </div>
                         ))}
                       </div>
@@ -874,8 +881,8 @@ export default function LiveWorkoutPage() {
                       <div key={gIdx}>
                         <div className="text-gray-500 text-sm md:text-base font-oswald uppercase mb-2">G{gIdx + 1}</div>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className="rd-ex-row text-base md:text-xl" style={{ color: getExerciseColor(ex.name) }}>
-                            <span className="rd-ex-dot" />
+                          <div key={eIdx} className="rd-ex-row text-base md:text-xl" style={{ ['--st' as string]: stationColor(eIdx) }}>
+                            <span className="rd-ex-dot">{eIdx + 1}</span>
                             <span>{formatExerciseLabel(ex)}</span>
                           </div>
                         ))}
@@ -908,17 +915,17 @@ export default function LiveWorkoutPage() {
   // =================== COUNTDOWN ===================
   if (phase === 'countdown') {
     return (
-      <div className="workout-fullscreen flex flex-col items-center justify-center bg-pulse-dark">
-        <div key={countdownValue} className="countdown-pop font-oswald font-bold text-hclub-magenta" style={{
-          fontSize: 'min(50vw, 40vh)',
-          textShadow: '0 0 60px #199DA9, 0 0 120px rgba(25,157,169,0.5)',
-          lineHeight: 1,
-        }}>
-          {countdownValue > 0 ? countdownValue : 'GO!'}
+      <div className="v3-count" style={discStyle} data-discipline={discipline}>
+        <div className="v3-count-inner">
+          <div className="v3-count-label">{countdownValue > 0 ? 'Get ready' : workout.name}</div>
+          <div key={countdownValue} className={`v3-count-num countdown-pop ${countdownValue > 0 ? '' : 'is-go'}`}>
+            {countdownValue > 0 ? countdownValue : 'GO'}
+          </div>
+          {firstExercise && (
+            <div className="v3-count-first"><i>First</i>{firstExercise}</div>
+          )}
         </div>
-        <div className="absolute bottom-6 right-6">
-          <span className="font-oswald text-xl tracking-wider text-gray-500">HYB<span className="text-hclub-magenta">RYD</span></span>
-        </div>
+        <div key={`r${countdownValue}`} className="v3-count-ring" aria-hidden="true" />
       </div>
     );
   }
@@ -1009,6 +1016,7 @@ export default function LiveWorkoutPage() {
         elapsed={forTimeElapsed}
         isPaused={isPaused}
         trainerName={workout.trainer_name}
+        discipline={discipline}
         onAdvance={forTimeAdvanceGroup}
         onTogglePause={() => setIsPaused(p => !p)}
       />
@@ -1040,6 +1048,7 @@ export default function LiveWorkoutPage() {
       }))}
       isPaused={isPaused}
       trainerName={workout.trainer_name}
+      discipline={discipline}
       onSkip={() => (phase === 'work' ? skipToNext() : setTimeRemaining(0))}
       onAdjust={(d) => setTimeRemaining((t) => Math.max(0, t + d))}
       onTogglePause={() => setIsPaused((x) => !x)}
