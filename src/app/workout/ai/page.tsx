@@ -18,7 +18,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getExerciseImage } from '@/lib/exerciseImages';
 import type { Workout } from '@/lib/types';
 import { aiDraftToWorkout, workoutToDraft, type AiBlock, type AiDraft, type AiExercise, type AiFormat, type ConvertedWorkout } from '@/lib/aiWorkout';
-import { DISCIPLINES, stationColor, workoutDiscipline, type Discipline } from '@/lib/discipline';
+import { DISCIPLINES, makeExerciseColors, stationColor, workoutDiscipline, type Discipline } from '@/lib/discipline';
 import { HYROX_EXERCISES, TRAINING_EXERCISES } from '@/lib/exercises';
 import { USE_LOCAL_STORE, getLocalWorkout, isLocalId, saveLocalWorkout } from '@/lib/localWorkouts';
 import CrossTag from '@/components/CrossTag';
@@ -157,6 +157,7 @@ function CreateWorkout() {
   const srRef = useRef<SR | null>(null);
   const recRef = useRef<MediaRecorder | null>(null);
   const baseRef = useRef('');
+  const colorRef = useRef<(name: string) => string>(() => stationColor(0));
 
   useEffect(() => { try { setCoach(localStorage.getItem('hclub_trainer_name') || ''); } catch { /* egal */ } }, []);
   function changeCoach(v: string) { setCoach(v); try { localStorage.setItem('hclub_trainer_name', v); } catch { /* egal */ } }
@@ -499,6 +500,12 @@ function CreateWorkout() {
                     )}
                   </div>
 
+                  {(() => {
+                    // Farbe je Übung wie auf dem TV (gleiche Übung = gleiche Farbe, Gruppe für Gruppe).
+                    const longest = Math.max(0, ...b.stations.map((g) => g.length));
+                    colorRef.current = makeExerciseColors(Array.from({ length: longest }, (_, i) => b.stations.map((g) => g[i]?.name).filter(Boolean) as string[]).flat());
+                    return null;
+                  })()}
                   <div className={`cw-groups n${Math.min(b.stations.length, 4)}`}>
                     {b.stations.map((g, gIdx) => (
                       <div key={gIdx} className="cw-group">
@@ -513,7 +520,7 @@ function CreateWorkout() {
                         </div>
                         <ol className="cw-rows">
                           {g.map((ex, eIdx) => (
-                            <li key={eIdx} className="cw-ex" style={{ ['--st' as string]: stationColor(eIdx) }}>
+                            <li key={eIdx} className="cw-ex" style={{ ['--st' as string]: colorRef.current(ex.name) }}>
                               <span className="cw-ex-no">{eIdx + 1}</span>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img className="cw-ex-img" src={getExerciseImage(ex.name)} alt="" />

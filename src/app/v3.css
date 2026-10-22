@@ -228,4 +228,78 @@
 .as-seg.is-done { background: color-mix(in srgb, var(--sc, #4FC3F7) 45%, transparent); }
 .as-seg.is-now { background: var(--sc, #4FC3F7); }
 
+/* ---------- Handy-Fernbedienung (V3): Hybryd-Blau, Leuchten, Daumen-Knöpfe ---------- */
+.rc-root {
+  --rc-accent: #22BFCC; gap: 18px;
+  background:
+    radial-gradient(90% 45% at 50% 0%, rgba(25, 157, 169, 0.28), transparent 70%),
+    radial-gradient(90% 40% at 50% 110%, rgba(25, 157, 169, 0.22), transparent 70%),
+    #040809;
+}
+.rc-root.is-rest {
+  --rc-accent: #A5B4FC;
+  background:
+    radial-gradient(90% 45% at 50% 0%, rgba(124, 143, 224, 0.26), transparent 70%),
+    radial-gradient(90% 40% at 50% 110%, rgba(124, 143, 224, 0.2), transparent 70%),
+    #090c18;
+}
+.rc-brand span { color: #22BFCC !important; text-shadow: 0 0 14px rgba(25, 157, 169, 0.6), 0 0 30px rgba(25, 157, 169, 0.25); }
+.rc-link.is-live i { box-shadow: 0 0 10px #3DDC97; }
+
+.rp-state { text-align: center; padding-top: 4px; }
+.rp-tags { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.18em; font-size: 13px; }
+.rp-disc { padding: 2px 8px 1px; border-radius: 6px; border: 1.5px solid var(--k); color: var(--k); font-weight: 600; letter-spacing: 0.14em; }
+.rp-phase { color: var(--rc-accent); text-shadow: 0 0 12px color-mix(in srgb, var(--rc-accent) 50%, transparent); }
+.rp-state.is-paused .rp-phase { color: #FFB547; text-shadow: none; }
+.rp-round { color: #8AA7AD; }
+.rp-name { margin-top: 10px; font-family: var(--font-oswald); text-transform: uppercase; font-size: 20px; letter-spacing: 0.04em; color: #BFD3D7; }
+.rp-time { font-family: var(--font-oswald); font-weight: 600; font-size: clamp(96px, 34vw, 150px); line-height: 0.95; font-variant-numeric: tabular-nums; color: #f4fafa; margin-top: 2px; }
+.rp-state.is-paused .rp-time { color: #FFB547; }
+
+.rp-now {
+  display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 20px;
+  background: rgba(13, 25, 28, 0.85); border: 1px solid rgba(34, 191, 204, 0.4);
+  box-shadow: 0 0 0 1px rgba(34, 191, 204, 0.12), 0 0 40px -10px rgba(34, 191, 204, 0.45);
+}
+.rc-root.is-rest .rp-now { border-color: rgba(165, 180, 252, 0.35); box-shadow: 0 0 40px -12px rgba(124, 143, 224, 0.45); background: rgba(16, 21, 40, 0.85); }
+.rp-now-label { font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.28em; font-size: 12px; color: var(--rc-accent); }
+.rp-ex { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.rp-ex-g { font-family: var(--font-oswald); font-size: 13px; color: #8AA7AD; letter-spacing: 0.1em; width: 24px; flex: none; }
+.rp-ex-dot { width: 12px; height: 12px; border-radius: 4px; background: var(--st); flex: none; }
+.rp-ex-name { font-family: var(--font-oswald); text-transform: uppercase; font-size: 28px; line-height: 1.05; letter-spacing: 0.02em; color: #f4fafa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-now:has(.rp-ex-g) .rp-ex-name { font-size: 22px; }
+
+.rp-pad { display: flex; flex-direction: column; gap: 12px; margin-top: auto; }
+.rp-row { display: flex; gap: 10px; }
+.rp-main {
+  flex: 1; min-height: 96px; border-radius: 24px; border: 0; display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  background: #199DA9; color: #fff; font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.1em; font-size: 28px;
+  box-shadow: 0 0 0 1px rgba(34, 191, 204, 0.5), 0 0 40px rgba(34, 191, 204, 0.45);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s;
+}
+.rp-main.is-paused { background: #22BFCC; color: #04181b; }
+.rp-main:disabled { opacity: 0.35; box-shadow: none; }
+.rp-main.is-tap, .rp-skip.is-tap, .rp-done.is-tap { transform: scale(0.96); }
+.rp-skip {
+  width: 96px; min-height: 96px; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: rgba(34, 191, 204, 0.1); border: 1px solid rgba(34, 191, 204, 0.5); color: #E6F6F8;
+  font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.14em; font-size: 14px;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rp-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.rp-done {
+  min-height: 84px; border-radius: 20px; border: 1px solid rgba(34, 191, 204, 0.55); background: rgba(34, 191, 204, 0.12); color: #E6F6F8;
+  font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.08em; font-size: 24px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 28px -10px rgba(34, 191, 204, 0.6);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rp-done small { font-size: 12px; letter-spacing: 0.2em; color: #22BFCC; }
+.rp-sec {
+  flex: 1; min-height: 64px; border-radius: 18px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.05); color: #E6F6F8;
+  font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.1em; font-size: 18px;
+}
+.rp-sec.is-strong { flex: 1.4; background: var(--rc-accent); color: #0b1030; border-color: transparent; box-shadow: 0 0 30px -6px var(--rc-accent); }
+.rp-stop { min-height: 44px; background: transparent; border: 0; color: #8AA7AD; font-size: 15px; text-decoration: underline; text-underline-offset: 4px; }
+
 @media (prefers-reduced-motion: reduce) { .v3-count-ring { animation: none; } }

@@ -98,6 +98,16 @@ export default function LiveWorkoutPage() {
   const remoteStatus: RemoteStatus | null = workout ? {
     name: workout.name, mode: workoutMode, phase, time: remoteTime, round: currentRound + 1,
     rounds: workout.config.numRounds, groups: workout.config.numGroups, paused: isPaused, label: workout.trainer_name,
+    disc: workoutDiscipline(workout.config),
+    now: Array.from({ length: workout.config.numGroups || 1 }, (_, g) => {
+      if (workoutMode === 'fortime') {
+        const list = getForTimeBlocks(workout.config)[forTimeCurrentBlock]?.exercises?.[g] || [];
+        const e = list[forTimeCurrentExIndex[g] ?? 0];
+        if (!e || e.isNote) return '';
+        return [e.distance || (e.reps ? String(e.reps) : ''), e.name].filter(Boolean).join(' ');
+      }
+      return workout.config.rounds?.[currentRound]?.[g]?.[currentExerciseIndex] || '';
+    }),
   } : null;
   useRemoteHost(embedSlot === null ? rcCode : null, remoteStatus, runCmd);
   useEffect(() => {

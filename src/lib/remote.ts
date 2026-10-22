@@ -27,6 +27,10 @@ export interface RemoteStatus {
   groups: number;
   paused: boolean;
   label: string; // aktuelle Übung, kurz
+  /** V3: Art des Workouts (kleines Kennzeichen am Handy). */
+  disc?: 'hyrox' | 'crossfit';
+  /** V3: aktuelle (in der Pause: kommende) Übung je Gruppe, wie auf dem TV. */
+  now?: string[];
 }
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
