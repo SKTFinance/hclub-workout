@@ -146,8 +146,38 @@
 }
 @keyframes v3-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
+/* ---------- Startbild (idle) ---------- */
+.v3-idle { background: var(--v3-bg); color: var(--v3-text); }
+.v3-idle-brand { font-family: var(--font-oswald); font-size: clamp(22px, 3vh, 34px); letter-spacing: 0.12em; font-weight: 600; margin-bottom: 4vh; }
+.v3-idle-brand span { color: var(--v3-muted); }
+.v3-idle-tags { display: flex; align-items: center; gap: 14px; font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.18em; font-size: clamp(14px, 2vh, 22px); }
+.v3-idle-tags .iv-disc { font-size: 0.9em; }
+.v3-idle-format { color: var(--v3-muted); }
+.v3-idle-name { font-family: var(--font-oswald); text-transform: uppercase; font-weight: 600; text-align: center; line-height: 0.95; font-size: clamp(44px, 9vh, 120px); margin: 2.2vh 0 1vh; max-width: 18ch; }
+.v3-idle-coach { color: var(--v3-muted); font-size: clamp(15px, 2vh, 22px); margin-bottom: 5vh; }
+.v3-idle-stats { gap: clamp(16px, 4vw, 64px); margin-bottom: 6vh; }
+.v3-idle-stats > div { padding: 0 8px; }
+.v3-idle-stats .font-oswald.text-4xl { color: var(--v3-text); font-size: clamp(36px, 6vh, 72px); line-height: 1; }
+.v3-idle-stats .text-gray-400 { color: var(--v3-muted); letter-spacing: 0.2em; margin-top: 6px; }
+.v3-idle-start {
+  min-height: 64px; padding: 0 44px; border-radius: 16px; background: var(--disc, #22BFCC); color: var(--disc-ink, #071012);
+  font-family: var(--font-oswald); font-size: clamp(20px, 2.6vh, 28px); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
+  transition: transform 0.2s ease;
+}
+.v3-idle-start:hover { transform: translateY(-1px); }
+.v3-idle-start:active { transform: scale(0.98); }
+
 /* Aufwärmen: gleiche ruhige Fläche */
-.v3-warm .breathe h1 { color: var(--disc, #22BFCC); }
+.v3-warm { background: var(--v3-bg); color: var(--v3-text); }
+.v3-warm .breathe h1 { color: var(--disc, #22BFCC); text-shadow: none; }
+.v3-warm .breathe > div { color: var(--v3-text); }
+.v3-warm-first {
+  position: absolute; top: 6vh; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px;
+  padding: 10px 18px; border-radius: 14px; background: var(--v3-surface); border: 1px solid var(--v3-line);
+  font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.06em; font-size: clamp(16px, 2.6vh, 28px); white-space: nowrap;
+}
+.v3-warm-first i { font-style: normal; color: var(--v3-muted); font-size: 0.6em; letter-spacing: 0.3em; }
+.v3-warm .iv-pause-hint { color: var(--v3-muted); }
 
 /* ---------- Übersicht vor dem Start (Summary): Stationen unterscheidbar ---------- */
 .rd-ex-dot { box-shadow: none; border-radius: 4px; width: 22px; height: 22px; display: inline-grid; place-items: center;

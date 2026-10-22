@@ -731,23 +731,17 @@ export default function LiveWorkoutPage() {
   // =================== IDLE STATE ===================
   if (phase === 'idle') {
     return (
-      <div className="workout-fullscreen flex flex-col items-center justify-center overflow-y-auto px-4 pb-[15vh] [@media(max-height:500px)]:justify-start [@media(max-height:500px)]:pt-4 [@media(max-height:500px)]:pb-4">
+      <div className="workout-fullscreen v3-idle flex flex-col items-center justify-center overflow-y-auto px-4 pb-[15vh] [@media(max-height:500px)]:justify-start [@media(max-height:500px)]:pt-4 [@media(max-height:500px)]:pb-4" style={discStyle}>
         {embedSlot === null && <RemoteBadge code={rcCode} />}
-        <h1 className="font-oswald text-6xl md:text-8xl font-bold tracking-wider mb-4 logo-glow [@media(max-height:500px)]:text-4xl [@media(max-height:500px)]:mb-1">
-          HYB<span className="text-hclub-magenta">RYD</span>
-        </h1>
-        <h2 className="font-oswald text-3xl md:text-4xl uppercase tracking-wider text-gray-300 mb-2 text-center fade-in-up [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-0">
-          {workout.name}
-        </h2>
-        <p className="text-gray-400 text-lg mb-4 fade-in-up [@media(max-height:500px)]:mb-1 [@media(max-height:500px)]:text-base" style={{ animationDelay: '0.1s' }}>{workout.trainer_name}</p>
-        <div className={`font-oswald text-sm uppercase tracking-wider mb-8 [@media(max-height:500px)]:mb-3 px-3 py-1 rounded ${
-          workoutMode === 'fortime' ? 'text-cyan-400 bg-cyan-400/10' :
-          'text-green-400 bg-green-400/10'
-        }`}>
-          {workoutMode === 'fortime' ? 'AMRAP' : 'Timed'}
+        <div className="v3-idle-brand">HYB<span>RYD</span></div>
+        <div className="v3-idle-tags">
+          <span className="iv-disc">{DISCIPLINES[discipline].label}</span>
+          <span className="v3-idle-format">{config.formatLabel || (workoutMode === 'fortime' ? 'AMRAP' : 'Intervals')}</span>
         </div>
+        <h2 className="v3-idle-name">{workout.name}</h2>
+        <p className="v3-idle-coach">{workout.trainer_name}</p>
 
-        <div className="grid grid-cols-3 gap-8 mb-12 text-center [@media(max-height:500px)]:mb-4">
+        <div className="v3-idle-stats grid grid-cols-3 text-center">
           <div className="fade-in-up" style={{ animationDelay: '0.2s' }}>
             <div className="font-oswald text-4xl text-hclub-magenta">{config.numGroups}</div>
             <div className="text-gray-400 text-sm font-oswald uppercase">Groups</div>
@@ -789,10 +783,7 @@ export default function LiveWorkoutPage() {
           )}
         </div>
 
-        <button onClick={goToSummary}
-          className="px-12 py-4 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald
-                     text-2xl uppercase tracking-widest rounded-xl transition-colors fade-in-up glow-pulse"
-          style={{ animationDelay: '0.5s' }}>
+        <button onClick={goToSummary} className="v3-idle-start">
           Start Workout
         </button>
 
@@ -974,13 +965,14 @@ export default function LiveWorkoutPage() {
   // =================== WARMUP ===================
   if (phase === 'warmup') {
     return (
-      <div className="workout-fullscreen flex flex-col items-center justify-center" style={{ paddingBottom: "15vh" }}>
+      <div className="workout-fullscreen v3-warm flex flex-col items-center justify-center" style={{ paddingBottom: "15vh", ...discStyle }}>
         {isPaused && (
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50 cursor-pointer" onClick={() => setIsPaused(false)}>
-            <span className="font-oswald text-6xl uppercase tracking-wider text-yellow-400">Paused</span>
-            <span className="absolute bottom-24 text-gray-400 font-oswald text-lg uppercase tracking-wider">Tap to resume</span>
-          </div>
+          <button type="button" className="iv-pause" onClick={() => setIsPaused(false)} aria-label="Resume">
+            <span className="iv-pause-word">Paused</span>
+            <span className="iv-pause-hint">Tap or press Space to resume</span>
+          </button>
         )}
+        {firstExercise && <div className="v3-warm-first"><i>First</i>{firstExercise}</div>}
         <div className="breathe text-center">
           <h1 className="font-oswald text-5xl md:text-7xl uppercase tracking-widest text-hclub-magenta mb-8 text-center">Warmup</h1>
           <div className="font-oswald text-[10rem] md:text-[14rem] leading-none text-white text-center">{formatTime(timeRemaining)}</div>

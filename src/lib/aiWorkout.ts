@@ -186,6 +186,42 @@ export function sanitizeDraft(raw: unknown): AiDraft {
   };
 }
 
+// Was der Coach ausdrücklich an Zeiten schreibt, gilt – auch wenn die KI sich vertut.
+// Gemessen 22.10.: „40 sec work 20 rest, 3 rounds" kam als workSeconds 600 / rounds leer zurück.
+export function applyExplicitTiming(draft: AiDraft, text: string): AiDraft {
+  const t = ` ${String(text || '').toLowerCase().replace(/\n/g, ' ')} `;
+  const sec = '(?:s|sec|secs|second|seconds|sek|sekunden|seg|segundos)\\b';
+  // „40/20 x 4" oder „40/20s" – Lasten wie „24/16" bleiben unberührt.
+  const pair = /(\d{2,3})\s*\/\s*(\d{1,3})\s*(?:x|×|s\b|sec)/.exec(t);
+  const work = new RegExp(`(\\d{1,3})\\s*${sec}?\\s*(?:on|work|arbeit|trabajo)\\b`).exec(t) || new RegExp(`(?:work|arbeit)\\s*(\\d{1,3})\\s*${sec}`).exec(t);
+  const rest = new RegExp(`(\\d{1,3})\\s*${sec}?\\s*(?:off|rest|pause|descanso)\\b`).exec(t) || new RegExp(`(?:rest|pause)\\s*(\\d{1,3})\\s*${sec}`).exec(t);
+  const rounds = /(\d{1,2})\s*(?:rounds?|runden|rondas|x\b)/.exec(t);
+  const b = draft.blocks[0];
+  if (!b || b.format !== 'INTERVALS') return draft;
+  let w = work ? parseInt(work[1], 10) : undefined;
+  let r = rest ? parseInt(rest[1], 10) : undefined;
+  if (pair && w === undefined && r === undefined) { w = parseInt(pair[1], 10); r = parseInt(pair[2], 10); }
+  if (w && w >= 5 && w <= 600) b.workSeconds = w;
+  if (r !== undefined && r >= 0 && r <= 600) b.restSeconds = r;
+  if (rounds) { const n = parseInt(rounds[1], 10); if (n >= 1 && n <= 50) b.rounds = n; }
+  // Unplausibel lange Arbeitsphasen ohne Minutenangabe im Text kappen.
+  if ((b.workSeconds || 0) > 300 && !/\bmin/.test(t)) b.workSeconds = 40;
+  return draft;
+}
+
+/** Fehlende Werte mit den Standardwerten füllen, die auch die Umwandlung nutzt (Editor zeigt echte Zahlen). */
+export function withDefaults(draft: AiDraft): AiDraft {
+  return {
+    ...draft,
+    blocks: draft.blocks.map((b) => {
+      if (b.format === 'INTERVALS') return { ...b, workSeconds: b.workSeconds ?? 40, restSeconds: b.restSeconds ?? 20, rounds: b.rounds ?? 4 };
+      if (b.format === 'AMRAP') return { ...b, minutes: b.minutes ?? 12 };
+      if (b.format === 'EMOM') return { ...b, minutes: b.minutes ?? Math.max((b.stations[0]?.length || 1) * 3, 10) };
+      return b;
+    }),
+  };
+}
+
 // Ein Timed-Workout kennt nur Übungsnamen. Wiederholungen und Gewicht wandern
 // deshalb in den Namen — das Bild findet die Übung trotzdem per Stichwort.
 export function timedLabel(e: AiExercise): string {

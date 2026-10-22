@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { AI_SYSTEM_PROMPT, AI_WORKOUT_SCHEMA, DISCIPLINE_PROMPT, sanitizeDraft } from '@/lib/aiWorkout';
+import { AI_SYSTEM_PROMPT, AI_WORKOUT_SCHEMA, DISCIPLINE_PROMPT, applyExplicitTiming, sanitizeDraft, withDefaults } from '@/lib/aiWorkout';
 
 type Discipline = 'hyrox' | 'crossfit';
 
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
   for (const model of MODELS) {
     try {
       const raw = await callGemini(model, key, text, discipline, audio);
-      const draft = sanitizeDraft(raw);
+      const draft = withDefaults(applyExplicitTiming(sanitizeDraft(raw), text));
       if (discipline) draft.discipline = discipline;
       if (draft.blocks.length === 0) throw new Error('empty');
       return NextResponse.json({ draft });
