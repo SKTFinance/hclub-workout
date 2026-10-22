@@ -114,6 +114,8 @@
 .iv-seg.is-done { background: color-mix(in srgb, var(--sc) 45%, transparent); }
 .iv-seg.is-now { background: var(--sc); height: 7px; margin-top: -1px; }
 
+.iv-next { font-size: clamp(17px, 3.2cqh, 30px); padding: 10px 16px; }
+.iv-next-name { color: var(--iv-text); }
 .iv-next-name::before {
   content: ''; width: 10px; height: 10px; border-radius: 3px; background: var(--nc, #888); flex: none;
 }
