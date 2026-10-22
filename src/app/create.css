@@ -291,6 +291,49 @@
   .ov-tabs { width: 100%; }
   .ov-tabs button { flex: 1; justify-content: center; padding: 9px 8px; }
 }
+/* =====================================================================
+   Markenkern (Samuel 22.10. 11:32): Grundstimmung Hybryd-Blau mit Leuchten.
+   Hyrox/CrossFit bleiben kleine Marker (Schild, Punkt, Kachel bei der Wahl).
+   ===================================================================== */
+.cw-root, .ov-root {
+  --disc-ui: #22BFCC;
+  background:
+    radial-gradient(60% 40% at 0% 0%, rgba(25, 157, 169, 0.14), transparent 70%),
+    radial-gradient(50% 40% at 100% 100%, rgba(25, 157, 169, 0.10), transparent 70%),
+    #05090a;
+  background-attachment: fixed;
+}
+.cw-root :focus-visible, .ov-root :focus-visible { outline-color: #22BFCC; }
+.cw-top-right { display: flex; align-items: center; gap: 14px; }
+.cw-logo { font-family: var(--font-oswald); font-size: 22px; letter-spacing: 0.08em; font-weight: 600; }
+@media (max-width: 640px) { .cw-logo { display: none; } }
+.ov-logo span, .cw-logo span { color: #22BFCC; text-shadow: 0 0 14px rgba(25, 157, 169, 0.55), 0 0 30px rgba(25, 157, 169, 0.25); }
+.cw-steps li.is-on span { background: #22BFCC; color: #04181b; box-shadow: 0 0 14px rgba(34, 191, 204, 0.5); }
+.cw-steps li.is-done span { background: rgba(34, 191, 204, 0.22); }
+.cw-disc { background: transparent; color: var(--disc); border: 1.5px solid var(--disc); }
+.cw-input:focus-within, .cw-input.is-listening { border-color: #22BFCC; box-shadow: 0 0 0 1px rgba(34, 191, 204, 0.25), 0 0 40px -10px rgba(34, 191, 204, 0.5); }
+.cw-mic:hover { background: rgba(34, 191, 204, 0.12); }
+.cw-mic.is-on { background: #22BFCC; color: #04181b; box-shadow: 0 0 28px rgba(34, 191, 204, 0.5); }
+.cw-chip:hover { border-color: #22BFCC; }
+.cw-primary { background: #199DA9; color: #fff; box-shadow: 0 0 0 1px rgba(34, 191, 204, 0.45), 0 0 30px rgba(34, 191, 204, 0.35); }
+.cw-primary:hover:not(:disabled) { background: #22BFCC; color: #04181b; }
+.cw-name:focus { border-bottom-color: #22BFCC; }
+.cw-addgroup:hover, .cw-addpart:hover { border-color: #22BFCC; }
+.cw-coach input:focus { border-color: #22BFCC; }
+.cw-block, .cw-side-card { border-color: rgba(34, 191, 204, 0.22); box-shadow: 0 0 44px -18px rgba(34, 191, 204, 0.35); }
+.cw-side-time { color: #22BFCC; }
+.cw-tile:hover { box-shadow: 0 0 0 1px var(--t), 0 0 48px -12px rgba(34, 191, 204, 0.45); }
+
+.ov-card { border-color: rgba(34, 191, 204, 0.14); }
+.ov-card:hover { border-color: rgba(34, 191, 204, 0.5); box-shadow: 0 0 40px -12px rgba(34, 191, 204, 0.45); }
+.ov-card.is-new { border-color: #22BFCC; box-shadow: 0 0 0 1px rgba(34, 191, 204, 0.3), 0 0 40px -10px rgba(34, 191, 204, 0.5); }
+.ov-tag { background: transparent; color: var(--k); border: 1.5px solid var(--k); }
+.ov-start { background: #199DA9; color: #fff; box-shadow: 0 0 22px rgba(34, 191, 204, 0.3); }
+.ov-start:hover { background: #22BFCC; color: #04181b; }
+.ov-new-btn:hover { border-color: #22BFCC; box-shadow: 0 0 30px -8px rgba(34, 191, 204, 0.5); }
+.ov-search input:focus { border-color: #22BFCC; box-shadow: 0 0 30px -10px rgba(34, 191, 204, 0.5); }
+.ov-tabs button.is-on { box-shadow: inset 0 0 0 1px rgba(34, 191, 204, 0.45); }
+
 @media (prefers-reduced-motion: reduce) {
   .cw-root *, .ov-root * { transition: none !important; animation: none !important; }
 }

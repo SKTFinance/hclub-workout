@@ -10,7 +10,7 @@
 // Animationen nur über transform/opacity; prefers-reduced-motion schaltet ab.
 
 import { getExerciseImage } from '@/lib/exerciseImages';
-import { DISCIPLINES, stationColor, IMAGE_FOCUS, type Discipline } from '@/lib/discipline';
+import { DISCIPLINES, makeExerciseColors, type Discipline } from '@/lib/discipline';
 import CrossTag from '@/components/CrossTag';
 
 export type IntervalPhase = 'work' | 'rest' | 'roundRest';
@@ -87,6 +87,10 @@ export default function IntervalStage(p: IntervalStageProps) {
   const phaseWord = p.phase === 'work' ? 'Work' : p.phase === 'roundRest' ? 'Round rest' : 'Rest';
   const tone = isWork ? 'is-work' : 'is-rest';
   const disc = DISCIPLINES[p.discipline || 'crossfit'];
+  // Farbe je Übung: Gruppe für Gruppe, Übung für Übung in Reihenfolge des Auftretens.
+  const colorOf = makeExerciseColors(
+    Array.from({ length: Math.max(0, ...p.groups.map((g) => g.items.length)) }, (_, i) => p.groups.map((g) => g.items[i]).filter(Boolean)).flat(),
+  );
 
   return (
     <div
@@ -159,7 +163,7 @@ export default function IntervalStage(p: IntervalStageProps) {
           const cur = parseLabel(items[at]);
           const nextRaw = at + 1 < items.length ? items[at + 1] : null;
           const next = nextRaw ? parseLabel(nextRaw) : null;
-          const st = stationColor(at);
+          const st = colorOf(items[at]);
           return (
             <section key={gi} className="iv-card" style={{ ['--i' as string]: gi, ['--st' as string]: st }} aria-label={`Group ${gi + 1}`}>
               <div className="iv-card-head">
@@ -176,7 +180,8 @@ export default function IntervalStage(p: IntervalStageProps) {
               <div className="iv-card-main">
                 <div className="iv-img" key={`${at}-${p.phase}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={getExerciseImage(items[at])} alt="" draggable={false} style={{ objectPosition: IMAGE_FOCUS }} />
+                  <img className="iv-img-bg" src={getExerciseImage(items[at])} alt="" aria-hidden="true" draggable={false} />
+                  <img className="iv-img-fg" src={getExerciseImage(items[at])} alt="" draggable={false} />
                   <span className="iv-img-sheen" aria-hidden="true" />
                 </div>
                 <div className="iv-text" key={`t${at}-${p.phase}`}>
@@ -193,12 +198,12 @@ export default function IntervalStage(p: IntervalStageProps) {
 
               <div className="iv-segs" aria-label={`${at} of ${items.length} done`}>
                 {items.map((_, i) => (
-                  <span key={i} className={`iv-seg ${i < at ? 'is-done' : i === at ? 'is-now' : ''}`} style={{ ['--sc' as string]: stationColor(i) }} />
+                  <span key={i} className={`iv-seg ${i < at ? 'is-done' : i === at ? 'is-now' : ''}`} style={{ ['--sc' as string]: colorOf(items[i]) }} />
                 ))}
               </div>
 
               {isWork && (
-                <div className="iv-next" style={{ ['--nc' as string]: stationColor(at + 1) }}>
+                <div className="iv-next" style={{ ['--nc' as string]: nextRaw ? colorOf(nextRaw) : 'transparent' }}>
                   <span className="iv-next-label">Next</span>
                   <span className="iv-next-name">
                     {next ? <>{next.value ? `${next.value} ` : ''}{next.name}</> : <><CheckIcon /> Last one</>}

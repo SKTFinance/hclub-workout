@@ -18,7 +18,7 @@
 
 import type { ExerciseEntry } from '@/lib/types';
 import { getExerciseImage } from '@/lib/exerciseImages';
-import { DISCIPLINES, stationColor, IMAGE_FOCUS, type Discipline } from '@/lib/discipline';
+import { DISCIPLINES, makeExerciseColors, IMAGE_FOCUS, type Discipline } from '@/lib/discipline';
 import CrossTag from '@/components/CrossTag';
 
 export interface AmrapStageProps {
@@ -72,7 +72,11 @@ export default function AmrapStage(p: AmrapStageProps) {
   // einmal unten über die ganze Breite statt in jeder Spalte doppelt.
   const noteSets = groups.map((g) => (p.exercisesByGroup[g] || []).filter((e) => e.isNote && e.name.trim()).map((e) => e.name.trim()));
   const shared = p.numGroups > 1 ? (noteSets[0] || []).filter((n) => noteSets.every((set) => set.includes(n))) : [];
-  const timerValue = p.roundTimer.enabled ? p.roundTimer.remaining : p.elapsed;
+  const allNames = groups.map((g) => (p.exercisesByGroup[g] || []).filter((e) => !e.isNote).map((e) => e.name));
+  const colorOf = makeExerciseColors(
+    Array.from({ length: Math.max(0, ...allNames.map((l) => l.length)) }, (_, i) => allNames.map((l) => l[i]).filter(Boolean)).flat(),
+  );
+  const timerValue =p.roundTimer.enabled ? p.roundTimer.remaining : p.elapsed;
   const progress = p.roundTimer.enabled && p.roundTimer.total > 0
     ? 1 - p.roundTimer.remaining / p.roundTimer.total
     : 0;
@@ -145,7 +149,7 @@ export default function AmrapStage(p: AmrapStageProps) {
               </div>
               <div className="as-segs" aria-label={`${doneCount} of ${stations.length} stations done`}>
                 {stations.map((s) => (
-                  <span key={s.i} className={`as-seg ${finished || s.i < cur ? 'is-done' : s.i === cur ? 'is-now' : ''}`} style={{ ['--sc' as string]: stationColor(stations.indexOf(s)) }} />
+                  <span key={s.i} className={`as-seg ${finished || s.i < cur ? 'is-done' : s.i === cur ? 'is-now' : ''}`} style={{ ['--sc' as string]: colorOf(s.ex.name) }} />
                 ))}
               </div>
 
@@ -155,7 +159,7 @@ export default function AmrapStage(p: AmrapStageProps) {
                   const m = metric(ex);
                   const isNow = state === 'now';
                   return (
-                    <li key={`${i}-${ex.name}`} className={`as-card is-${state}`} style={{ ['--i' as string]: pos, ['--st' as string]: stationColor(pos) }}>
+                    <li key={`${i}-${ex.name}`} className={`as-card is-${state}`} style={{ ['--i' as string]: pos, ['--st' as string]: colorOf(ex.name) }}>
                       <button
                         type="button"
                         className="as-card-btn"

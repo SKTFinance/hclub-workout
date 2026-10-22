@@ -321,7 +321,7 @@ function CreateWorkout() {
     if (!converted) return;
     const w = {
       id: 'preview', user_id: 'preview', name: converted.name,
-      trainer_name: coach || 'Coach',
+      trainer_name: coach.trim(),
       config: { ...converted.config, warmupTime: 0 },
       workout_mode: converted.workout_mode, is_public: false,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -337,7 +337,7 @@ function CreateWorkout() {
     if (USE_LOCAL_STORE) {
       // Vorschau: nur im Browser speichern, Live-Tabelle bleibt unberührt.
       const rec = saveLocalWorkout({
-        id: editId || undefined, user_id: 'local', name: converted.name, trainer_name: coach || 'Coach',
+        id: editId || undefined, user_id: 'local', name: converted.name, trainer_name: coach.trim(),
         config: converted.config, workout_mode: converted.workout_mode, is_public: false,
         draft: { ...draft, discipline: disc },
       });
@@ -373,7 +373,10 @@ function CreateWorkout() {
             <li key={s} className={i === stepNo ? 'is-on' : i < stepNo ? 'is-done' : ''}><span>{i + 1}</span>{s}</li>
           ))}
         </ol>
-        <div className="cw-top-right">{step !== 'type' && <span className="cw-disc">{D.label}</span>}</div>
+        <div className="cw-top-right">
+          {step !== 'type' && <span className="cw-disc">{D.label}</span>}
+          <span className="cw-logo">HYB<span>RYD</span></span>
+        </div>
       </header>
 
       {/* ---------- 1. Art ---------- */}

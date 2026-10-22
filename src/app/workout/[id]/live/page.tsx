@@ -16,7 +16,7 @@ import { getExerciseImage } from '@/lib/exerciseImages';
 import AmrapStage from '@/components/AmrapStage';
 import IntervalStage from '@/components/IntervalStage';
 import RemoteBadge from '@/components/RemoteBadge';
-import { DISCIPLINES, stationColor, workoutDiscipline } from '@/lib/discipline';
+import { DISCIPLINES, makeExerciseColors, workoutDiscipline } from '@/lib/discipline';
 import CrossTag from '@/components/CrossTag';
 import { getLocalWorkout, isLocalId } from '@/lib/localWorkouts';
 import { newCode, validCode, useRemoteHost, type RemoteCmd, type RemoteStatus } from '@/lib/remote';
@@ -723,6 +723,9 @@ export default function LiveWorkoutPage() {
 
   const config = workout.config;
   const discipline = workoutDiscipline(config);
+  const colorOf = makeExerciseColors(workoutMode === 'fortime'
+    ? getForTimeBlocks(config).flatMap((b) => Object.values(b.exercises || {}).flatMap((g) => (g || []).filter((e) => !e.isNote).map((e) => e.name)))
+    : Object.values(config.rounds || {}).flatMap((r) => Object.values(r || {}).flat()));
   const discStyle = { ['--disc' as string]: DISCIPLINES[discipline].accent, ['--disc-ink' as string]: DISCIPLINES[discipline].ink } as React.CSSProperties;
   const firstExercise: string | null = workoutMode === 'fortime'
     ? (getForTimeBlocks(config)[0]?.exercises?.[0]?.[0]?.name || null)
@@ -733,7 +736,7 @@ export default function LiveWorkoutPage() {
     return (
       <div className="workout-fullscreen v3-idle flex flex-col items-center justify-center overflow-y-auto px-4 pb-[15vh] [@media(max-height:500px)]:justify-start [@media(max-height:500px)]:pt-4 [@media(max-height:500px)]:pb-4" style={discStyle}>
         {embedSlot === null && <RemoteBadge code={rcCode} />}
-        <div className="v3-idle-brand">HYB<span>RYD</span></div>
+        <div className="v3-idle-brand logo-glow">HYB<span>RYD</span></div>
         <div className="v3-idle-tags">
           <span className="iv-disc">{DISCIPLINES[discipline].label}</span>
           <span className="v3-idle-format">{config.formatLabel || (workoutMode === 'fortime' ? 'AMRAP' : 'Intervals')}</span>
@@ -844,7 +847,7 @@ export default function LiveWorkoutPage() {
                       <div key={gIdx}>
                         <div className={`text-gray-500 font-oswald uppercase tracking-wider mb-1.5 ${config.numRounds === 1 ? 'text-base md:text-lg' : 'text-sm md:text-base'}`}>G{gIdx + 1}</div>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className={`rd-ex-row ${config.numRounds === 1 ? 'text-base md:text-lg' : 'text-sm md:text-base'}`} style={{ ['--st' as string]: stationColor(eIdx) }}>
+                          <div key={eIdx} className={`rd-ex-row ${config.numRounds === 1 ? 'text-base md:text-lg' : 'text-sm md:text-base'}`} style={{ ['--st' as string]: colorOf(ex) }}>
                             <span className="rd-ex-dot">{eIdx + 1}</span>
                             <span>{ex}<CrossTag name={ex} discipline={discipline} /></span>
                           </div>
@@ -879,7 +882,7 @@ export default function LiveWorkoutPage() {
                       <div key={gIdx}>
                         <div className="text-gray-500 text-sm md:text-base font-oswald uppercase mb-2">G{gIdx + 1}</div>
                         {exercises.map((ex, eIdx) => (
-                          <div key={eIdx} className="rd-ex-row text-base md:text-xl" style={{ ['--st' as string]: stationColor(eIdx) }}>
+                          <div key={eIdx} className="rd-ex-row text-base md:text-xl" style={{ ['--st' as string]: colorOf(ex.name) }}>
                             <span className="rd-ex-dot">{eIdx + 1}</span>
                             <span>{formatExerciseLabel(ex)}</span>
                           </div>

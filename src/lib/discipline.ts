@@ -62,18 +62,35 @@ export function isCrossover(name: string, workout: Discipline | undefined): bool
 
 // Stationsfarben: gleiche Helligkeit, klar verschiedene Farbtöne, auf dunklem Grund
 // lesbar. Reihenfolge so, dass Nachbarn sich stark unterscheiden.
-// Bewusst ohne Gelb und Koralle: das sind die Kennfarben von Hyrox und CrossFit.
-// Hellblau erst an vierter Stelle (Samuel: „alles in Hellblau").
+// Passend zum Hybryd-Blau (#22BFCC), aber klar davon und voneinander unterscheidbar:
+// gleiche Helligkeit, kühle Grundstimmung, kein Türkis (das ist die Markenfarbe),
+// kein reines Gelb/Koralle (Kennfarben Hyrox/CrossFit).
 export const STATION_COLORS = [
-  '#5BE08F', // grün
-  '#FF9F5A', // orange
-  '#B79BFF', // violett
-  '#4FC3F7', // himmelblau
-  '#FF7AB6', // pink
-  '#4DD9C7', // türkis
-  '#C6E36B', // limette
-  '#9DB4FF', // kornblume
+  '#6EE7A8', // mint
+  '#A99BFF', // lavendel
+  '#FFB27A', // aprikose
+  '#7CB8FF', // kornblume
+  '#F58FD0', // orchidee
+  '#C4E86B', // limette
+  '#9FE3FF', // eisblau
+  '#FF9C9C', // rosé
 ];
+
+/** Übungsname ohne Menge/Last („12 cal Echo Bike @ 20 kg" → „echo bike"). */
+export function exerciseKey(raw: string): string {
+  return String(raw || '').split(' @ ')[0].replace(/^\s*\d+(?:[.,]\d+)?\s*(km|kcal|cal|m|x|s|sec)?\s+/i, '').trim().toLowerCase();
+}
+
+/**
+ * Farbe je ÜBUNG statt je Position (Samuel-Foto 22.10. 11:35: drei Gruppen, alle an
+ * Station 2 → alle gleich gefärbt). Jede verschiedene Übung des Workouts bekommt in
+ * Reihenfolge des ersten Auftretens eine eigene Farbe; dieselbe Übung bleibt überall gleich.
+ */
+export function makeExerciseColors(names: string[]): (name: string) => string {
+  const keys: string[] = [];
+  for (const n of names) { const k = exerciseKey(n); if (k && !keys.includes(k)) keys.push(k); }
+  return (name: string) => stationColor(Math.max(0, keys.indexOf(exerciseKey(name))));
+}
 
 export function stationColor(i: number): string {
   return STATION_COLORS[((i % STATION_COLORS.length) + STATION_COLORS.length) % STATION_COLORS.length];
@@ -97,4 +114,7 @@ export function workoutDiscipline(config: { discipline?: Discipline; rounds?: Re
 
 // Fokuspunkt der Übungsbilder: Personen stehen meist im oberen Drittel. „center 22%"
 // verhindert abgeschnittene Köpfe bei breiten Ausschnitten (Echo Bike, 22.10.).
-export const IMAGE_FOCUS = 'center 15%';
+// Nachtrag 22.10. 11:35: „center 15%" schnitt Bilder mit tief stehender Person (Sled Pull)
+// ab. Alle Übungsbilder sind 4:3; wo die Box ein anderes Format hat, zeigt die Live-Ansicht
+// das Bild jetzt ganz (contain) vor einer unscharfen Kopie. Für 4:3-Boxen reicht „center".
+export const IMAGE_FOCUS = 'center';
