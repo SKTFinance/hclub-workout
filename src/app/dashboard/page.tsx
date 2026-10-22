@@ -1,457 +1,304 @@
 'use client';
 
+// Workout-Übersicht (V3, 22.10.2026). Samuel: „Die große Übersicht draußen müssen wir
+// überholen, dass die Workouts übersichtlicher zu finden sind."
+//
+// - Getrennt nach Art: Hyrox und CrossFit als eigene Abschnitte, Umschalter mit Anzahl.
+// - Suche über Name, Coach UND Übungen („sled" findet alle Workouts mit Schlitten).
+// - Karten zeigen Art, Format, Dauer, Gruppen und die ersten Übungsbilder.
+// - Auf der Vorschau: Live-Workouts werden nur GELESEN. Gespeichert, kopiert, favorisiert
+//   und gelöscht wird nur im Browser (lib/localWorkouts). In Produktion wie bisher.
+
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
-import type { Workout, WorkoutMode } from '@/lib/types';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { Workout, WorkoutConfig } from '@/lib/types';
+import { DISCIPLINES, workoutDiscipline, type Discipline } from '@/lib/discipline';
+import { getExerciseImage } from '@/lib/exerciseImages';
+import { USE_LOCAL_STORE, deleteLocalWorkout, isLocalId, listLocalWorkouts, saveLocalWorkout } from '@/lib/localWorkouts';
 
-type FilterMode = 'mine' | 'all' | 'favorites';
-type SortMode = 'date' | 'name';
-type ViewMode = 'grid' | 'list';
+type Scope = 'mine' | 'all' | 'favorites';
+type Kind = 'all' | Discipline;
+type Sort = 'date' | 'name';
 
-const PAGE_SIZE = 12;
+const FAV_KEY = 'hybryd_local_favs_v1';
 
-export default function DashboardPage() {
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [trainerName, setTrainerName] = useState('');
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [filterMode, setFilterMode] = useState<FilterMode>('mine');
-  const [sortMode, setSortMode] = useState<SortMode>('date');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [workoutMode, setWorkoutMode] = useState<WorkoutMode>('timed');
-  const [typeFilter, setTypeFilter] = useState<WorkoutMode | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [page, setPage] = useState(0);
+function exerciseNames(c: WorkoutConfig, mode?: string): string[] {
+  const out: string[] = [];
+  if (mode === 'fortime' && c.forTimeBlocks?.length) {
+    c.forTimeBlocks.forEach((b) => Object.values(b.exercises || {}).forEach((g) => (g || []).forEach((e) => { if (!e.isNote && e.name) out.push(e.name); })));
+  } else {
+    Object.values(c.rounds || {}).forEach((r) => Object.values(r || {}).forEach((g) => (g || []).forEach((n) => out.push(n))));
+  }
+  return out;
+}
+
+function cleanName(n: string): string {
+  return n.split(' @ ')[0].replace(/^\s*\d+(?:[.,]\d+)?\s*(km|kcal|cal|m|x)?\s+/i, '').trim();
+}
+
+function durationMin(w: Workout): number | null {
+  const c = w.config;
+  if (w.workout_mode === 'fortime') {
+    if (!c.forTimeRoundTimerEnabled) return null;
+    return (c.forTimeBlocks?.length || 1) * (c.forTimeRoundTimerMinutes || 12);
+  }
+  let s = 0;
+  for (let r = 0; r < (c.numRounds || 1); r++) {
+    const n = c.rounds?.[r]?.[0]?.length || 0;
+    s += n * (c.workTime || 0) + Math.max(0, n - 1) * (c.restTime || 0);
+  }
+  s += Math.max(0, (c.numRounds || 1) - 1) * (c.roundRestTime || 0);
+  return s ? Math.max(1, Math.round(s / 60)) : null;
+}
+
+function formatOf(w: Workout): string {
+  const c = w.config;
+  if (c.formatLabel) return c.formatLabel;
+  if (w.workout_mode === 'fortime') return c.forTimeRoundTimerEnabled ? `AMRAP ${c.forTimeRoundTimerMinutes || 12}` : 'For Time';
+  return `${c.workTime}/${c.restTime} × ${c.numRounds}`;
+}
+
+function Dashboard() {
   const router = useRouter();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const params = useSearchParams();
+  const savedId = params.get('saved');
   const supabase = useMemo(() => createClient(), []);
+  const [remote, setRemote] = useState<Workout[]>([]);
+  const [local, setLocal] = useState<Workout[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [scope, setScope] = useState<Scope>('all');
+  const [kind, setKind] = useState<Kind>('all');
+  const [sort, setSort] = useState<Sort>('date');
+  const [q, setQ] = useState('');
+  const [favs, setFavs] = useState<Set<string>>(new Set());
+  const [limit, setLimit] = useState<Record<string, number>>({});
 
-  // Load saved trainer name from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('hclub_trainer_name');
-    if (saved) setTrainerName(saved);
-  }, []);
-
-  // Save trainer name when it changes
-  useEffect(() => {
-    if (trainerName) localStorage.setItem('hclub_trainer_name', trainerName);
-  }, [trainerName]);
-
-  const loadFavorites = useCallback(async () => {
-    const { data } = await supabase.from('hybryd_workout_favorites').select('workout_id');
-    if (data) {
-      setFavorites(new Set(data.map((f: { workout_id: string }) => f.workout_id)));
-    }
-  }, [supabase]);
-
-  const loadWorkouts = useCallback(async () => {
+  const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      setCurrentUserId(user.id);
-      // Admin-Check
-      fetch('/api/admin/users').then(res => { if (res.ok) setIsAdmin(true); });
+      setUserId(user.id);
+      fetch('/api/admin/users').then((r) => { if (r.ok) setIsAdmin(true); }).catch(() => {});
     }
-
-    let query = supabase.from('hybryd_workouts').select('*');
-
-    if (filterMode === 'mine' && user) {
-      query = query.eq('user_id', user.id);
-    }
-    // 'all' and 'favorites' load everything (RLS handles visibility)
-
-    if (sortMode === 'date') {
-      query = query.order('updated_at', { ascending: false });
+    const { data } = await supabase.from('hybryd_workouts').select('*').order('updated_at', { ascending: false });
+    if (data) setRemote(data as Workout[]);
+    setLocal(USE_LOCAL_STORE ? listLocalWorkouts() : []);
+    if (USE_LOCAL_STORE) {
+      try { setFavs(new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]'))); } catch { /* egal */ }
     } else {
-      query = query.order('name', { ascending: true });
+      const { data: f } = await supabase.from('hybryd_workout_favorites').select('workout_id');
+      if (f) setFavs(new Set(f.map((x: { workout_id: string }) => x.workout_id)));
     }
-
-    const { data } = await query;
-    if (data) setWorkouts(data as Workout[]);
     setLoading(false);
-  }, [supabase, filterMode, sortMode]);
+  }, [supabase]);
+  useEffect(() => { load(); }, [load]);
 
-  useEffect(() => {
-    loadWorkouts();
-    loadFavorites();
-  }, [loadWorkouts, loadFavorites]);
+  const all = useMemo(() => [...local, ...remote], [local, remote]);
+  const isMine = useCallback((w: Workout) => isLocalId(w.id) || w.user_id === userId, [userId]);
 
-  useEffect(() => { setPage(0); }, [filterMode, sortMode, typeFilter, searchQuery]);
-
-  const displayedWorkouts = useMemo(() => {
-    let filtered = workouts;
-
-    // Favorites filter
-    if (filterMode === 'favorites') {
-      filtered = filtered.filter(w => favorites.has(w.id));
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    let list = all.filter((w) => scope === 'all' || (scope === 'mine' ? isMine(w) : favs.has(w.id)));
+    if (needle) {
+      list = list.filter((w) =>
+        w.name.toLowerCase().includes(needle) ||
+        (w.trainer_name || '').toLowerCase().includes(needle) ||
+        formatOf(w).toLowerCase().includes(needle) ||
+        exerciseNames(w.config, w.workout_mode).some((n) => n.toLowerCase().includes(needle)));
     }
+    list = [...list].sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name) : (b.updated_at || '').localeCompare(a.updated_at || '')));
+    return list;
+  }, [all, scope, favs, q, sort, isMine]);
 
-    // Type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(w => (w.workout_mode || 'timed') === typeFilter);
+  const byKind = useMemo(() => {
+    const m: Record<Discipline, Workout[]> = { hyrox: [], crossfit: [] };
+    filtered.forEach((w) => m[workoutDiscipline(w.config)].push(w));
+    return m;
+  }, [filtered]);
+
+  function toggleFav(id: string) {
+    const next = new Set(favs);
+    const on = !next.has(id);
+    if (on) next.add(id); else next.delete(id);
+    setFavs(next);
+    if (USE_LOCAL_STORE) {
+      try { localStorage.setItem(FAV_KEY, JSON.stringify([...next])); } catch { /* egal */ }
+      return;
     }
-
-    // Search
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(w =>
-        w.name.toLowerCase().includes(q) ||
-        w.trainer_name.toLowerCase().includes(q)
-      );
-    }
-
-    return filtered;
-  }, [workouts, filterMode, favorites, typeFilter, searchQuery]);
-
-  const totalPages = Math.max(1, Math.ceil(displayedWorkouts.length / PAGE_SIZE));
-  const pagedWorkouts = displayedWorkouts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-
-  async function toggleFavorite(workoutId: string) {
-    const isFav = favorites.has(workoutId);
-    if (isFav) {
-      await supabase.from('hybryd_workout_favorites').delete().eq('workout_id', workoutId);
-      setFavorites(prev => { const next = new Set(prev); next.delete(workoutId); return next; });
-    } else {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      await supabase.from('hybryd_workout_favorites').insert({ user_id: user.id, workout_id: workoutId });
-      setFavorites(prev => new Set(prev).add(workoutId));
-    }
+    if (on) supabase.auth.getUser().then(({ data: { user } }) => user && supabase.from('hybryd_workout_favorites').insert({ user_id: user.id, workout_id: id }));
+    else supabase.from('hybryd_workout_favorites').delete().eq('workout_id', id);
   }
 
-  async function createWorkout() {
+  async function copy(w: Workout) {
+    if (USE_LOCAL_STORE) {
+      saveLocalWorkout({ user_id: 'local', name: `${w.name} (copy)`, trainer_name: w.trainer_name, config: w.config, workout_mode: w.workout_mode, is_public: false });
+      setLocal(listLocalWorkouts());
+      return;
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
-    let defaultConfig;
-    if (workoutMode === 'timed') {
-      defaultConfig = {
-        numGroups: 2, numRounds: 3, workTime: 60, restTime: 15, roundRestTime: 60, warmupTime: 30,
-        rounds: { 0: { 0: ['Wall Balls'], 1: ['SkiErg'] }, 1: { 0: ['Rowing'], 1: ['Sled Push'] }, 2: { 0: ['Burpees'], 1: ['Box Jumps'] } },
-      };
-    } else if (workoutMode === 'amrap') {
-      defaultConfig = {
-        numGroups: 1, numRounds: 1, workTime: 60, restTime: 0, roundRestTime: 0, warmupTime: 30,
-        rounds: { 0: { 0: ['Wall Balls'] } },
-        amrapTotalTime: 1200,
-        amrapExercises: { 0: [{ name: 'Wall Balls', reps: 20 }, { name: 'Burpees', reps: 10 }, { name: 'Box Jumps', reps: 15 }] },
-      };
-    } else {
-      defaultConfig = {
-        numGroups: 1, numRounds: 1, workTime: 0, restTime: 0, roundRestTime: 0, warmupTime: 10,
-        rounds: { 0: { 0: ['Burpees'] } },
-        forTimeExercises: { 0: [{ name: 'Burpees', distance: '50m' }, { name: 'Rowing', distance: '500m' }, { name: 'Wall Balls', reps: 20 }] },
-      };
-    }
-
-    const { data, error } = await supabase.from('hybryd_workouts').insert({
-      user_id: user.id, user_email: user.email, name: 'New Workout',
-      trainer_name: trainerName || 'Trainer', config: defaultConfig,
-      is_public: true, workout_mode: workoutMode,
-    }).select().single();
-
-    if (error) { console.error('Error creating workout:', error); return; }
-    if (data) router.push(`/workout/${data.id}`);
+    await supabase.from('hybryd_workouts').insert({ user_id: user.id, user_email: user.email, name: `${w.name} (copy)`, trainer_name: w.trainer_name, config: w.config, is_public: true, workout_mode: w.workout_mode || 'timed' });
+    load();
   }
 
-  async function duplicateWorkout(workout: Workout) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { error } = await supabase.from('hybryd_workouts').insert({
-      user_id: user.id, user_email: user.email,
-      name: `${workout.name} (Copy)`, trainer_name: trainerName || workout.trainer_name,
-      config: workout.config, is_public: true, workout_mode: workout.workout_mode || 'timed',
-    }).select().single();
-    if (!error) loadWorkouts();
+  async function remove(w: Workout) {
+    if (!confirm(`Delete “${w.name}”?`)) return;
+    if (isLocalId(w.id)) { deleteLocalWorkout(w.id); setLocal(listLocalWorkouts()); return; }
+    if (USE_LOCAL_STORE) return; // Vorschau löscht keine Live-Workouts
+    await supabase.from('hybryd_workouts').delete().eq('id', w.id);
+    load();
   }
 
-  async function deleteWorkout(id: string) {
-    if (!confirm('Really delete this workout?')) return;
-    await supabase.from('hybryd_workouts').delete().eq('id', id);
-    loadWorkouts();
+  function edit(w: Workout) {
+    // Vorschau: alles im neuen Editor (Live-Workouts als Kopie). Produktion: eigene
+    // Live-Workouts weiter im bisherigen Editor.
+    if (isLocalId(w.id) || USE_LOCAL_STORE) router.push(`/workout/ai?edit=${w.id}`);
+    else router.push(`/workout/${w.id}`);
   }
 
-  async function handleLogout() {
+  async function logout() {
     await supabase.auth.signOut();
     router.push('/login');
     router.refresh();
   }
 
-  function getModeLabel(mode?: WorkoutMode): string {
-    switch (mode) { case 'amrap': return 'AMRAP'; case 'fortime': return 'AMRAP'; default: return 'Timed'; }
-  }
-  function getModeColor(mode?: WorkoutMode): string {
-    switch (mode) { case 'amrap': return 'text-orange-400'; case 'fortime': return 'text-cyan-400'; default: return 'text-green-400'; }
-  }
-
-  function renderWorkoutCard(workout: Workout, index: number) {
-    const isOwn = workout.user_id === currentUserId;
-    const isFav = favorites.has(workout.id);
-
-    if (viewMode === 'list') {
-      return (
-        <div key={workout.id}
-          className="bg-hclub-dark border border-hclub-gray rounded-lg px-4 py-3 flex items-center gap-4 hover:border-hclub-magenta/30 transition-colors fade-in-up"
-          style={{ opacity: 0, animationDelay: `${index * 0.03}s` }}>
-          <button onClick={() => toggleFavorite(workout.id)}
-            className={`text-lg shrink-0 ${isFav ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'} transition-colors`}>
-            {isFav ? '\u2605' : '\u2606'}
-          </button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-oswald uppercase tracking-wider truncate">{workout.name}</span>
-              <span className={`text-[10px] font-oswald uppercase px-1.5 py-0 rounded ${getModeColor(workout.workout_mode)} bg-white/5`}>
-                {getModeLabel(workout.workout_mode)}
-              </span>
-              {workout.is_public && <span className="text-[10px] text-green-400 bg-green-400/10 px-1.5 rounded font-oswald uppercase">Pub</span>}
-            </div>
-            <div className="text-gray-500 text-xs truncate">
-              {workout.trainer_name}
-              {!isOwn && workout.user_email && ` (${workout.user_email})`}
-              {' '}&bull; {new Date(workout.updated_at).toLocaleDateString('en-GB')}
-            </div>
-          </div>
-          <div className="flex gap-1 shrink-0">
-            {isOwn && (
-              <button onClick={() => router.push(`/workout/${workout.id}`)}
-                className="px-2 py-1 bg-hclub-gray hover:bg-hclub-magenta text-white text-xs font-oswald uppercase rounded transition-colors">Edit</button>
-            )}
-            <button onClick={() => window.open(`/workout/${workout.id}/live`, '_blank')}
-              className="px-2 py-1 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white text-xs font-oswald uppercase rounded transition-colors">Start</button>
-            <button onClick={() => duplicateWorkout(workout)}
-              className="px-2 py-1 bg-hclub-gray hover:bg-cyan-900/60 text-gray-400 text-xs font-oswald uppercase rounded transition-colors">Copy</button>
-            {isOwn && (
-              <button onClick={() => deleteWorkout(workout.id)}
-                className="px-2 py-1 bg-red-900/30 hover:bg-red-900/60 text-red-400 text-xs font-oswald uppercase rounded transition-colors">X</button>
-            )}
-          </div>
-        </div>
-      );
-    }
-
+  function Card({ w }: { w: Workout }) {
+    const d = workoutDiscipline(w.config);
+    const names = Array.from(new Set(exerciseNames(w.config, w.workout_mode).map(cleanName))).filter(Boolean);
+    const mins = durationMin(w);
+    const own = isMine(w);
     return (
-      <div key={workout.id}
-        className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 card-gradient-border transition-all duration-300 group fade-in-up"
-        style={{ opacity: 0, animationDelay: `${0.1 + index * 0.05}s` }}>
-        <div className="flex items-start justify-between mb-1">
-          <h3 className="font-oswald text-lg uppercase tracking-wider flex-1 truncate">{workout.name}</h3>
-          <div className="flex items-center gap-1 shrink-0">
-            <button onClick={() => toggleFavorite(workout.id)}
-              className={`text-lg ${isFav ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'} transition-colors`}>
-              {isFav ? '\u2605' : '\u2606'}
+      <article className={`ov-card ${w.id === savedId ? 'is-new' : ''}`} style={{ ['--k' as string]: DISCIPLINES[d].accent }}>
+        <div className="ov-card-top">
+          <span className="ov-tag">{DISCIPLINES[d].label}</span>
+          <span className="ov-format">{formatOf(w)}</span>
+          <button type="button" className={`ov-fav ${favs.has(w.id) ? 'is-on' : ''}`} onClick={() => toggleFav(w.id)} aria-label={favs.has(w.id) ? 'Remove favourite' : 'Add favourite'} aria-pressed={favs.has(w.id)}>
+            {favs.has(w.id) ? '★' : '☆'}
+          </button>
+        </div>
+        <h3 className="ov-card-name">{w.name}</h3>
+        <div className="ov-thumbs" aria-hidden="true">
+          {names.slice(0, 4).map((n) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={n} src={getExerciseImage(n)} alt="" loading="lazy" />
+          ))}
+          {names.length > 4 && <span>+{names.length - 4}</span>}
+        </div>
+        <div className="ov-meta">
+          <span><b>{mins ? `${mins} min` : 'Open'}</b></span>
+          <span><b>{w.config.numGroups || 1}</b> {(w.config.numGroups || 1) === 1 ? 'group' : 'groups'}</span>
+          <span>{w.trainer_name}</span>
+          {isLocalId(w.id) && <span className="ov-local">In this browser</span>}
+        </div>
+        <div className="ov-actions">
+          <button type="button" className="ov-start" onClick={() => window.open(`/workout/${w.id}/live`, '_blank')}>Start</button>
+          {(own || USE_LOCAL_STORE) && <button type="button" className="ov-btn" onClick={() => edit(w)}>Edit</button>}
+          <button type="button" className="ov-btn" onClick={() => copy(w)}>Copy</button>
+          {(isLocalId(w.id) || (own && !USE_LOCAL_STORE)) && (
+            <button type="button" className="ov-btn is-danger" onClick={() => remove(w)} aria-label={`Delete ${w.name}`}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
-            <span className={`text-xs font-oswald uppercase px-2 py-0.5 rounded ${getModeColor(workout.workout_mode)} bg-white/5`}>
-              {getModeLabel(workout.workout_mode)}
-            </span>
-          </div>
-        </div>
-        <p className="text-gray-400 text-sm mb-1">
-          {workout.trainer_name}
-          {workout.workout_mode === 'timed' && (
-            <> &bull; {workout.config.numGroups}G &bull; {workout.config.numRounds}R &bull; {workout.config.workTime}s</>
-          )}
-          {workout.workout_mode === 'amrap' && workout.config.amrapTotalTime && (
-            <> &bull; {Math.floor(workout.config.amrapTotalTime / 60)} Min AMRAP</>
-          )}
-        </p>
-        {!isOwn && workout.user_email && (
-          <p className="text-gray-500 text-xs mb-1">by {workout.user_email}</p>
-        )}
-        <div className="flex items-center gap-2 mb-3">
-          {workout.is_public && (
-            <span className="text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded font-oswald uppercase">Public</span>
-          )}
-          <span className="text-gray-500 text-xs">
-            {new Date(workout.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-          </span>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {isOwn && (
-            <button onClick={() => router.push(`/workout/${workout.id}`)}
-              className="flex-1 px-3 py-2 bg-hclub-gray hover:bg-hclub-magenta text-white text-sm font-oswald uppercase tracking-wider rounded-lg transition-colors">Edit</button>
-          )}
-          <button onClick={() => window.open(`/workout/${workout.id}/live`, '_blank')}
-            className="flex-1 px-3 py-2 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white text-sm font-oswald uppercase tracking-wider rounded-lg transition-colors">Start</button>
-          <button onClick={() => duplicateWorkout(workout)}
-            className="px-3 py-2 bg-hclub-gray hover:bg-cyan-900/60 text-gray-300 hover:text-cyan-300 text-sm font-oswald uppercase rounded-lg transition-colors">Copy</button>
-          {isOwn && (
-            <button onClick={() => deleteWorkout(workout.id)}
-              className="px-3 py-2 bg-red-900/30 hover:bg-red-900/60 text-red-400 text-sm font-oswald uppercase rounded-lg transition-colors">X</button>
           )}
         </div>
-      </div>
+      </article>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-hclub-black">
-      <header className="border-b border-hclub-gray">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="font-oswald text-3xl font-bold tracking-wider">
-            HYB<span className="text-hclub-magenta">RYD</span>
-          </h1>
-          <div className="flex items-center gap-4">
-            {isAdmin && (
-              <a href="/admin" className="text-hclub-magenta hover:text-white transition-colors text-sm font-oswald uppercase tracking-wider">
-                User management
-              </a>
-            )}
-            <a href="/settings" className="text-gray-400 hover:text-hclub-magenta transition-colors text-sm font-oswald uppercase tracking-wider">Settings</a>
-            <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 transition-colors text-sm font-oswald uppercase tracking-wider">Sign out</button>
+  function Section({ k, list }: { k: Discipline; list: Workout[] }) {
+    const n = limit[k] || (kind === 'all' ? 6 : 24);
+    return (
+      <section className="ov-section" aria-label={DISCIPLINES[k].label}>
+        <h2 className="ov-section-h" style={{ ['--k' as string]: DISCIPLINES[k].accent }}>
+          <span className="ov-dot" aria-hidden="true" />{DISCIPLINES[k].label}<span>{list.length}</span>
+        </h2>
+        {list.length === 0 ? (
+          <div className="ov-empty" style={{ marginTop: 0 }}>
+            <b>No {DISCIPLINES[k].label} workouts{q ? ` for “${q}”` : ''}</b>
+            <button type="button" className="ov-more" onClick={() => router.push(`/workout/ai?d=${k}`)}>+ New {DISCIPLINES[k].label} workout</button>
           </div>
+        ) : (
+          <>
+            <div className="ov-grid">{list.slice(0, n).map((w) => <Card key={w.id} w={w} />)}</div>
+            {list.length > n && (
+              <button type="button" className="ov-more" onClick={() => setLimit({ ...limit, [k]: n + 24 })}>Show {Math.min(24, list.length - n)} more</button>
+            )}
+          </>
+        )}
+      </section>
+    );
+  }
+
+  const kinds: Discipline[] = kind === 'all' ? ['hyrox', 'crossfit'] : [kind];
+
+  return (
+    <div className="ov-root">
+      <header className="ov-top">
+        <div className="ov-top-in">
+          <div className="ov-logo">HYB<span>RYD</span></div>
+          <nav className="ov-nav">
+            {isAdmin && <a href="/admin">Users</a>}
+            <a href="/tv">TV mode</a>
+            <a href="/settings">Settings</a>
+            <button type="button" onClick={logout}>Sign out</button>
+          </nav>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Search + Filter bar */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          {/* Search */}
-          <div className="flex-1 min-w-[200px]">
-            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search workouts..."
-              className="w-full px-4 py-2 bg-hclub-dark border border-hclub-gray rounded-lg text-white text-sm
-                         placeholder-gray-500 focus:outline-none focus:border-hclub-magenta transition-colors" />
+      <main className="ov-main">
+        <div className="ov-hero">
+          <div>
+            <h1 className="ov-h1">Workouts</h1>
+            <p className="ov-sub">{loading ? 'Loading…' : `${filtered.length} ${filtered.length === 1 ? 'workout' : 'workouts'}`}</p>
           </div>
-
-          {/* Filter tabs */}
-          <div className="flex bg-hclub-dark rounded-lg border border-hclub-gray overflow-hidden">
-            {(['mine', 'all', 'favorites'] as FilterMode[]).map((f) => (
-              <button key={f} onClick={() => setFilterMode(f)}
-                className={`px-3 py-2 text-xs font-oswald uppercase tracking-wider transition-colors ${
-                  filterMode === f ? 'bg-hclub-magenta text-white' : 'text-gray-400 hover:text-white'
-                }`}>
-                {f === 'mine' ? 'Mine' : f === 'all' ? 'All' : '\u2605'}
+          <div className="ov-new">
+            {(['hyrox', 'crossfit'] as Discipline[]).map((k) => (
+              <button key={k} type="button" className="ov-new-btn" style={{ ['--k' as string]: DISCIPLINES[k].accent }} onClick={() => router.push(`/workout/ai?d=${k}`)}>
+                <i aria-hidden="true">+</i>{DISCIPLINES[k].label}
               </button>
             ))}
           </div>
-
-          {/* Type filter */}
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as WorkoutMode | 'all')}
-            className="px-4 py-2.5 bg-hclub-dark border border-hclub-gray rounded-xl text-sm text-white font-oswald uppercase tracking-wider focus:outline-none focus:border-hclub-magenta hover:border-hclub-magenta/50 transition-colors appearance-none cursor-pointer"
-            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%239ca3af\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '36px' }}>
-            <option value="all">All types</option>
-            <option value="timed">⏱ Timed</option>
-            <option value="fortime">🔁 AMRAP</option>
-          </select>
-
-          {/* Sort */}
-          <select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)}
-            className="px-4 py-2.5 bg-hclub-dark border border-hclub-gray rounded-xl text-sm text-white font-oswald uppercase tracking-wider focus:outline-none focus:border-hclub-magenta hover:border-hclub-magenta/50 transition-colors appearance-none cursor-pointer"
-            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%239ca3af\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '36px' }}>
-            <option value="date">📅 Newest</option>
-            <option value="name">🔤 Name A-Z</option>
-          </select>
-
-          {/* View toggle */}
-          <div className="flex bg-hclub-dark rounded-lg border border-hclub-gray overflow-hidden">
-            <button onClick={() => setViewMode('grid')}
-              className={`px-2.5 py-2 text-xs transition-colors ${viewMode === 'grid' ? 'bg-hclub-magenta text-white' : 'text-gray-400 hover:text-white'}`}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="0" width="6" height="6" rx="1"/><rect x="8" y="0" width="6" height="6" rx="1"/><rect x="0" y="8" width="6" height="6" rx="1"/><rect x="8" y="8" width="6" height="6" rx="1"/></svg>
-            </button>
-            <button onClick={() => setViewMode('list')}
-              className={`px-2.5 py-2 text-xs transition-colors ${viewMode === 'list' ? 'bg-hclub-magenta text-white' : 'text-gray-400 hover:text-white'}`}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="0" width="14" height="3" rx="1"/><rect x="0" y="5.5" width="14" height="3" rx="1"/><rect x="0" y="11" width="14" height="3" rx="1"/></svg>
-            </button>
-          </div>
         </div>
 
-        {/* Count */}
-        {!loading && (
-          <div className="text-gray-500 text-xs font-oswald uppercase tracking-wider mb-4">
-            {displayedWorkouts.length} Workout{displayedWorkouts.length !== 1 ? 's' : ''}
-            {searchQuery && ` for "${searchQuery}"`}
+        <div className="ov-bar">
+          <label className="ov-search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" /><path d="M16 16l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, coach or movement" aria-label="Search workouts" />
+          </label>
+          <div className="ov-tabs" role="tablist" aria-label="Type">
+            <button type="button" role="tab" aria-selected={kind === 'all'} className={kind === 'all' ? 'is-on' : ''} onClick={() => setKind('all')}>All <b>{filtered.length}</b></button>
+            {(['hyrox', 'crossfit'] as Discipline[]).map((k) => (
+              <button key={k} type="button" role="tab" aria-selected={kind === k} className={kind === k ? 'is-on' : ''} style={{ ['--k' as string]: DISCIPLINES[k].accent }} onClick={() => setKind(k)}>
+                <span className="ov-dot" aria-hidden="true" />{DISCIPLINES[k].label} <b>{byKind[k].length}</b>
+              </button>
+            ))}
           </div>
-        )}
-
-        {/* KI-Baukasten (21.10.2026): Übungen untereinander tippen → fertiges Workout */}
-        <button type="button" onClick={() => router.push('/workout/ai')}
-          className="ai-entry group w-full text-left mb-4 fade-in-up" style={{ opacity: 0, animationDelay: '0s' }}>
-          <span className="ai-entry-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" fill="currentColor"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" fill="currentColor" opacity=".6"/></svg>
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block font-oswald text-lg uppercase tracking-wider text-white">AI Workout Builder</span>
-            <span className="block text-sm text-gray-400">Type your movements line by line. Get a ready AMRAP, EMOM, For Time or interval workout.</span>
-          </span>
-          <span className="ai-entry-cta font-oswald uppercase tracking-wider text-sm">Build with AI <span aria-hidden="true">&rarr;</span></span>
-        </button>
-
-        {/* Create new workout */}
-        <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8 fade-in-up" style={{ opacity: 0, animationDelay: '0s' }}>
-          <h3 className="font-oswald text-lg uppercase tracking-wider mb-3">New Workout</h3>
-          <div className="flex gap-3 items-end flex-wrap">
-            <div className="flex-1 min-w-[150px]">
-              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">Trainer</label>
-              <input type="text" value={trainerName} onChange={(e) => setTrainerName(e.target.value)}
-                placeholder="Your name"
-                className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-hclub-magenta transition-colors" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase tracking-wider">Mode</label>
-              <select value={workoutMode} onChange={(e) => setWorkoutMode(e.target.value as WorkoutMode)}
-                className="px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-sm focus:outline-none focus:border-hclub-magenta transition-colors">
-                <option value="timed">Timed</option>
-                <option value="fortime">AMRAP</option>
-              </select>
-            </div>
-            <button onClick={createWorkout}
-              className="px-5 py-2 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald uppercase tracking-wider rounded-lg transition-colors whitespace-nowrap text-sm">
-              + Create
-            </button>
+          <div className="ov-tabs" role="tablist" aria-label="Show">
+            {(['all', 'mine', 'favorites'] as Scope[]).map((s) => (
+              <button key={s} type="button" role="tab" aria-selected={scope === s} className={scope === s ? 'is-on' : ''} onClick={() => setScope(s)}>
+                {s === 'all' ? 'Everyone' : s === 'mine' ? 'Mine' : '★ Favourites'}
+              </button>
+            ))}
           </div>
+          <select className="ov-select" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort">
+            <option value="date">Newest first</option>
+            <option value="name">Name A–Z</option>
+          </select>
         </div>
 
-        {/* Workout list */}
-        {loading ? (
-          <div className="text-center text-gray-400 py-12">Loading...</div>
-        ) : displayedWorkouts.length === 0 ? (
-          <div className="text-center text-gray-500 py-12">
-            <p className="font-oswald text-xl uppercase">No workouts found</p>
-            <p className="text-sm mt-2">
-              {filterMode === 'favorites' ? 'Star a workout to mark it as a favourite.' :
-               searchQuery ? 'No results for your search.' :
-               'Create your first workout above.'}
-            </p>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {pagedWorkouts.map((w, i) => renderWorkoutCard(w, i))}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {pagedWorkouts.map((w, i) => renderWorkoutCard(w, i))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-              className="px-3 py-1.5 bg-hclub-dark border border-hclub-gray rounded-lg text-sm font-oswald uppercase text-gray-400 hover:text-white disabled:opacity-30 transition-colors">
-              &larr;
-            </button>
-            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-              const pageNum = totalPages <= 7 ? i : (page < 3 ? i : page > totalPages - 4 ? totalPages - 7 + i : page - 3 + i);
-              return (
-                <button key={pageNum} onClick={() => setPage(pageNum)}
-                  className={`w-8 h-8 rounded-lg text-sm font-oswald transition-colors ${
-                    page === pageNum ? 'bg-hclub-magenta text-white' : 'bg-hclub-dark border border-hclub-gray text-gray-400 hover:text-white'
-                  }`}>
-                  {pageNum + 1}
-                </button>
-              );
-            })}
-            <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
-              className="px-3 py-1.5 bg-hclub-dark border border-hclub-gray rounded-lg text-sm font-oswald uppercase text-gray-400 hover:text-white disabled:opacity-30 transition-colors">
-              &rarr;
-            </button>
-          </div>
-        )}
+        {!loading && kinds.map((k) => <Section key={k} k={k} list={byKind[k]} />)}
       </main>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <Dashboard />
+    </Suspense>
   );
 }

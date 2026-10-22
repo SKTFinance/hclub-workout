@@ -214,6 +214,66 @@ function noteEntries(lines: string[] | undefined, prefix = ''): ExerciseEntry[] 
   return l.length ? [{ name: `${prefix}${l.join(' · ')}`, isNote: true }] : [];
 }
 
+// Umkehrung (V3): ein gespeichertes Workout als bearbeitbarer Entwurf für den neuen Editor.
+// Verlustarm für alles, was der Editor kennt; bei Timed-Workouts mit je Runde
+// VERSCHIEDENEN Übungen zählt die erste Runde (Hinweis im Editor über adjustments).
+function parseTimedLabel(raw: string): AiExercise {
+  const [head, ...rest] = String(raw || '').split(' @ ');
+  const weight = rest.length ? rest.join(' @ ').trim() : undefined;
+  const m = /^\s*(\d+(?:[.,]\d+)?)\s*(km|kcal|cal|m)?\s+(.+)$/i.exec(head);
+  if (!m) return { name: head.trim() || 'Exercise', ...(weight ? { weight } : {}) };
+  const unit = (m[2] || '').toLowerCase();
+  const ex: AiExercise = { name: m[3].trim() };
+  if (unit) ex.distance = unit === 'm' || unit === 'km' ? `${m[1]}${unit}` : `${m[1]} ${unit}`;
+  else ex.reps = parseInt(m[1], 10);
+  if (weight) ex.weight = weight;
+  return ex;
+}
+
+export function workoutToDraft(w: { name: string; workout_mode?: WorkoutMode; config: WorkoutConfig }): AiDraft {
+  const c = w.config;
+  const groups = Math.max(1, c.numGroups || 1);
+  const discipline = c.discipline;
+  if (w.workout_mode === 'fortime' && c.forTimeBlocks?.length) {
+    const timer = !!c.forTimeRoundTimerEnabled;
+    const blocks: AiBlock[] = c.forTimeBlocks.map((b): AiBlock => ({
+      format: timer ? 'AMRAP' : 'FOR_TIME',
+      minutes: timer ? (c.forTimeRoundTimerMinutes || 12) : undefined,
+      rounds: c.forTimeTargetRounds,
+      stations: Array.from({ length: groups }, (_, g) => (b.exercises?.[g] || [])
+        .filter((e) => !e.isNote && e.name?.trim())
+        .map((e) => {
+          const x: AiExercise = { name: e.name };
+          if (e.distance) x.distance = e.distance;
+          if (e.reps) x.reps = e.reps;
+          if (e.duration) x.seconds = e.duration;
+          if (e.weight) x.weight = e.weight;
+          return x;
+        })).filter((g) => g.length),
+    })).filter((b) => b.stations.length);
+    return { name: w.name, discipline, blocks, restBetweenBlocksSeconds: c.roundRestTime || undefined };
+  }
+  const isEmom = /^emom/i.test(c.formatLabel || '') || (c.numRounds === 1 && c.workTime === 60 && c.restTime === 0);
+  const r0 = c.rounds?.[0] || {};
+  if (isEmom) {
+    const minutes = (r0[0] || []).length || 10;
+    const stations = Array.from({ length: groups }, (_, g) => {
+      const list = r0[g] || [];
+      // Wiederholte Minutenfolge auf die Grundliste zurückführen.
+      let p = list.length;
+      for (let n = 1; n <= list.length; n++) if (list.every((x, i) => x === list[i % n])) { p = n; break; }
+      return list.slice(0, p).map(parseTimedLabel);
+    }).filter((g) => g.length);
+    return { name: w.name, discipline, blocks: [{ format: 'EMOM', minutes, stations }] };
+  }
+  const stations = Array.from({ length: groups }, (_, g) => (r0[g] || []).map(parseTimedLabel)).filter((g) => g.length);
+  return {
+    name: w.name, discipline,
+    blocks: [{ format: 'INTERVALS', workSeconds: c.workTime || 40, restSeconds: c.restTime ?? 20, rounds: c.numRounds || 1, stations }],
+    restBetweenBlocksSeconds: c.roundRestTime || undefined,
+  };
+}
+
 export interface ConvertedWorkout {
   name: string;
   workout_mode: WorkoutMode;

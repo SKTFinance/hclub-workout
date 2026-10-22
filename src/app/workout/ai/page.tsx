@@ -16,8 +16,9 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getExerciseImage } from '@/lib/exerciseImages';
-import { aiDraftToWorkout, type AiBlock, type AiDraft, type AiExercise, type AiFormat, type ConvertedWorkout } from '@/lib/aiWorkout';
-import { DISCIPLINES, stationColor, type Discipline } from '@/lib/discipline';
+import type { Workout } from '@/lib/types';
+import { aiDraftToWorkout, workoutToDraft, type AiBlock, type AiDraft, type AiExercise, type AiFormat, type ConvertedWorkout } from '@/lib/aiWorkout';
+import { DISCIPLINES, stationColor, workoutDiscipline, type Discipline } from '@/lib/discipline';
 import { HYROX_EXERCISES, TRAINING_EXERCISES } from '@/lib/exercises';
 import { USE_LOCAL_STORE, getLocalWorkout, isLocalId, saveLocalWorkout } from '@/lib/localWorkouts';
 import CrossTag from '@/components/CrossTag';
@@ -149,6 +150,7 @@ function CreateWorkout() {
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<AiDraft | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
+  const [copyOf, setCopyOf] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [coach, setCoach] = useState('');
   const [listening, setListening] = useState<'off' | 'speech' | 'record'>('off');
@@ -165,13 +167,29 @@ function CreateWorkout() {
     const e = params.get('edit');
     if (e && isLocalId(e)) {
       const w = getLocalWorkout(e);
-      if (w?.draft) {
+      if (w) {
+        const d = w.draft || workoutToDraft(w);
+        const k = d.discipline || workoutDiscipline(w.config);
         setEditId(w.id);
-        setDraft(w.draft);
-        setDisc(w.draft.discipline || 'crossfit');
+        setDraft({ ...d, discipline: k });
+        setDisc(k);
+        if (w.trainer_name) setCoach(w.trainer_name);
         setStep('edit');
         return;
       }
+    }
+    // Live-Workout (nur gelesen) als Vorlage: Änderungen landen als neue Kopie.
+    if (e && !isLocalId(e)) {
+      supabase.from('hybryd_workouts').select('*').eq('id', e).single().then(({ data }) => {
+        if (!data) return;
+        const w = data as Workout;
+        const k = w.config.discipline || workoutDiscipline(w.config);
+        setDraft({ ...workoutToDraft(w), discipline: k });
+        setDisc(k);
+        setCopyOf(w.name);
+        setStep('edit');
+      });
+      return;
     }
     const d = params.get('d');
     if (d === 'hyrox' || d === 'crossfit') { setDisc(d); setStep('describe'); }
@@ -434,7 +452,9 @@ function CreateWorkout() {
             <div className="cw-edit-col">
               <div className="cw-namebar">
                 <input className="cw-name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} aria-label="Workout name" />
-                {draft.summary && <p className="cw-summary">{draft.summary}</p>}
+                {copyOf ? (
+                  <p className="cw-summary">Editing a copy of “{copyOf}”. The original stays as it is.</p>
+                ) : draft.summary && <p className="cw-summary">{draft.summary}</p>}
               </div>
 
               {draft.blocks.map((b, bIdx) => (
