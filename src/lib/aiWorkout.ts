@@ -193,9 +193,9 @@ export function applyExplicitTiming(draft: AiDraft, text: string): AiDraft {
   const sec = '(?:s|sec|secs|second|seconds|sek|sekunden|seg|segundos)\\b';
   // „40/20 x 4" oder „40/20s" – Lasten wie „24/16" bleiben unberührt.
   const pair = /(\d{2,3})\s*\/\s*(\d{1,3})\s*(?:x|×|s\b|sec)/.exec(t);
-  const work = new RegExp(`(\\d{1,3})\\s*${sec}?\\s*(?:on|work|arbeit|trabajo)\\b`).exec(t) || new RegExp(`(?:work|arbeit)\\s*(\\d{1,3})\\s*${sec}`).exec(t);
-  const rest = new RegExp(`(\\d{1,3})\\s*${sec}?\\s*(?:off|rest|pause|descanso)\\b`).exec(t) || new RegExp(`(?:rest|pause)\\s*(\\d{1,3})\\s*${sec}`).exec(t);
-  const rounds = /(\d{1,2})\s*(?:rounds?|runden|rondas|x\b)/.exec(t);
+  const work = new RegExp(`(\\d{1,3})\\s*(?:${sec})?\\s*(?:on|work|arbeit|trabajo)\\b`).exec(t) || new RegExp(`(?:work|arbeit)\\s*(\\d{1,3})\\s*${sec}`).exec(t);
+  const rest = new RegExp(`(\\d{1,3})\\s*(?:${sec})?\\s*(?:off|rest|pause|descanso)\\b`).exec(t) || new RegExp(`(?:rest|pause)\\s*(\\d{1,3})\\s*${sec}`).exec(t);
+  const rounds = /(\d{1,2})\s*(?:rounds?|runden|rondas)\b/.exec(t) || /\d\s*[x×]\s*(\d{1,2})\b(?!\s*(?:kg|lb))/.exec(t);
   const b = draft.blocks[0];
   if (!b || b.format !== 'INTERVALS') return draft;
   let w = work ? parseInt(work[1], 10) : undefined;

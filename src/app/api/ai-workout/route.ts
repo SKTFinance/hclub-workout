@@ -96,7 +96,10 @@ export async function POST(request: Request) {
   for (const model of MODELS) {
     try {
       const raw = await callGemini(model, key, text, discipline, audio);
-      const draft = withDefaults(applyExplicitTiming(sanitizeDraft(raw), text));
+      let draft = sanitizeDraft(raw);
+      // Nachbearbeitung darf nie die ganze KI-Antwort verwerfen.
+      try { draft = applyExplicitTiming(draft, text); } catch (e) { console.error('[ai-workout] timing', e); }
+      draft = withDefaults(draft);
       if (discipline) draft.discipline = discipline;
       if (draft.blocks.length === 0) throw new Error('empty');
       return NextResponse.json({ draft });
