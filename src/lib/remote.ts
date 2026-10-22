@@ -90,15 +90,35 @@ export function connectRemote(code: string, onStatus: (s: RemoteStatus) => void,
 
 // Link für das Handy (QR). Auf der geschützten Vorschau braucht das Handy den Freigabe-Token
 // (_vercel_share); er kommt über ?vs=… in die TV-Adresse und wird hier weitergereicht.
-export function phoneUrl(path: string): string {
+export function phoneUrl(path: string, extraQuery = ''): string {
   if (typeof window === 'undefined') return path;
   let vs = '';
   try {
     const q = new URLSearchParams(window.location.search);
-    vs = q.get('vs') || sessionStorage.getItem('hy_vs') || '';
-    if (vs) sessionStorage.setItem('hy_vs', vs);
+    vs = q.get('vs') || localStorage.getItem('hy_vs') || sessionStorage.getItem('hy_vs') || '';
+    if (vs) localStorage.setItem('hy_vs', vs);
   } catch { /* egal */ }
-  return `${window.location.origin}${path}${vs ? `${path.includes('?') ? '&' : '?'}_vercel_share=${encodeURIComponent(vs)}` : ''}`;
+  const add = extraQuery || (vs ? `_vercel_share=${encodeURIComponent(vs)}` : '');
+  return `${window.location.origin}${path}${add ? `${path.includes('?') ? '&' : '?'}${add}` : ''}`;
+}
+
+// Wie phoneUrl, holt aber zuerst beim Server den Schutz-Umgehungsparameter
+// (/api/phone-access). Damit braucht das Handy auf der Vorschau keinen Vercel-Login,
+// auch wenn der TV ohne ?vs=… geöffnet wurde.
+let accessCache: Promise<string> | null = null;
+export async function phoneUrlAsync(path: string): Promise<string> {
+  if (typeof window === 'undefined') return path;
+  const host = window.location.hostname;
+  const isVercelPreview = host.endsWith('.vercel.app');
+  if (!isVercelPreview) return phoneUrl(path);
+  if (!accessCache) {
+    accessCache = fetch('/api/phone-access', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : { query: '' }))
+      .then((j: { query?: string }) => j.query || '')
+      .catch(() => '');
+  }
+  const q = await accessCache;
+  return phoneUrl(path, q);
 }
 
 // ---------- Freies Training: ein Kanal je TV-Code ----------

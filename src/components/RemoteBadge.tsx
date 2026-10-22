@@ -2,12 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import Qr from '@/components/Qr';
-import { phoneUrl } from '@/lib/remote';
+import { phoneUrlAsync } from '@/lib/remote';
 
 // Kleiner QR-Kasten in der Ecke: Coach scannt und steuert das Training am Handy.
 export default function RemoteBadge({ code }: { code: string | null }) {
   const [url, setUrl] = useState('');
-  useEffect(() => { if (code) setUrl(phoneUrl(`/r/${code}`)); }, [code]);
+  useEffect(() => {
+    if (!code) return;
+    let alive = true;
+    phoneUrlAsync(`/r/${code}`).then((u) => { if (alive) setUrl(u); });
+    return () => { alive = false; };
+  }, [code]);
   if (!code || !url) return null;
   return (
     <div className="rb-badge" data-url={url}>

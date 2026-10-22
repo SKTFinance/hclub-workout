@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Qr from '@/components/Qr';
 import { getExerciseImage } from '@/lib/exerciseImages';
-import { newCode, openTv, phoneUrl, validCode, type RemoteCmd, type RemoteStatus } from '@/lib/remote';
+import { newCode, openTv, phoneUrl, phoneUrlAsync, validCode, type RemoteCmd, type RemoteStatus } from '@/lib/remote';
 
 interface Slot { sid: string; name: string; status: RemoteStatus | null; doneAt?: number }
 const SLOTS = 4;
@@ -65,6 +65,7 @@ export default function TvPage() {
     try { sessionStorage.setItem('hy_tvcode', c); } catch { /* egal */ }
     setCode(c);
     setUrl(phoneUrl(`/free/${c}`));
+    phoneUrlAsync(`/free/${c}`).then(setUrl);
   }, []);
 
   const announce = useCallback(() => {
