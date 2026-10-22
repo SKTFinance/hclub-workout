@@ -116,6 +116,8 @@ export interface WorkoutConfig {
   forTimeTargetRounds?: number;
   /** Anzeigename des Formats aus dem KI-Baukasten, z. B. "AMRAP 12", "EMOM 10". */
   formatLabel?: string;
+  /** Art des Workouts (V3, 22.10.2026): Hyrox oder CrossFit. Ohne Feld wird geschätzt. */
+  discipline?: 'hyrox' | 'crossfit';
 }
 
 export interface Workout {
