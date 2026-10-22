@@ -1,0 +1,1411 @@
+'use client';
+
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter, useParams } from 'next/navigation';
+import type { Workout, WorkoutConfig, WorkoutMode, ExerciseEntry, LibraryExercise, ForTimeBlock } from '@/lib/types';
+import { HYROX_EXERCISES, TRAINING_EXERCISES } from '@/lib/exercises';
+import { ICON_PICKER_OPTIONS, exerciseIconMap, getExerciseIcon } from '@/lib/exerciseIcons';
+import { USE_LOCAL_STORE, getLocalWorkout, isLocalId, saveLocalWorkout } from '@/lib/localWorkouts';
+import { DISCIPLINES, workoutDiscipline, type Discipline } from '@/lib/discipline';
+
+const ALL_EXERCISES = [...HYROX_EXERCISES, ...TRAINING_EXERCISES];
+
+export default function WorkoutEditorPage() {
+  const params = useParams();
+  const id = params.id as string;
+  const router = useRouter();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const supabase = useMemo(() => createClient(), []);
+
+  const [workout, setWorkout] = useState<Workout | null>(null);
+  const [name, setName] = useState('');
+  const [isPublic, setIsPublic] = useState(true);
+  const [workoutMode, setWorkoutMode] = useState<WorkoutMode>('timed');
+  const [config, setConfig] = useState<WorkoutConfig>({
+    numGroups: 2,
+    numRounds: 3,
+    workTime: 60,
+    restTime: 15,
+    roundRestTime: 60,
+    warmupTime: 30,
+    rounds: {},
+  });
+  const [saving, setSaving] = useState(false);
+  const [customExercise, setCustomExercise] = useState('');
+  const [customForTimeExercise, setCustomForTimeExercise] = useState<Record<string, string>>({});
+  // AMRAP: eine einzelne Gruppe in der Ablage, zum Einfuegen in beliebige Runden/Gruppen
+  const [groupClipboard, setGroupClipboard] = useState<{ exercises: ExerciseEntry[]; label: string } | null>(null);
+  const [expandedRoundSettings, setExpandedRoundSettings] = useState<Record<number, boolean>>({});
+  const [expandedGroupSettings, setExpandedGroupSettings] = useState<Record<string, boolean>>({});
+  // Local string states for number inputs
+  const [groupsInput, setGroupsInput] = useState(String(config.numGroups));
+  const [roundsInput, setRoundsInput] = useState(String(config.numRounds));
+  const [roundRestInput, setRoundRestInput] = useState(String(config.roundRestTime));
+  const [warmupInput, setWarmupInput] = useState(String(config.warmupTime));
+  const [iconPickerOpen, setIconPickerOpen] = useState<{ round: number; group: number; ex: number } | null>(null);
+  // Drag-and-drop state for reordering exercises within a group
+  const [dragExercise, setDragExercise] = useState<{ round: number; group: number; ex: number } | null>(null);
+  const [forTimeDrag, setForTimeDrag] = useState<{ b: number; g: number; e: number } | null>(null);
+  const [forTimeDragOver, setForTimeDragOver] = useState<{ b: number; g: number; e: number } | null>(null);
+  const [dragOverExercise, setDragOverExercise] = useState<{ round: number; group: number; ex: number } | null>(null);
+  // Exercise library
+  const [libraryExercises, setLibraryExercises] = useState<LibraryExercise[]>([]);
+  // Admin state
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // ForTime (= AMRAP im UI) round timer state
+  const [forTimeRoundTimerEnabled, setForTimeRoundTimerEnabled] = useState(false);
+  const [forTimeRoundTimerMinutes, setForTimeRoundTimerMinutes] = useState(12);
+
+  const loadWorkout = useCallback(async () => {
+    // V3: Vorschau-eigene Speicherung. local-… kommt aus dem Browser, Live-Workouts werden
+    // nur gelesen; Speichern legt auf der Vorschau eine Kopie im Browser an.
+    const { data } = isLocalId(id)
+      ? { data: getLocalWorkout(id) }
+      : await supabase
+        .from('hybryd_workouts')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    if (data) {
+      const w = data as Workout;
+      setWorkout(w);
+      setName(w.name);
+      setIsPublic(w.is_public || false);
+      setWorkoutMode(w.workout_mode || 'timed');
+      setConfig(w.config);
+      setGroupsInput(String(w.config.numGroups));
+      setRoundsInput(String(w.config.numRounds));
+      setRoundRestInput(String(w.config.roundRestTime));
+      setWarmupInput(String(w.config.warmupTime));
+      // Load fortime round timer settings from config
+      if (w.config.forTimeRoundTimerEnabled) {
+        setForTimeRoundTimerEnabled(true);
+        setForTimeRoundTimerMinutes(w.config.forTimeRoundTimerMinutes || 12);
+      }
+    }
+  }, [supabase, id]);
+
+  const loadLibrary = useCallback(async () => {
+    const { data } = await supabase
+      .from('hybryd_exercise_library')
+      .select('*')
+      .order('name');
+    if (data) setLibraryExercises(data as LibraryExercise[]);
+  }, [supabase]);
+
+  const checkAdmin = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from('hybryd_admins')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    setIsAdmin(!!data);
+  }, [supabase]);
+
+  useEffect(() => {
+    loadWorkout();
+    loadLibrary();
+    checkAdmin();
+  }, [loadWorkout, loadLibrary, checkAdmin]);
+
+  // Save custom exercises to library automatically
+  async function saveToLibrary(exerciseName: string) {
+    if (ALL_EXERCISES.find(e => e.name === exerciseName)) return; // skip built-in
+    if (libraryExercises.find(e => e.name === exerciseName)) return; // already saved
+    if (USE_LOCAL_STORE) return; // Vorschau: keine Schreibzugriffe auf Live-Tabellen
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from('hybryd_exercise_library').upsert({
+      user_id: user.id,
+      name: exerciseName,
+      color: '#199DA9',
+    }, { onConflict: 'user_id,name' });
+
+    loadLibrary();
+  }
+
+  function updateConfig(partial: Partial<WorkoutConfig>) {
+    setConfig((prev) => {
+      const next = { ...prev, ...partial };
+      const rounds = { ...next.rounds };
+      for (let r = 0; r < next.numRounds; r++) {
+        if (!rounds[r]) rounds[r] = {};
+        for (let g = 0; g < next.numGroups; g++) {
+          if (!rounds[r][g]) rounds[r][g] = ['Wall Balls'];
+        }
+      }
+      next.rounds = rounds;
+      return next;
+    });
+  }
+
+  function setExercise(roundIndex: number, groupIndex: number, exerciseIndex: number, exerciseName: string) {
+    setConfig((prev) => {
+      const rounds = JSON.parse(JSON.stringify(prev.rounds));
+      if (!rounds[roundIndex]) rounds[roundIndex] = {};
+      if (!rounds[roundIndex][groupIndex]) rounds[roundIndex][groupIndex] = [];
+      rounds[roundIndex][groupIndex][exerciseIndex] = exerciseName;
+      return { ...prev, rounds };
+    });
+  }
+
+  function addExerciseToGroup(roundIndex: number, groupIndex: number) {
+    setConfig((prev) => {
+      const rounds = JSON.parse(JSON.stringify(prev.rounds));
+      if (!rounds[roundIndex]) rounds[roundIndex] = {};
+      if (!rounds[roundIndex][groupIndex]) rounds[roundIndex][groupIndex] = [];
+      rounds[roundIndex][groupIndex].push('Wall Balls');
+      return { ...prev, rounds };
+    });
+  }
+
+  function removeExerciseFromGroup(roundIndex: number, groupIndex: number, exerciseIndex: number) {
+    setConfig((prev) => {
+      const rounds = JSON.parse(JSON.stringify(prev.rounds));
+      if (rounds[roundIndex]?.[groupIndex]?.length > 1) {
+        rounds[roundIndex][groupIndex].splice(exerciseIndex, 1);
+      }
+      return { ...prev, rounds };
+    });
+  }
+
+  // Reorder exercises within a group (drag-and-drop). Moves the exercise at
+  // `fromIndex` to `toIndex` and keeps the per-exercise iconOverrides in sync.
+  function reorderExerciseInGroup(roundIndex: number, groupIndex: number, fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    setConfig((prev) => {
+      const rounds = JSON.parse(JSON.stringify(prev.rounds));
+      const list: string[] = rounds[roundIndex]?.[groupIndex];
+      if (!Array.isArray(list) || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
+        return prev;
+      }
+      const [moved] = list.splice(fromIndex, 1);
+      list.splice(toIndex, 0, moved);
+      rounds[roundIndex][groupIndex] = list;
+
+      // Keep iconOverrides aligned to the new exercise order
+      const iconOverrides = JSON.parse(JSON.stringify(prev.iconOverrides || {}));
+      const groupOverrides = iconOverrides[roundIndex]?.[groupIndex];
+      if (groupOverrides && Object.keys(groupOverrides).length > 0) {
+        const orderKeys = list.map((_, i) => i);
+        // Build old-index order then apply same splice to derive mapping
+        const idxOrder = orderKeys.map((_, i) => i);
+        const [movedIdx] = idxOrder.splice(fromIndex, 1);
+        idxOrder.splice(toIndex, 0, movedIdx);
+        const remapped: Record<number, string> = {};
+        idxOrder.forEach((oldIdx, newIdx) => {
+          if (groupOverrides[oldIdx] !== undefined) remapped[newIdx] = groupOverrides[oldIdx];
+        });
+        if (!iconOverrides[roundIndex]) iconOverrides[roundIndex] = {};
+        iconOverrides[roundIndex][groupIndex] = remapped;
+      }
+
+      return { ...prev, rounds, iconOverrides };
+    });
+  }
+
+  // Duplicate a group across ALL rounds: inserts a copy right after `groupIndex`,
+  // shifts subsequent groups (rounds/groupTimeSettings/iconOverrides) by one,
+  // bumps numGroups. `rotateBy` cyclically rotates the exercise order of the NEW
+  // group in every round (1st -> 2nd, ..., last -> 1st for rotateBy=1). 0 = exact copy.
+  function duplicateGroup(roundIndex: number, groupIndex: number, rotateBy: number) {
+    setConfig((prev) => {
+      const newNumGroups = prev.numGroups + 1;
+      const rounds = JSON.parse(JSON.stringify(prev.rounds));
+      const groupTimeSettings = JSON.parse(JSON.stringify(prev.groupTimeSettings || {}));
+      const iconOverrides = JSON.parse(JSON.stringify(prev.iconOverrides || {}));
+
+      const rotate = <T,>(arr: T[], by: number): T[] => {
+        const n = arr.length;
+        if (n === 0) return arr;
+        const k = ((by % n) + n) % n;
+        if (k === 0) return arr.slice();
+        // rotateBy=1 => 1. -> 2. means element moves DOWN by one position:
+        // new[i] = old[(i - k + n) % n]
+        return arr.map((_, i) => arr[(i - k + n) % n]);
+      };
+
+      const insertAt = groupIndex + 1;
+
+      // For every round, shift group-indexed exercise arrays right, then insert copy
+      for (let r = 0; r < prev.numRounds; r++) {
+        if (!rounds[r]) rounds[r] = {};
+        for (let g = newNumGroups - 1; g > insertAt; g--) {
+          rounds[r][g] = rounds[r][g - 1];
+        }
+        const source = prev.rounds[r]?.[groupIndex] || ['Wall Balls'];
+        rounds[r][insertAt] = rotate(JSON.parse(JSON.stringify(source)), rotateBy);
+
+        // Shift group-indexed settings for this round
+        if (groupTimeSettings[r]) {
+          for (let g = newNumGroups - 1; g > insertAt; g--) {
+            if (groupTimeSettings[r][g - 1] !== undefined) groupTimeSettings[r][g] = groupTimeSettings[r][g - 1];
+            else delete groupTimeSettings[r][g];
+          }
+          if (groupTimeSettings[r][groupIndex] !== undefined) {
+            groupTimeSettings[r][insertAt] = JSON.parse(JSON.stringify(groupTimeSettings[r][groupIndex]));
+          } else {
+            delete groupTimeSettings[r][insertAt];
+          }
+        }
+
+        if (iconOverrides[r]) {
+          for (let g = newNumGroups - 1; g > insertAt; g--) {
+            if (iconOverrides[r][g - 1] !== undefined) iconOverrides[r][g] = iconOverrides[r][g - 1];
+            else delete iconOverrides[r][g];
+          }
+          if (iconOverrides[r][groupIndex] !== undefined) {
+            // Copy overrides and rotate their indices to match the rotated order
+            const srcOv: Record<number, string> = iconOverrides[r][groupIndex];
+            const srcLen = (prev.rounds[r]?.[groupIndex] || []).length;
+            const rotated: Record<number, string> = {};
+            if (srcLen > 0) {
+              const k = ((rotateBy % srcLen) + srcLen) % srcLen;
+              Object.entries(srcOv).forEach(([oldIdxStr, val]) => {
+                const oldIdx = Number(oldIdxStr);
+                const newIdx = (oldIdx + k) % srcLen;
+                rotated[newIdx] = val as string;
+              });
+            }
+            iconOverrides[r][insertAt] = rotated;
+          } else {
+            delete iconOverrides[r][insertAt];
+          }
+        }
+      }
+
+      return {
+        ...prev,
+        numGroups: newNumGroups,
+        rounds,
+        groupTimeSettings,
+        iconOverrides,
+      };
+    });
+    setGroupsInput(String(config.numGroups + 1));
+  }
+
+  // Asks how far to rotate the copied group's exercise order, then duplicates.
+  function promptDuplicateGroup(roundIndex: number, groupIndex: number) {
+    const exCount = (config.rounds[roundIndex]?.[groupIndex] || []).length;
+    const answer = window.prompt(
+      `Duplicate group ${groupIndex + 1}.\n\nShift the order by X positions?\n(1 = each exercise moves one position, 2 = two, … · empty/0 = exact copy)`,
+      '0'
+    );
+    if (answer === null) return; // cancelled
+    const raw = parseInt(answer.trim(), 10);
+    const rotateBy = isNaN(raw) ? 0 : (exCount > 0 ? ((raw % exCount) + exCount) % exCount : 0);
+    duplicateGroup(roundIndex, groupIndex, rotateBy);
+  }
+
+  function addCustomExercise(roundIndex: number, groupIndex: number) {
+    if (!customExercise.trim()) return;
+    const trimmed = customExercise.trim();
+    setConfig((prev) => {
+      const rounds = JSON.parse(JSON.stringify(prev.rounds));
+      if (!rounds[roundIndex]) rounds[roundIndex] = {};
+      if (!rounds[roundIndex][groupIndex]) rounds[roundIndex][groupIndex] = [];
+      rounds[roundIndex][groupIndex].push(trimmed);
+      return { ...prev, rounds };
+    });
+    saveToLibrary(trimmed);
+    setCustomExercise('');
+  }
+
+  function updateRoundSetting(roundIndex: number, field: 'workTime' | 'restTime', value: number | undefined) {
+    setConfig((prev) => {
+      const roundSettings = { ...(prev.roundSettings || {}) };
+      if (!roundSettings[roundIndex]) roundSettings[roundIndex] = {};
+      if (value === undefined) {
+        delete roundSettings[roundIndex][field];
+        if (Object.keys(roundSettings[roundIndex]).length === 0) {
+          delete roundSettings[roundIndex];
+        }
+      } else {
+        roundSettings[roundIndex] = { ...roundSettings[roundIndex], [field]: value };
+      }
+      return { ...prev, roundSettings };
+    });
+  }
+
+  function updateGroupTimeSetting(roundIndex: number, groupIndex: number, field: 'workTime' | 'restTime', value: number | undefined) {
+    setConfig((prev) => {
+      const gts = JSON.parse(JSON.stringify(prev.groupTimeSettings || {}));
+      if (!gts[roundIndex]) gts[roundIndex] = {};
+      if (!gts[roundIndex][groupIndex]) gts[roundIndex][groupIndex] = {};
+      if (value === undefined) {
+        delete gts[roundIndex][groupIndex][field];
+        if (Object.keys(gts[roundIndex][groupIndex]).length === 0) {
+          delete gts[roundIndex][groupIndex];
+        }
+        if (Object.keys(gts[roundIndex]).length === 0) {
+          delete gts[roundIndex];
+        }
+      } else {
+        gts[roundIndex][groupIndex] = { ...gts[roundIndex][groupIndex], [field]: value };
+      }
+      return { ...prev, groupTimeSettings: gts };
+    });
+  }
+
+  function toggleRoundSettings(roundIndex: number) {
+    setExpandedRoundSettings((prev) => ({ ...prev, [roundIndex]: !prev[roundIndex] }));
+  }
+
+  function toggleGroupSettings(roundIndex: number, groupIndex: number) {
+    const key = `${roundIndex}-${groupIndex}`;
+    setExpandedGroupSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function getIconOverrideKey(roundIndex: number, groupIndex: number, exerciseIndex: number): string | undefined {
+    return config.iconOverrides?.[roundIndex]?.[groupIndex]?.[exerciseIndex];
+  }
+
+  function setIconOverride(roundIndex: number, groupIndex: number, exerciseIndex: number, iconKey: string | null) {
+    setConfig((prev) => {
+      const overrides = JSON.parse(JSON.stringify(prev.iconOverrides || {}));
+      if (iconKey === null) {
+        if (overrides[roundIndex]?.[groupIndex]) {
+          delete overrides[roundIndex][groupIndex][exerciseIndex];
+        }
+      } else {
+        if (!overrides[roundIndex]) overrides[roundIndex] = {};
+        if (!overrides[roundIndex][groupIndex]) overrides[roundIndex][groupIndex] = {};
+        overrides[roundIndex][groupIndex][exerciseIndex] = iconKey;
+      }
+      return { ...prev, iconOverrides: overrides };
+    });
+  }
+
+  function duplicateRound(roundIndex: number) {
+    setConfig((prev) => {
+      const newNumRounds = prev.numRounds + 1;
+      const rounds = JSON.parse(JSON.stringify(prev.rounds));
+      const roundSettings = JSON.parse(JSON.stringify(prev.roundSettings || {}));
+      const groupTimeSettings = JSON.parse(JSON.stringify(prev.groupTimeSettings || {}));
+      const iconOverrides = JSON.parse(JSON.stringify(prev.iconOverrides || {}));
+
+      // Shift all rounds after the duplicated one
+      for (let r = newNumRounds - 1; r > roundIndex + 1; r--) {
+        rounds[r] = rounds[r - 1];
+        if (roundSettings[r - 1]) roundSettings[r] = roundSettings[r - 1];
+        else delete roundSettings[r];
+        if (groupTimeSettings[r - 1]) groupTimeSettings[r] = groupTimeSettings[r - 1];
+        else delete groupTimeSettings[r];
+        if (iconOverrides[r - 1]) iconOverrides[r] = iconOverrides[r - 1];
+        else delete iconOverrides[r];
+      }
+
+      // Copy the round
+      rounds[roundIndex + 1] = JSON.parse(JSON.stringify(rounds[roundIndex]));
+      if (roundSettings[roundIndex]) {
+        roundSettings[roundIndex + 1] = JSON.parse(JSON.stringify(roundSettings[roundIndex]));
+      }
+      if (groupTimeSettings[roundIndex]) {
+        groupTimeSettings[roundIndex + 1] = JSON.parse(JSON.stringify(groupTimeSettings[roundIndex]));
+      }
+      if (iconOverrides[roundIndex]) {
+        iconOverrides[roundIndex + 1] = JSON.parse(JSON.stringify(iconOverrides[roundIndex]));
+      }
+
+      return {
+        ...prev,
+        numRounds: newNumRounds,
+        rounds,
+        roundSettings,
+        groupTimeSettings,
+        iconOverrides,
+      };
+    });
+    setRoundsInput(String(config.numRounds + 1));
+  }
+
+  function randomFill() {
+    setConfig((prev) => {
+      const rounds = JSON.parse(JSON.stringify(prev.rounds));
+      const exercisePool = ALL_EXERCISES.map((e) => e.name);
+
+      for (let r = 0; r < prev.numRounds; r++) {
+        if (!rounds[r]) rounds[r] = {};
+        const prevRoundExercises: Record<number, string> = {};
+        if (r > 0 && rounds[r - 1]) {
+          for (let g = 0; g < prev.numGroups; g++) {
+            const prevEx = rounds[r - 1]?.[g];
+            if (prevEx && prevEx.length > 0) {
+              prevRoundExercises[g] = prevEx[prevEx.length - 1];
+            }
+          }
+        }
+
+        const maxExercisesInRound = Math.max(
+          ...Array.from({ length: prev.numGroups }, (_, g) =>
+            (rounds[r]?.[g]?.length || 1)
+          )
+        );
+
+        for (let exIdx = 0; exIdx < maxExercisesInRound; exIdx++) {
+          const available = [...exercisePool];
+          for (let i = available.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [available[i], available[j]] = [available[j], available[i]];
+          }
+
+          const usedInSlot = new Set<string>();
+          for (let g = 0; g < prev.numGroups; g++) {
+            if (!rounds[r][g]) rounds[r][g] = [];
+            if (exIdx >= rounds[r][g].length) continue;
+            const prevExForGroup = exIdx === 0 ? prevRoundExercises[g] : rounds[r][g][exIdx - 1];
+            let chosen = available.find((ex) => !usedInSlot.has(ex) && ex !== prevExForGroup);
+            if (!chosen) chosen = available.find((ex) => ex !== prevExForGroup);
+            if (!chosen) chosen = available[0] || 'Wall Balls';
+            rounds[r][g][exIdx] = chosen;
+            usedInSlot.add(chosen);
+          }
+        }
+      }
+      return { ...prev, rounds };
+    });
+  }
+
+  // ForTime Block helpers (= AMRAP-Modus im UI)
+  function getForTimeBlocks(): ForTimeBlock[] {
+    if (config.forTimeBlocks && config.forTimeBlocks.length > 0) return config.forTimeBlocks;
+    // Legacy: convert single block to array
+    return [{
+      exercises: config.forTimeExercises || {},
+    }];
+  }
+
+  function setForTimeBlocks(blocks: ForTimeBlock[]) {
+    setConfig(prev => ({
+      ...prev,
+      forTimeBlocks: blocks,
+      forTimeExercises: blocks[0]?.exercises || {},
+    }));
+  }
+
+  function addForTimeBlock() {
+    const blocks = getForTimeBlocks();
+    const newBlock: ForTimeBlock = { exercises: {} };
+    for (let g = 0; g < config.numGroups; g++) {
+      newBlock.exercises[g] = [{ name: 'Wall Balls', reps: 10 }];
+    }
+    setForTimeBlocks([...blocks, newBlock]);
+  }
+
+  /**
+   * Einen ganzen Block samt allen Gruppen kopieren.
+   *
+   * Guido, 01.09.2026: „Es waere eine grosse Erleichterung, wenn es moeglich
+   * waere einzelne Bloecke zu markieren und zu kopieren. Dann muss man bei
+   * vielen Gruppen speziell im AMRAP die Bloecke nicht immer neu eingeben."
+   *
+   * ⛔ Tiefe Kopie ueber JSON, wie im ganzen Rest dieser Datei: Eine flache
+   * Kopie teilte die Uebungslisten mit dem Original — wer danach im neuen Block
+   * etwas aenderte, aenderte es unbemerkt auch im alten.
+   *
+   * Der neue Block wird DIREKT hinter dem Original eingefuegt, nicht ans Ende:
+   * Wer kopiert, will meistens variieren, und dann gehoert das Ergebnis dorthin,
+   * wo man gerade arbeitet.
+   */
+  function duplicateForTimeBlock(blockIndex: number) {
+    const blocks: ForTimeBlock[] = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    const original = blocks[blockIndex];
+    if (!original) return;
+    blocks.splice(blockIndex + 1, 0, JSON.parse(JSON.stringify(original)));
+    setForTimeBlocks(blocks);
+  }
+
+  /**
+   * Eine einzelne Gruppe kopieren und woanders einfuegen (Baukasten).
+   *
+   * Guido, 04.10.2026: „ich will das kopieren im baukastenprinzip, und nicht die
+   * gesamte runde, damit ich die reihenfolge veraendern kann" — Runde 1 hat in
+   * Gruppe 1 die Uebungen xyz, Runde 2 hat sie in Gruppe 2. „Runde kopieren"
+   * nimmt alle Gruppen mit und laesst sie an derselben Stelle.
+   *
+   * Die Ablage bleibt nach dem Einfuegen gefuellt, damit man dieselbe Gruppe in
+   * mehrere Runden setzen kann. Tiefe Kopie aus demselben Grund wie oben.
+   */
+  function copyForTimeGroup(blockIndex: number, groupIndex: number) {
+    const exercises = getForTimeBlocks()[blockIndex]?.exercises?.[groupIndex] || [];
+    setGroupClipboard({
+      exercises: JSON.parse(JSON.stringify(exercises)),
+      label: `Round ${blockIndex + 1} · Group ${groupIndex + 1}`,
+    });
+  }
+
+  function pasteForTimeGroup(blockIndex: number, groupIndex: number) {
+    if (!groupClipboard) return;
+    const blocks: ForTimeBlock[] = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    const target = blocks[blockIndex]?.exercises?.[groupIndex] || [];
+    // Eine frisch angelegte Runde traegt je Gruppe den Platzhalter „Wall Balls 10" — den ohne Rueckfrage ueberschreiben
+    const nurPlatzhalter = target.length === 1 && target[0].name === 'Wall Balls' && target[0].reps === 10 && !target[0].distance && !target[0].duration;
+    const hatInhalt = !nurPlatzhalter && target.some((ex) => ex.isNote ? ex.name.trim() !== '' : !!ex.name);
+    if (hatInhalt && !window.confirm(`Replace round ${blockIndex + 1} · group ${groupIndex + 1} with ${groupClipboard.label}?`)) return;
+    blocks[blockIndex].exercises[groupIndex] = JSON.parse(JSON.stringify(groupClipboard.exercises));
+    setForTimeBlocks(blocks);
+  }
+
+  /** Eine Notizzeile in eine Gruppe einfuegen. */
+  function addForTimeBlockNote(blockIndex: number, groupIndex: number) {
+    const blocks = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
+    blocks[blockIndex].exercises[groupIndex].push({ name: '', isNote: true });
+    setForTimeBlocks(blocks);
+  }
+
+  function removeForTimeBlock(blockIndex: number) {
+    const blocks = getForTimeBlocks();
+    if (blocks.length <= 1) return;
+    const updated = blocks.filter((_, i) => i !== blockIndex);
+    setForTimeBlocks(updated);
+  }
+
+  function updateForTimeBlockExercise(blockIndex: number, groupIndex: number, exIndex: number, updates: Partial<ExerciseEntry>) {
+    const blocks = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
+    blocks[blockIndex].exercises[groupIndex][exIndex] = { ...blocks[blockIndex].exercises[groupIndex][exIndex], ...updates };
+    setForTimeBlocks(blocks);
+  }
+
+  function addForTimeBlockExercise(blockIndex: number, groupIndex: number) {
+    const blocks = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
+    blocks[blockIndex].exercises[groupIndex].push({ name: 'Wall Balls', reps: 10 });
+    setForTimeBlocks(blocks);
+  }
+
+  function addCustomForTimeExercise(blockIndex: number, groupIndex: number) {
+    const key = `${blockIndex}-${groupIndex}`;
+    const name = (customForTimeExercise[key] || '').trim();
+    if (!name) return;
+    const blocks = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    if (!blocks[blockIndex].exercises[groupIndex]) blocks[blockIndex].exercises[groupIndex] = [];
+    blocks[blockIndex].exercises[groupIndex].push({ name, reps: 10 });
+    setForTimeBlocks(blocks);
+    saveToLibrary(name);
+    setCustomForTimeExercise(prev => ({ ...prev, [key]: '' }));
+  }
+
+  function removeForTimeBlockExercise(blockIndex: number, groupIndex: number, exIndex: number) {
+    const blocks = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    if (blocks[blockIndex].exercises[groupIndex]?.length > 1) {
+      blocks[blockIndex].exercises[groupIndex].splice(exIndex, 1);
+    }
+    setForTimeBlocks(blocks);
+  }
+
+  // AMRAP: Übung innerhalb einer Gruppe verschieben (Ziehen am Griff oder Pfeile, Pfeile für Touch)
+  function moveForTimeBlockExercise(blockIndex: number, groupIndex: number, fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    const blocks = JSON.parse(JSON.stringify(getForTimeBlocks()));
+    const list = blocks[blockIndex]?.exercises?.[groupIndex];
+    if (!Array.isArray(list) || toIndex < 0 || toIndex >= list.length || fromIndex < 0 || fromIndex >= list.length) return;
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+    setForTimeBlocks(blocks);
+  }
+
+  function renderForTimeMover(blockIndex: number, groupIndex: number, exIndex: number, count: number) {
+    return (
+      <div className="flex-shrink-0 flex items-center gap-0.5">
+        <div
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', String(exIndex));
+            setForTimeDrag({ b: blockIndex, g: groupIndex, e: exIndex });
+          }}
+          onDragEnd={() => { setForTimeDrag(null); setForTimeDragOver(null); }}
+          title="Drag to reorder"
+          className="hidden sm:flex w-6 h-8 items-center justify-center cursor-grab active:cursor-grabbing text-gray-500 hover:text-hclub-magenta select-none"
+        >
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <circle cx="6" cy="4" r="1.6" /><circle cx="14" cy="4" r="1.6" />
+            <circle cx="6" cy="10" r="1.6" /><circle cx="14" cy="10" r="1.6" />
+            <circle cx="6" cy="16" r="1.6" /><circle cx="14" cy="16" r="1.6" />
+          </svg>
+        </div>
+        <div className="flex flex-col">
+          <button type="button" aria-label="Move up" title="Move up" disabled={exIndex === 0}
+            onClick={() => moveForTimeBlockExercise(blockIndex, groupIndex, exIndex, exIndex - 1)}
+            className="w-8 h-5 sm:w-6 sm:h-4 flex items-center justify-center text-gray-400 hover:text-hclub-magenta disabled:opacity-20 text-xs leading-none">&#9650;</button>
+          <button type="button" aria-label="Move down" title="Move down" disabled={exIndex === count - 1}
+            onClick={() => moveForTimeBlockExercise(blockIndex, groupIndex, exIndex, exIndex + 1)}
+            className="w-8 h-5 sm:w-6 sm:h-4 flex items-center justify-center text-gray-400 hover:text-hclub-magenta disabled:opacity-20 text-xs leading-none">&#9660;</button>
+        </div>
+      </div>
+    );
+  }
+
+  function forTimeRowProps(blockIndex: number, groupIndex: number, exIndex: number) {
+    const dragging = forTimeDrag?.b === blockIndex && forTimeDrag?.g === groupIndex && forTimeDrag?.e === exIndex;
+    const over = forTimeDragOver?.b === blockIndex && forTimeDragOver?.g === groupIndex && forTimeDragOver?.e === exIndex && !dragging;
+    return {
+      dragClass: `${dragging ? 'opacity-40' : ''} ${over ? 'ring-2 ring-hclub-magenta' : ''}`,
+      onDragOver: (e: React.DragEvent) => {
+        if (!forTimeDrag || forTimeDrag.b !== blockIndex || forTimeDrag.g !== groupIndex) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (!over) setForTimeDragOver({ b: blockIndex, g: groupIndex, e: exIndex });
+      },
+      onDrop: (e: React.DragEvent) => {
+        e.preventDefault();
+        if (forTimeDrag && forTimeDrag.b === blockIndex && forTimeDrag.g === groupIndex) {
+          moveForTimeBlockExercise(blockIndex, groupIndex, forTimeDrag.e, exIndex);
+        }
+        setForTimeDrag(null);
+        setForTimeDragOver(null);
+      },
+    };
+  }
+
+  async function saveWorkout() {
+    setSaving(true);
+    // Persist fortime round timer settings into config
+    const configToSave = {
+      ...config,
+      forTimeRoundTimerEnabled,
+      forTimeRoundTimerMinutes,
+    };
+    if (USE_LOCAL_STORE) {
+      const rec = saveLocalWorkout({
+        id: isLocalId(id) ? id : undefined,
+        user_id: 'local', name,
+        trainer_name: workout?.trainer_name ?? (localStorage.getItem('hclub_trainer_name') || ''),
+        config: configToSave, is_public: isPublic, workout_mode: workoutMode,
+        draft: undefined, // Entwurf des Schnell-Editors ist nach Änderungen hier veraltet
+      });
+      setSaving(false);
+      if (rec.id !== id) router.replace(`/workout/${rec.id}/classic`);
+      return rec.id;
+    }
+    await supabase
+      .from('hybryd_workouts')
+      .update({
+        name,
+        trainer_name: localStorage.getItem('hclub_trainer_name') || '',
+        config: configToSave,
+        is_public: isPublic,
+        workout_mode: workoutMode,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+    setSaving(false);
+    return id;
+  }
+
+  function startWorkout() {
+    saveWorkout().then((wid) => {
+      window.open(`/workout/${wid || id}/live`, '_blank');
+    });
+  }
+
+  // V3: Art (Hyrox/CrossFit) – steht im config, ältere Workouts werden geschätzt.
+  const discipline: Discipline = workoutDiscipline(config);
+  function setDiscipline(d: Discipline) { setConfig((prev) => ({ ...prev, discipline: d })); }
+
+  // Ensure rounds structure
+  useEffect(() => {
+    if (config.numRounds > 0 && config.numGroups > 0) {
+      const rounds = { ...config.rounds };
+      let changed = false;
+      for (let r = 0; r < config.numRounds; r++) {
+        if (!rounds[r]) { rounds[r] = {}; changed = true; }
+        for (let g = 0; g < config.numGroups; g++) {
+          if (!rounds[r][g]) { rounds[r][g] = ['Wall Balls']; changed = true; }
+        }
+      }
+      if (changed) setConfig((prev) => ({ ...prev, rounds }));
+    }
+  }, [config.numRounds, config.numGroups, config.rounds]);
+
+  // Build combined exercise options (built-in + library)
+  const allExerciseOptions = useMemo(() => {
+    const builtIn = ALL_EXERCISES.map(e => e.name);
+    const fromLib = libraryExercises.map(e => e.name).filter(n => !builtIn.includes(n));
+    return { builtIn, fromLib };
+  }, [libraryExercises]);
+
+  function renderExerciseSelect(value: string, onChange: (v: string) => void) {
+    return (
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="flex-1 min-w-0 px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg
+                   text-white text-sm focus:outline-none focus:border-hclub-magenta"
+      >
+        <optgroup label="HYROX">
+          {HYROX_EXERCISES.map((ex) => (
+            <option key={ex.name} value={ex.name}>{ex.name}</option>
+          ))}
+        </optgroup>
+        <optgroup label="Training">
+          {TRAINING_EXERCISES.map((ex) => (
+            <option key={ex.name} value={ex.name}>{ex.name}</option>
+          ))}
+        </optgroup>
+        {allExerciseOptions.fromLib.length > 0 && (
+          <optgroup label="Library">
+            {allExerciseOptions.fromLib.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </optgroup>
+        )}
+        {!ALL_EXERCISES.find((e) => e.name === value) && !allExerciseOptions.fromLib.includes(value) && (
+          <option value={value}>{value}</option>
+        )}
+      </select>
+    );
+  }
+
+  if (!workout) {
+    return (
+      <div className="min-h-screen bg-hclub-black flex items-center justify-center text-gray-400">
+        Loading...
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-hclub-black overflow-x-hidden ed-v3">
+      {/* Header */}
+      <header className="border-b border-hclub-gray sticky top-0 bg-hclub-black z-50">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="text-gray-400 hover:text-white transition-colors font-oswald uppercase tracking-wider text-sm whitespace-nowrap py-2"
+            >
+              &larr; Back
+            </button>
+            <h1 className="font-oswald text-xl sm:text-2xl font-bold tracking-wider whitespace-nowrap">
+              HYB<span className="text-hclub-magenta">RYD</span>
+            </h1>
+          </div>
+          <div className="flex gap-2 sm:gap-3">
+            <button
+              onClick={saveWorkout}
+              disabled={saving}
+              className="px-4 sm:px-5 py-2.5 bg-hclub-gray hover:bg-gray-600 text-white font-oswald uppercase
+                         tracking-wider rounded-lg transition-colors text-sm disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={startWorkout}
+              className="px-4 sm:px-5 py-2.5 bg-hclub-magenta hover:bg-hclub-magenta-dark text-white font-oswald
+                         uppercase tracking-wider rounded-lg transition-colors text-sm"
+            >
+              Start
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Basic info */}
+        <div className="grid md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1 font-oswald uppercase tracking-wider">
+              Workout name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 bg-hclub-dark border border-hclub-gray rounded-lg text-white
+                         focus:outline-none focus:border-hclub-magenta transition-colors"
+            />
+          </div>
+        </div>
+
+        {/* Mode & visibility */}
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1 font-oswald uppercase tracking-wider">
+              Workout mode
+            </label>
+            <select
+              value={workoutMode}
+              onChange={(e) => setWorkoutMode(e.target.value as WorkoutMode)}
+              className="w-full px-4 py-2 bg-hclub-dark border border-hclub-gray rounded-lg text-white
+                         focus:outline-none focus:border-hclub-magenta transition-colors"
+            >
+              <option value="timed">Timed (timer)</option>
+              <option value="fortime">AMRAP</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1 font-oswald uppercase tracking-wider">
+              Type
+            </label>
+            <div className="ed-disc" role="radiogroup" aria-label="Type">
+              {(['hyrox', 'crossfit'] as Discipline[]).map((d) => (
+                <button key={d} type="button" role="radio" aria-checked={discipline === d}
+                  className={discipline === d ? 'is-on' : ''} style={{ ['--k' as string]: DISCIPLINES[d].accent }}
+                  onClick={() => setDiscipline(d)}>
+                  <i aria-hidden="true" />{DISCIPLINES[d].label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-end">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                className="w-5 h-5 accent-hclub-magenta rounded"
+              />
+              <span className="text-sm font-oswald uppercase tracking-wider text-gray-300">
+                Public (other trainers can see it)
+              </span>
+            </label>
+          </div>
+        </div>
+
+        {/* ===================== TIMED MODE ===================== */}
+        {workoutMode === 'timed' && (
+          <>
+            {/* Timing settings */}
+            <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8">
+              <h3 className="font-oswald text-lg uppercase tracking-wider mb-4">
+                Time settings
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Groups</label>
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={groupsInput}
+                    onChange={(e) => { setGroupsInput(e.target.value); const val = parseInt(e.target.value); if (!isNaN(val) && val >= 1 && val <= 10) updateConfig({ numGroups: val }); }}
+                    onBlur={() => { const val = parseInt(groupsInput); const c = isNaN(val) || val < 1 ? 1 : Math.min(10, val); setGroupsInput(String(c)); updateConfig({ numGroups: c }); }}
+                    className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-hclub-magenta" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Rounds</label>
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={roundsInput}
+                    onChange={(e) => { setRoundsInput(e.target.value); const val = parseInt(e.target.value); if (!isNaN(val) && val >= 1 && val <= 20) updateConfig({ numRounds: val }); }}
+                    onBlur={() => { const val = parseInt(roundsInput); const c = isNaN(val) || val < 1 ? 1 : Math.min(20, val); setRoundsInput(String(c)); updateConfig({ numRounds: c }); }}
+                    className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-hclub-magenta" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Round rest (s)</label>
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={roundRestInput}
+                    onChange={(e) => { setRoundRestInput(e.target.value); const val = parseInt(e.target.value); if (!isNaN(val) && val >= 0) updateConfig({ roundRestTime: Math.min(600, val) }); }}
+                    onBlur={() => { const val = parseInt(roundRestInput); const c = isNaN(val) || val < 0 ? 0 : Math.min(600, val); setRoundRestInput(String(c)); updateConfig({ roundRestTime: c }); }}
+                    className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-hclub-magenta" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Warm-up (s)</label>
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={warmupInput}
+                    onChange={(e) => { setWarmupInput(e.target.value); const val = parseInt(e.target.value); if (!isNaN(val) && val >= 0) updateConfig({ warmupTime: Math.min(300, val) }); }}
+                    onBlur={() => { const val = parseInt(warmupInput); const c = isNaN(val) || val < 0 ? 0 : Math.min(300, val); setWarmupInput(String(c)); updateConfig({ warmupTime: c }); }}
+                    className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-hclub-magenta" />
+                </div>
+              </div>
+            </div>
+
+            {/* Random fill button */}
+            <div className="flex justify-center mb-8">
+              <button onClick={randomFill}
+                className="px-8 py-3 bg-cyan-900/40 hover:bg-hclub-magenta border border-cyan-500/50 hover:border-hclub-magenta
+                           text-cyan-300 hover:text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-all duration-300">
+                Fill randomly
+              </button>
+            </div>
+
+            {/* Rounds editor */}
+            {Array.from({ length: config.numRounds }, (_, roundIndex) => {
+              const roundHasCustomSettings = config.roundSettings?.[roundIndex] &&
+                Object.keys(config.roundSettings[roundIndex]).length > 0;
+              const isExpanded = expandedRoundSettings[roundIndex];
+              const effectiveWorkTime = config.roundSettings?.[roundIndex]?.workTime ?? config.workTime;
+              const effectiveRestTime = config.roundSettings?.[roundIndex]?.restTime ?? config.restTime;
+
+              return (
+              <div key={roundIndex} className="mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <h3 className="font-oswald text-xl uppercase tracking-wider text-hclub-magenta">
+                    Round {roundIndex + 1}
+                  </h3>
+                  <button
+                    onClick={() => toggleRoundSettings(roundIndex)}
+                    className={`text-xs px-3 py-1 rounded-lg font-oswald uppercase tracking-wider transition-colors border ${
+                      roundHasCustomSettings
+                        ? 'border-hclub-magenta text-hclub-magenta bg-hclub-magenta/10'
+                        : 'border-hclub-gray text-gray-400 hover:text-white hover:border-gray-500'
+                    }`}
+                  >
+                    {isExpanded ? 'Times' : 'Times'}
+                    {roundHasCustomSettings && ' *'}
+                  </button>
+                  {roundHasCustomSettings && !isExpanded && (
+                    <span className="text-xs text-gray-500 font-oswald">
+                      {effectiveWorkTime}s / {effectiveRestTime}s
+                    </span>
+                  )}
+                  <button
+                    onClick={() => duplicateRound(roundIndex)}
+                    className="text-xs px-3 py-1 rounded-lg font-oswald uppercase tracking-wider transition-colors border
+                               border-hclub-gray text-gray-400 hover:text-cyan-300 hover:border-cyan-500 hover:bg-cyan-900/20"
+                    title="Copy round"
+                  >
+                    Copy round
+                  </button>
+                </div>
+
+                {isExpanded && (
+                  <div className="bg-hclub-dark/50 border border-hclub-gray/50 rounded-lg p-4 mb-4 flex flex-wrap gap-4 items-end">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Work time (s)</label>
+                      <input type="number" min={5} max={600} step={5} value={effectiveWorkTime}
+                        onChange={(e) => { const val = parseInt(e.target.value) || config.workTime; updateRoundSetting(roundIndex, 'workTime', val === config.workTime ? undefined : val); }}
+                        className="w-24 px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center text-sm focus:outline-none focus:border-hclub-magenta" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Rest (s)</label>
+                      <input type="number" min={0} max={300} step={5} value={effectiveRestTime}
+                        onChange={(e) => { const val = parseInt(e.target.value) || 0; updateRoundSetting(roundIndex, 'restTime', val === config.restTime ? undefined : val); }}
+                        className="w-24 px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center text-sm focus:outline-none focus:border-hclub-magenta" />
+                    </div>
+                    {roundHasCustomSettings && (
+                      <button onClick={() => { setConfig((prev) => { const rs = { ...(prev.roundSettings || {}) }; delete rs[roundIndex]; return { ...prev, roundSettings: rs }; }); }}
+                        className="text-xs text-red-400 hover:text-red-300 font-oswald uppercase px-3 py-2">Reset</button>
+                    )}
+                  </div>
+                )}
+
+                <div className="overflow-hidden pb-2">
+                <div className={`grid gap-4 ${
+                  config.numGroups === 1 ? 'grid-cols-1' :
+                  config.numGroups === 2 ? 'grid-cols-1 sm:grid-cols-2' :
+                  config.numGroups === 3 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
+                  config.numGroups === 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
+                  config.numGroups <= 6 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
+                  'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+                }`}>
+                  {Array.from({ length: config.numGroups }, (_, groupIndex) => {
+                    const groupKey = `${roundIndex}-${groupIndex}`;
+                    const groupHasCustomTime = config.groupTimeSettings?.[roundIndex]?.[groupIndex] &&
+                      Object.keys(config.groupTimeSettings[roundIndex][groupIndex]).length > 0;
+                    const isGroupExpanded = expandedGroupSettings[groupKey];
+                    const groupWorkTime = config.groupTimeSettings?.[roundIndex]?.[groupIndex]?.workTime ?? effectiveWorkTime;
+                    const groupRestTime = config.groupTimeSettings?.[roundIndex]?.[groupIndex]?.restTime ?? effectiveRestTime;
+
+                    return (
+                    <div key={groupIndex} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 min-w-0 overflow-hidden">
+                      <div className="flex items-center justify-between mb-3 gap-2">
+                        <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400">
+                          Group {groupIndex + 1}
+                        </h4>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => promptDuplicateGroup(roundIndex, groupIndex)}
+                            title="Duplicate group (with optional rotation)"
+                            className="text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border
+                                       border-hclub-gray/50 text-gray-400 hover:text-cyan-300 hover:border-cyan-500 hover:bg-cyan-900/20"
+                          >
+                            Duplicate
+                          </button>
+                          <button
+                            onClick={() => toggleGroupSettings(roundIndex, groupIndex)}
+                            className={`text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border ${
+                              groupHasCustomTime
+                                ? 'border-cyan-500 text-cyan-400 bg-cyan-500/10'
+                                : 'border-hclub-gray/50 text-gray-500 hover:text-gray-300'
+                            }`}
+                          >
+                            {groupHasCustomTime ? `${groupWorkTime}s/${groupRestTime}s` : 'Custom'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {isGroupExpanded && (
+                        <div className="bg-hclub-black/50 border border-hclub-gray/30 rounded-lg p-3 mb-3 flex flex-wrap gap-3 items-end">
+                          <div>
+                            <label className="block text-[10px] text-gray-500 mb-1 font-oswald uppercase">Work (s)</label>
+                            <input type="number" min={5} max={600} step={5} value={groupWorkTime}
+                              onChange={(e) => { const val = parseInt(e.target.value) || effectiveWorkTime; updateGroupTimeSetting(roundIndex, groupIndex, 'workTime', val === effectiveWorkTime ? undefined : val); }}
+                              className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-center text-xs focus:outline-none focus:border-cyan-500" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-gray-500 mb-1 font-oswald uppercase">Rest (s)</label>
+                            <input type="number" min={0} max={300} step={5} value={groupRestTime}
+                              onChange={(e) => { const val = parseInt(e.target.value) || 0; updateGroupTimeSetting(roundIndex, groupIndex, 'restTime', val === effectiveRestTime ? undefined : val); }}
+                              className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-center text-xs focus:outline-none focus:border-cyan-500" />
+                          </div>
+                          {groupHasCustomTime && (
+                            <button onClick={() => { updateGroupTimeSetting(roundIndex, groupIndex, 'workTime', undefined); updateGroupTimeSetting(roundIndex, groupIndex, 'restTime', undefined); }}
+                              className="text-[10px] text-red-400 hover:text-red-300 font-oswald uppercase px-2 py-1">Reset</button>
+                          )}
+                        </div>
+                      )}
+
+                      {(config.rounds[roundIndex]?.[groupIndex] || []).map((exercise, exIdx) => {
+                        const overrideKey = getIconOverrideKey(roundIndex, groupIndex, exIdx);
+                        const IconComponent = overrideKey
+                          ? (exerciseIconMap[overrideKey] || getExerciseIcon(exercise))
+                          : getExerciseIcon(exercise);
+                        const isPickerOpen =
+                          iconPickerOpen?.round === roundIndex &&
+                          iconPickerOpen?.group === groupIndex &&
+                          iconPickerOpen?.ex === exIdx;
+                        const isDragging =
+                          dragExercise?.round === roundIndex &&
+                          dragExercise?.group === groupIndex &&
+                          dragExercise?.ex === exIdx;
+                        const isDragOver =
+                          dragOverExercise?.round === roundIndex &&
+                          dragOverExercise?.group === groupIndex &&
+                          dragOverExercise?.ex === exIdx &&
+                          !isDragging;
+                        return (
+                        <div key={exIdx}
+                          className={`mb-2 rounded-lg transition-all ${isDragging ? 'opacity-40' : ''} ${isDragOver ? 'ring-2 ring-hclub-magenta ring-offset-2 ring-offset-hclub-dark' : ''}`}
+                          onDragOver={(e) => {
+                            if (!dragExercise || dragExercise.round !== roundIndex || dragExercise.group !== groupIndex) return;
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'move';
+                            if (dragOverExercise?.ex !== exIdx || dragOverExercise?.group !== groupIndex || dragOverExercise?.round !== roundIndex) {
+                              setDragOverExercise({ round: roundIndex, group: groupIndex, ex: exIdx });
+                            }
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (dragExercise && dragExercise.round === roundIndex && dragExercise.group === groupIndex) {
+                              reorderExerciseInGroup(roundIndex, groupIndex, dragExercise.ex, exIdx);
+                            }
+                            setDragExercise(null);
+                            setDragOverExercise(null);
+                          }}>
+                          <div className="flex gap-2 min-w-0 items-center">
+                            {/* Drag handle: Übung per Ziehen umsortieren */}
+                            <div
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.effectAllowed = 'move';
+                                e.dataTransfer.setData('text/plain', String(exIdx));
+                                setDragExercise({ round: roundIndex, group: groupIndex, ex: exIdx });
+                              }}
+                              onDragEnd={() => { setDragExercise(null); setDragOverExercise(null); }}
+                              title="Drag to reorder"
+                              className="flex-shrink-0 w-6 h-9 flex items-center justify-center cursor-grab active:cursor-grabbing text-gray-500 hover:text-hclub-magenta select-none"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <circle cx="6" cy="4" r="1.6" /><circle cx="14" cy="4" r="1.6" />
+                                <circle cx="6" cy="10" r="1.6" /><circle cx="14" cy="10" r="1.6" />
+                                <circle cx="6" cy="16" r="1.6" /><circle cx="14" cy="16" r="1.6" />
+                              </svg>
+                            </div>
+                            {/* Icon picker: nur für Admins */}
+                            {isAdmin && (
+                              <button type="button"
+                                onClick={() => setIconPickerOpen(isPickerOpen ? null : { round: roundIndex, group: groupIndex, ex: exIdx })}
+                                title="Choose icon"
+                                className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
+                                  isPickerOpen ? 'border-hclub-magenta bg-hclub-magenta/10'
+                                  : overrideKey ? 'border-hclub-magenta/50 bg-hclub-dark'
+                                  : 'border-hclub-gray bg-hclub-black hover:border-gray-500'
+                                }`}>
+                                <IconComponent size={22} color={isPickerOpen ? '#199DA9' : '#9ca3af'} />
+                              </button>
+                            )}
+                            {!isAdmin && (
+                              <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center">
+                                <IconComponent size={22} color="#9ca3af" />
+                              </div>
+                            )}
+                            {renderExerciseSelect(exercise, (v) => setExercise(roundIndex, groupIndex, exIdx, v))}
+                            <button onClick={() => removeExerciseFromGroup(roundIndex, groupIndex, exIdx)}
+                              className="flex-shrink-0 px-2 text-red-400 hover:text-red-300 text-sm" title="Remove">x</button>
+                          </div>
+                          {isAdmin && isPickerOpen && (
+                            <div className="mt-1 p-2 bg-hclub-black border border-hclub-magenta/40 rounded-lg overflow-hidden">
+                              <div className="grid grid-cols-5 sm:grid-cols-6 gap-1">
+                                {ICON_PICKER_OPTIONS.map(({ key, label, Component }) => (
+                                  <button key={key} type="button" title={label}
+                                    onClick={() => { setIconOverride(roundIndex, groupIndex, exIdx, key === '__generic__' ? null : key); setIconPickerOpen(null); }}
+                                    className={`flex items-center justify-center w-9 h-9 rounded border transition-colors ${
+                                      (overrideKey === key) || (!overrideKey && key === '__generic__' && getExerciseIcon(exercise) === Component)
+                                        ? 'border-hclub-magenta bg-hclub-magenta/20' : 'border-hclub-gray/40 hover:border-hclub-magenta/60 hover:bg-hclub-dark'
+                                    }`}>
+                                    <Component size={20} color="#9ca3af" />
+                                  </button>
+                                ))}
+                              </div>
+                              {overrideKey && (
+                                <button type="button"
+                                  onClick={() => { setIconOverride(roundIndex, groupIndex, exIdx, null); setIconPickerOpen(null); }}
+                                  className="mt-1 text-xs text-gray-500 hover:text-red-400 font-oswald uppercase">Reset</button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        );
+                      })}
+                      <div className="flex gap-2 mt-2">
+                        <button onClick={() => addExerciseToGroup(roundIndex, groupIndex)}
+                          className="text-xs text-hclub-magenta hover:text-white transition-colors font-oswald uppercase">+ Exercise</button>
+                      </div>
+                      <div className="flex gap-2 mt-2 min-w-0">
+                        <input type="text" value={customExercise}
+                          onChange={(e) => setCustomExercise(e.target.value)}
+                          placeholder="Custom exercise..."
+                          className="flex-1 min-w-0 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-hclub-magenta"
+                          onKeyDown={(e) => { if (e.key === 'Enter') addCustomExercise(roundIndex, groupIndex); }} />
+                        <button onClick={() => addCustomExercise(roundIndex, groupIndex)}
+                          className="text-xs text-hclub-magenta hover:text-white px-2">+</button>
+                      </div>
+                    </div>
+                    );
+                  })}
+                </div>
+                </div>
+              </div>
+              );
+            })}
+          </>
+        )}
+
+        {/* ===================== AMRAP MODE (fortime in DB) ===================== */}
+        {workoutMode === 'fortime' && (
+          <>
+            <div className="bg-hclub-dark border border-hclub-gray rounded-xl p-5 mb-8">
+              <h3 className="font-oswald text-lg uppercase tracking-wider mb-4 text-cyan-400">
+                AMRAP settings
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Groups</label>
+                  <input type="number" min={1} max={10}
+                    value={config.numGroups}
+                    onChange={(e) => { const val = Math.max(1, Math.min(10, parseInt(e.target.value) || 1)); updateConfig({ numGroups: val }); }}
+                    className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-cyan-400" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Warm-up (s)</label>
+                  <input type="number" min={0} max={300}
+                    value={config.warmupTime}
+                    onChange={(e) => { const val = Math.max(0, Math.min(300, parseInt(e.target.value) || 0)); updateConfig({ warmupTime: val }); }}
+                    className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-cyan-400" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1 font-oswald uppercase">Round rest (s)</label>
+                  <input type="number" min={0} max={600}
+                    value={config.roundRestTime ?? 60}
+                    onChange={(e) => { const val = Math.max(0, Math.min(600, parseInt(e.target.value) || 0)); updateConfig({ roundRestTime: val }); }}
+                    className="w-full px-3 py-2 bg-hclub-black border border-hclub-gray rounded-lg text-white text-center focus:outline-none focus:border-cyan-400" />
+                  <p className="text-[11px] text-gray-500 mt-1 font-oswald">Rest between rounds · 0 = default 60 sec.</p>
+                </div>
+              </div>
+
+              {/* Timer pro Runde Toggle */}
+              <div className="border-t border-hclub-gray/40 pt-4 mt-2">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <div
+                      onClick={() => setForTimeRoundTimerEnabled(v => !v)}
+                      className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${forTimeRoundTimerEnabled ? 'bg-cyan-500' : 'bg-hclub-gray'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${forTimeRoundTimerEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
+                    </div>
+                    <span className="font-oswald uppercase tracking-wider text-sm text-gray-300">
+                      Timer per round
+                    </span>
+                  </label>
+                  {forTimeRoundTimerEnabled && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={120}
+                        value={forTimeRoundTimerMinutes}
+                        onChange={(e) => setForTimeRoundTimerMinutes(Math.max(1, Math.min(120, parseInt(e.target.value) || 12)))}
+                        className="w-20 px-2 py-1 bg-hclub-black border border-cyan-500/60 rounded-lg text-white text-center text-sm focus:outline-none focus:border-cyan-400"
+                      />
+                      <span className="text-gray-400 text-sm font-oswald uppercase">Minutes</span>
+                    </div>
+                  )}
+                </div>
+                {forTimeRoundTimerEnabled && (
+                  <p className="text-xs text-cyan-400/70 mt-2 font-oswald">
+                    Countdown runs while the groups work through their exercises.
+                  </p>
+                )}
+                {!forTimeRoundTimerEnabled && (
+                  <p className="text-xs text-gray-500 mt-2 font-oswald">
+                    No timer — groups advance themselves (key 1–{config.numGroups})
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* AMRAP Blocks (Runden) */}
+            {groupClipboard && (
+              <div className="sticky top-2 z-20 mb-4 flex flex-wrap items-center gap-3 px-4 py-2 rounded-xl border border-green-500/50 bg-hclub-dark/95 text-sm">
+                <span className="text-green-400 font-oswald uppercase tracking-wider text-xs">On the clipboard</span>
+                <span className="text-white">
+                  {groupClipboard.label} · {groupClipboard.exercises.filter((ex) => !ex.isNote).map((ex) => ex.name).join(', ') || 'leer'}
+                </span>
+                <span className="text-gray-500 text-xs">Tap "Paste" on each group</span>
+                <button onClick={() => setGroupClipboard(null)}
+                  className="ml-auto text-xs text-gray-400 hover:text-white font-oswald uppercase">Clear clipboard</button>
+              </div>
+            )}
+            {getForTimeBlocks().map((block, bIdx) => (
+              <div key={bIdx} className="mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <h3 className="font-oswald text-xl uppercase tracking-wider text-cyan-400">
+                    Round {bIdx + 1}
+                  </h3>
+                  <button onClick={() => duplicateForTimeBlock(bIdx)}
+                    className="text-xs text-cyan-400 hover:text-white font-oswald uppercase px-2 py-1 border border-cyan-400/30 rounded-lg">
+                    Copy round
+                  </button>
+                  {getForTimeBlocks().length > 1 && (
+                    <button onClick={() => removeForTimeBlock(bIdx)}
+                      className="text-xs text-red-400 hover:text-red-300 font-oswald uppercase px-2 py-1 border border-red-400/30 rounded-lg">
+                      Remove round
+                    </button>
+                  )}
+                </div>
+
+                <div className="overflow-hidden pb-2">
+                <div className={`grid gap-4 ${
+                  config.numGroups === 1 ? 'grid-cols-1' :
+                  config.numGroups === 2 ? 'grid-cols-1 sm:grid-cols-2' :
+                  config.numGroups <= 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
+                  'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                }`}>
+                  {Array.from({ length: config.numGroups }, (_, gIdx) => {
+                    const exercises = block.exercises?.[gIdx] || [];
+                    return (
+                      <div key={gIdx} className="bg-hclub-dark border border-hclub-gray rounded-xl p-4 min-w-0 overflow-hidden">
+                        <div className="flex items-center justify-between mb-3 gap-2">
+                          <h4 className="font-oswald text-sm uppercase tracking-wider text-gray-400">
+                            Group {gIdx + 1}
+                          </h4>
+                          <div className="flex items-center gap-1.5">
+                            <button onClick={() => copyForTimeGroup(bIdx, gIdx)}
+                              title="Copy this group to the clipboard"
+                              className="text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border border-hclub-gray/50 text-gray-400 hover:text-cyan-300 hover:border-cyan-500 hover:bg-cyan-900/20">
+                              Copy
+                            </button>
+                            {groupClipboard && (
+                              <button onClick={() => pasteForTimeGroup(bIdx, gIdx)}
+                                title={`${groupClipboard.label} paste here`}
+                                className="text-[10px] px-2 py-0.5 rounded font-oswald uppercase tracking-wider transition-colors border border-green-500/60 text-green-400 hover:text-white hover:bg-green-900/30">
+                                Paste
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {exercises.map((ex, eIdx) => {
+                          const measureType = ex.distance ? 'distance' : ex.duration ? 'duration' : 'reps';
+                          // Eine Notiz ist keine Uebung: kein Uebungs-Auswahlfeld,
+                          // keine Wiederholungen, keine Meter. Nur Text.
+                          if (ex.isNote) {
+                            return (
+                              <div key={eIdx} {...(({ dragClass, ...h }) => h)(forTimeRowProps(bIdx, gIdx, eIdx))} className={`mb-3 p-2 bg-yellow-400/5 rounded-lg border border-yellow-400/30 transition-all ${forTimeRowProps(bIdx, gIdx, eIdx).dragClass}`}>
+                                <div className="flex gap-2 items-center min-w-0">
+                                  {renderForTimeMover(bIdx, gIdx, eIdx, exercises.length)}
+                                  <span className="flex-shrink-0 text-yellow-400 text-xs font-oswald uppercase">Note</span>
+                                  <input type="text" value={ex.name}
+                                    placeholder="e.g. Halve the distance every round"
+                                    onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { name: e.target.value })}
+                                    className="flex-1 min-w-0 px-2 py-1 bg-hclub-black border border-yellow-400/30 rounded text-white text-xs focus:outline-none focus:border-yellow-400" />
+                                  <button onClick={() => removeForTimeBlockExercise(bIdx, gIdx, eIdx)}
+                                    className="flex-shrink-0 text-red-400 hover:text-red-300 text-sm px-1">x</button>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div key={eIdx} {...(({ dragClass, ...h }) => h)(forTimeRowProps(bIdx, gIdx, eIdx))} className={`mb-3 p-2 bg-hclub-black/50 rounded-lg border border-hclub-gray/30 transition-all ${forTimeRowProps(bIdx, gIdx, eIdx).dragClass}`}>
+                              <div className="flex gap-2 mb-2 items-center min-w-0">
+                                {renderForTimeMover(bIdx, gIdx, eIdx, exercises.length)}
+                                {renderExerciseSelect(ex.name, (v) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { name: v }))}
+                                <button onClick={() => removeForTimeBlockExercise(bIdx, gIdx, eIdx)}
+                                  className="flex-shrink-0 text-red-400 hover:text-red-300 text-sm px-1">x</button>
+                              </div>
+                              <div className="flex gap-2 items-center">
+                                <select value={measureType}
+                                  onChange={(e) => {
+                                    const t = e.target.value;
+                                    if (t === 'distance') updateForTimeBlockExercise(bIdx, gIdx, eIdx, { distance: '500m', reps: undefined, duration: undefined });
+                                    else if (t === 'reps') updateForTimeBlockExercise(bIdx, gIdx, eIdx, { reps: 10, distance: undefined, duration: undefined });
+                                    else updateForTimeBlockExercise(bIdx, gIdx, eIdx, { duration: 30, distance: undefined, reps: undefined });
+                                  }}
+                                  className="px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-cyan-400">
+                                  <option value="reps">Reps</option>
+                                  <option value="distance">Meters</option>
+                                  <option value="duration">Seconds</option>
+                                </select>
+                                {measureType === 'distance' && (
+                                  <input type="text" value={ex.distance || ''} placeholder="e.g. 500m"
+                                    onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { distance: e.target.value || undefined })}
+                                    className="w-24 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
+                                )}
+                                {measureType === 'reps' && (
+                                  <input type="number" min={1} value={ex.reps || ''} placeholder="Reps"
+                                    onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { reps: parseInt(e.target.value) || undefined })}
+                                    className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
+                                )}
+                                {measureType === 'duration' && (
+                                  <input type="number" min={1} value={ex.duration || ''} placeholder="Sec"
+                                    onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { duration: parseInt(e.target.value) || undefined })}
+                                    className="w-20 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
+                                )}
+                                {/* Last/Gewicht (optional), z. B. „24/16 kg" — erscheint auf der Stationskarte */}
+                                <input type="text" value={ex.weight || ''} placeholder="Load"
+                                  aria-label="Load"
+                                  onChange={(e) => updateForTimeBlockExercise(bIdx, gIdx, eIdx, { weight: e.target.value || undefined })}
+                                  className="w-24 min-w-0 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs text-center focus:outline-none focus:border-cyan-400" />
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div className="flex gap-3 mt-2">
+                          <button onClick={() => addForTimeBlockExercise(bIdx, gIdx)}
+                            className="text-xs text-cyan-400 hover:text-white transition-colors font-oswald uppercase">+ Exercise</button>
+                          <button onClick={() => addForTimeBlockNote(bIdx, gIdx)}
+                            className="text-xs text-yellow-400 hover:text-white transition-colors font-oswald uppercase">+ Note</button>
+                        </div>
+                        <div className="flex gap-2 mt-2 min-w-0">
+                          <input type="text" value={customForTimeExercise[`${bIdx}-${gIdx}`] || ''}
+                            onChange={(e) => setCustomForTimeExercise(prev => ({ ...prev, [`${bIdx}-${gIdx}`]: e.target.value }))}
+                            placeholder="Custom exercise..."
+                            className="flex-1 min-w-0 px-2 py-1 bg-hclub-black border border-hclub-gray rounded text-white text-xs focus:outline-none focus:border-cyan-400"
+                            onKeyDown={(e) => { if (e.key === 'Enter') addCustomForTimeExercise(bIdx, gIdx); }} />
+                          <button onClick={() => addCustomForTimeExercise(bIdx, gIdx)}
+                            className="text-xs text-cyan-400 hover:text-white px-2">+</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                </div>
+              </div>
+            ))}
+
+            <div className="flex justify-center mb-8">
+              <button onClick={addForTimeBlock}
+                className="px-8 py-3 bg-cyan-900/30 hover:bg-cyan-600 border border-cyan-500/50 hover:border-cyan-400
+                           text-cyan-300 hover:text-white font-oswald text-lg uppercase tracking-wider rounded-xl transition-all duration-300">
+                + Add round
+              </button>
+            </div>
+          </>
+        )}
+      </main>
+    </div>
+  );
+}

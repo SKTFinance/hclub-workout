@@ -21,7 +21,7 @@ import { aiDraftToWorkout, workoutToDraft, type AiBlock, type AiDraft, type AiEx
 import { DISCIPLINES, makeExerciseColors, stationColor, workoutDiscipline, type Discipline } from '@/lib/discipline';
 import { HYROX_EXERCISES, TRAINING_EXERCISES } from '@/lib/exercises';
 import { USE_LOCAL_STORE, getLocalWorkout, isLocalId, saveLocalWorkout } from '@/lib/localWorkouts';
-import CrossTag from '@/components/CrossTag';
+import WorkoutEditor, { type EditorValue } from '@/components/WorkoutEditor';
 
 type Step = 'type' | 'describe' | 'edit';
 
@@ -202,7 +202,8 @@ function CreateWorkout() {
     if (!draft) return null;
     try { return aiDraftToWorkout({ ...draft, discipline: disc }); } catch { return null; }
   }, [draft, disc]);
-  const est = estimate(converted);
+  // Neuer Entwurf (KI, leer, geladen) → Editor neu aufbauen.
+  const genId = useMemo(() => Math.random().toString(36).slice(2), [draft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- KI ----------
   const generate = useCallback(async (audio?: { mime: string; data: string }) => {
@@ -280,84 +281,42 @@ function CreateWorkout() {
   }
   useEffect(() => () => { srRef.current?.abort(); }, []);
 
-  // ---------- Entwurf bearbeiten ----------
-  function patchBlock(bIdx: number, patch: Partial<AiBlock>) {
-    setDraft((d) => d && { ...d, blocks: d.blocks.map((b, i) => (i === bIdx ? { ...b, ...patch } : b)) });
-  }
-  function patchStations(bIdx: number, fn: (s: AiExercise[][]) => AiExercise[][]) {
-    setDraft((d) => d && { ...d, blocks: d.blocks.map((b, i) => (i === bIdx ? { ...b, stations: fn(b.stations) } : b)) });
-  }
-  function patchExercise(bIdx: number, gIdx: number, eIdx: number, patch: Partial<AiExercise> | null) {
-    patchStations(bIdx, (st) => st.map((g, gi) => {
-      if (gi !== gIdx) return g;
-      if (patch === null) return g.filter((_, ei) => ei !== eIdx);
-      return g.map((e, ei) => (ei === eIdx ? { ...e, ...patch } : e));
-    }));
-  }
-  function moveExercise(bIdx: number, gIdx: number, eIdx: number, dir: -1 | 1) {
-    patchStations(bIdx, (st) => st.map((g, gi) => {
-      if (gi !== gIdx) return g;
-      const j = eIdx + dir;
-      if (j < 0 || j >= g.length) return g;
-      const n = [...g];
-      [n[eIdx], n[j]] = [n[j], n[eIdx]];
-      return n;
-    }));
-  }
-  function addExercise(bIdx: number, gIdx: number, name?: string) {
-    patchStations(bIdx, (st) => st.map((g, gi) => (gi === gIdx ? [...g, { name: name || MORE_MOVES[disc][0], reps: 10 }] : g)));
-  }
-  function addGroup(bIdx: number) {
-    patchStations(bIdx, (st) => [...st, (st[st.length - 1] || []).map((e) => ({ ...e }))]);
-  }
-  function removeGroup(bIdx: number, gIdx: number) {
-    patchStations(bIdx, (st) => (st.length > 1 ? st.filter((_, i) => i !== gIdx) : st));
-  }
-  function addPart() {
-    setDraft((d) => d && { ...d, blocks: [...d.blocks, { ...d.blocks[d.blocks.length - 1], title: undefined, stations: [[{ name: MORE_MOVES[disc][0], reps: 10 }]] }] });
-  }
-  function removePart(bIdx: number) {
-    setDraft((d) => d && d.blocks.length > 1 ? { ...d, blocks: d.blocks.filter((_, i) => i !== bIdx) } : d);
-  }
-
-  function preview() {
-    if (!converted) return;
+  // ---------- Editor (Original-Datenformat, alle Original-Funktionen) ----------
+  function previewEditor(v: EditorValue) {
     const w = {
-      id: 'preview', user_id: 'preview', name: converted.name,
-      trainer_name: coach.trim(),
-      config: converted.config,
-      workout_mode: converted.workout_mode, is_public: false,
+      id: 'preview', user_id: 'preview', name: v.name, trainer_name: v.coach.trim(),
+      config: v.config, workout_mode: v.mode, is_public: false,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     };
     try { localStorage.setItem('hybryd_preview_workout', JSON.stringify(w)); } catch { /* egal */ }
     window.open('/workout/preview/live', '_blank');
   }
 
-  async function save(openFull = false) {
-    if (!converted || !draft || saving) return;
+  async function saveEditor(v: EditorValue) {
+    if (saving) return;
     setSaving(true);
     setError('');
+    changeCoach(v.coach);
     if (USE_LOCAL_STORE) {
       // Vorschau: nur im Browser speichern, Live-Tabelle bleibt unberührt.
       const rec = saveLocalWorkout({
-        id: editId || undefined, user_id: 'local', name: converted.name, trainer_name: coach.trim(),
-        config: converted.config, workout_mode: converted.workout_mode, is_public: false,
-        draft: { ...draft, discipline: disc },
+        id: editId || undefined, user_id: 'local', name: v.name, trainer_name: v.coach.trim(),
+        config: v.config, workout_mode: v.mode, is_public: v.isPublic, draft: undefined,
       });
       setSaving(false);
-      router.push(openFull ? `/workout/${rec.id}` : `/dashboard?saved=${rec.id}`);
+      router.push(`/dashboard?saved=${rec.id}`);
       return;
     }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); setError('Please sign in again.'); return; }
     const { data, error: err } = await supabase.from('hybryd_workouts').insert({
-      user_id: user.id, user_email: user.email, name: converted.name,
-      trainer_name: coach || 'Trainer', config: converted.config,
-      is_public: true, workout_mode: converted.workout_mode,
+      user_id: user.id, user_email: user.email, name: v.name,
+      trainer_name: v.coach || 'Trainer', config: v.config,
+      is_public: v.isPublic, workout_mode: v.mode,
     }).select().single();
     setSaving(false);
     if (err || !data) { setError('Could not save. Try again.'); return; }
-    router.push(openFull ? `/workout/${data.id}` : `/dashboard?saved=${data.id}`);
+    router.push(`/dashboard?saved=${data.id}`);
   }
 
   const D = DISCIPLINES[disc];
@@ -452,161 +411,15 @@ function CreateWorkout() {
       )}
 
       {/* ---------- 3. Editor ---------- */}
-      {step === 'edit' && draft && (
-        <main className="cw-main cw-edit">
-          <div className="cw-edit-grid">
-            <div className="cw-edit-col">
-              <div className="cw-namebar">
-                <input className="cw-name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} aria-label="Workout name" />
-                {copyOf ? (
-                  <p className="cw-summary">Editing a copy of “{copyOf}”. The original stays as it is.</p>
-                ) : draft.summary && <p className="cw-summary">{draft.summary}</p>}
-              </div>
-
-              {draft.blocks.map((b, bIdx) => (
-                <section key={bIdx} className="cw-block">
-                  <div className="cw-block-head">
-                    <span className="cw-block-no">{draft.blocks.length > 1 ? `Part ${String.fromCharCode(65 + bIdx)}` : 'Format'}</span>
-                    <div className="cw-seg" role="radiogroup" aria-label="Format">
-                      {FORMATS.map((f) => (
-                        <button key={f.value} type="button" role="radio" aria-checked={b.format === f.value}
-                          className={b.format === f.value ? 'is-on' : ''} title={f.hint}
-                          onClick={() => patchBlock(bIdx, { format: f.value })}>{f.label}</button>
-                      ))}
-                    </div>
-                    {draft.blocks.length > 1 && (
-                      <button type="button" className="cw-icon" aria-label="Remove part" onClick={() => removePart(bIdx)}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></svg>
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="cw-times">
-                    {(b.format === 'AMRAP' || b.format === 'EMOM') && (
-                      <Stepper label={b.format === 'EMOM' ? 'Minutes' : 'Time'} unit="min" min={1} max={120} value={b.minutes} placeholder="12" onChange={(v) => patchBlock(bIdx, { minutes: v })} />
-                    )}
-                    {b.format === 'FOR_TIME' && (
-                      <Stepper label="Time cap" unit="min" min={1} max={120} value={b.minutes} placeholder="–" onChange={(v) => patchBlock(bIdx, { minutes: v })} />
-                    )}
-                    {b.format === 'INTERVALS' && (
-                      <>
-                        <Stepper label="Work" unit="s" min={5} max={600} step={5} value={b.workSeconds} placeholder="40" onChange={(v) => patchBlock(bIdx, { workSeconds: v })} />
-                        <Stepper label="Rest" unit="s" min={0} max={600} step={5} value={b.restSeconds} placeholder="20" onChange={(v) => patchBlock(bIdx, { restSeconds: v })} />
-                      </>
-                    )}
-                    {(b.format === 'FOR_TIME' || b.format === 'INTERVALS') && (
-                      <Stepper label="Rounds" min={1} max={50} value={b.rounds} placeholder="1" onChange={(v) => patchBlock(bIdx, { rounds: v })} />
-                    )}
-                    {bIdx === 0 && (b.format === 'INTERVALS') && (b.rounds || 1) > 1 && (
-                      <Stepper label="Round rest" unit="s" min={0} max={900} step={15} value={draft.restBetweenBlocksSeconds} placeholder="60" onChange={(v) => setDraft({ ...draft, restBetweenBlocksSeconds: v })} />
-                    )}
-                  </div>
-
-                  {(() => {
-                    // Farbe je Übung wie auf dem TV (gleiche Übung = gleiche Farbe, Gruppe für Gruppe).
-                    const longest = Math.max(0, ...b.stations.map((g) => g.length));
-                    colorRef.current = makeExerciseColors(Array.from({ length: longest }, (_, i) => b.stations.map((g) => g[i]?.name).filter(Boolean) as string[]).flat());
-                    return null;
-                  })()}
-                  <div className={`cw-groups n${Math.min(b.stations.length, 4)}`}>
-                    {b.stations.map((g, gIdx) => (
-                      <div key={gIdx} className="cw-group">
-                        <div className="cw-group-head">
-                          <span className="cw-group-name">{b.stations.length > 1 ? <>Group <b>{gIdx + 1}</b></> : 'Movements'}</span>
-                          <span className="cw-group-count">{g.length}</span>
-                          {b.stations.length > 1 && (
-                            <button type="button" className="cw-icon" aria-label={`Remove group ${gIdx + 1}`} onClick={() => removeGroup(bIdx, gIdx)}>
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /></svg>
-                            </button>
-                          )}
-                        </div>
-                        <ol className="cw-rows">
-                          {g.map((ex, eIdx) => (
-                            <li key={eIdx} className="cw-ex" style={{ ['--st' as string]: colorRef.current(ex.name) }}>
-                              <span className="cw-ex-no">{eIdx + 1}</span>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img className="cw-ex-img" src={getExerciseImage(ex.name)} alt="" />
-                              <div className="cw-ex-fields">
-                                <div className="cw-ex-line1">
-                                  <input className="cw-ex-amount" value={amountOf(ex)} placeholder="10" aria-label="Reps, distance or seconds"
-                                    onChange={(e) => patchExercise(bIdx, gIdx, eIdx, { reps: undefined, distance: undefined, seconds: undefined, ...parseAmount(e.target.value) })} />
-                                  <input className="cw-ex-name" value={ex.name} aria-label="Movement" list={`moves-${disc}`}
-                                    onChange={(e) => patchExercise(bIdx, gIdx, eIdx, { name: e.target.value })} />
-                                </div>
-                                <div className="cw-ex-line2">
-                                  <input className="cw-ex-load" value={ex.weight || ''} placeholder="+ load" aria-label="Load"
-                                    onChange={(e) => patchExercise(bIdx, gIdx, eIdx, { weight: e.target.value || undefined })} />
-                                  <CrossTag name={ex.name} discipline={disc} />
-                                </div>
-                              </div>
-                              <div className="cw-ex-tools">
-                                <button type="button" className="cw-icon" aria-label="Move up" disabled={eIdx === 0} onClick={() => moveExercise(bIdx, gIdx, eIdx, -1)}>
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 15l6-6 6 6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                </button>
-                                <button type="button" className="cw-icon" aria-label={`Remove ${ex.name}`} onClick={() => patchExercise(bIdx, gIdx, eIdx, null)}>
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /></svg>
-                                </button>
-                              </div>
-                            </li>
-                          ))}
-                        </ol>
-                        <button type="button" className="cw-add" onClick={() => addExercise(bIdx, gIdx)}>+ Movement</button>
-                      </div>
-                    ))}
-                    {b.stations.length < 6 && (
-                      <button type="button" className="cw-addgroup" onClick={() => addGroup(bIdx)}>
-                        <span>+</span>Add group
-                      </button>
-                    )}
-                  </div>
-                </section>
-              ))}
-              <button type="button" className="cw-addpart" onClick={addPart}>+ Add part</button>
-
-              <label className="cw-label" htmlFor="cw-scaling">Scaling <span>shown on screen</span></label>
-              <textarea id="cw-scaling" className="cw-textarea cw-textarea-sm" rows={2}
-                value={(draft.scaling || []).join('\n')}
-                onChange={(e) => setDraft({ ...draft, scaling: e.target.value.split('\n') })}
-                placeholder="One option per line, e.g. Wall Balls 6/4 kg" />
-            </div>
-
-            {/* Seitenleiste: Überblick + Aktionen */}
-            <aside className="cw-side">
-              <div className="cw-side-card">
-                <div className="cw-side-disc"><span className="cw-disc">{D.label}</span>{converted?.config.formatLabel}</div>
-                <div className="cw-side-time">{est === null ? 'Open' : fmtDuration(est)}<small>{est === null ? 'no time cap' : 'total'}</small></div>
-                <dl className="cw-facts">
-                  <div><dt>Groups</dt><dd>{converted?.config.numGroups ?? '–'}</dd></div>
-                  <div><dt>Rounds</dt><dd>{converted ? (converted.workout_mode === 'timed' ? converted.config.numRounds : (converted.config.forTimeTargetRounds || converted.config.forTimeBlocks?.length || 1)) : '–'}</dd></div>
-                  <div><dt>Moves</dt><dd>{draft.blocks.reduce((n, b) => n + (b.stations[0]?.length || 0), 0)}</dd></div>
-                </dl>
-                <Stepper label="Warm-up" unit="s" min={0} max={600} step={5}
-                  value={draft.warmupSeconds ?? converted?.config.warmupTime}
-                  onChange={(v) => setDraft({ ...draft, warmupSeconds: v ?? 0 })} />
-                <label className="cw-coach">
-                  <span>Coach on screen</span>
-                  <input value={coach} onChange={(e) => changeCoach(e.target.value)} placeholder="Your name" maxLength={40} />
-                </label>
-                {converted && converted.adjustments.length > 0 && (
-                  <ul className="cw-adjust">{converted.adjustments.map((a) => <li key={a}>{a}</li>)}</ul>
-                )}
-                <div className="cw-actions">
-                  <button type="button" className="cw-ghost" onClick={preview} disabled={!converted}>Preview</button>
-                  <button type="button" className="cw-primary" onClick={() => save()} disabled={!converted || saving}>{saving ? 'Saving' : editId ? 'Save changes' : 'Save workout'}</button>
-                </div>
-                <button type="button" className="cw-full" onClick={() => save(true)} disabled={!converted || saving}>
-                  All settings: copy rounds, fill randomly, per-round times, icons →
-                </button>
-                {error && <p className="cw-error" role="alert">{error}</p>}
-                {USE_LOCAL_STORE && <p className="cw-fine">Preview build: workouts are saved in this browser only.</p>}
-              </div>
-            </aside>
-          </div>
-          <datalist id={`moves-${disc}`}>
-            {[...MORE_MOVES[disc], ...HYROX_EXERCISES.map((e) => e.name), ...TRAINING_EXERCISES.map((e) => e.name)]
-              .filter((v, i, a) => a.indexOf(v) === i).map((m) => <option key={m} value={m} />)}
-          </datalist>
-        </main>
+      {step === 'edit' && draft && converted && (
+        <WorkoutEditor
+          key={genId}
+          initial={{ name: converted.name, mode: converted.workout_mode, isPublic: true, config: { ...converted.config, discipline: disc }, coach }}
+          saving={saving}
+          savedNote={[...(converted.adjustments || []), USE_LOCAL_STORE ? 'Preview build: workouts are saved in this browser only.' : ''].filter(Boolean).join(' ')}
+          onSave={saveEditor}
+          onPreview={previewEditor}
+        />
       )}
     </div>
   );
