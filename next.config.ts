@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Kein rundes „N" (Next.js-Entwicklerzeichen) unten links auf TV und Handy.
+  devIndicators: false,
 };
 
 export default nextConfig;
