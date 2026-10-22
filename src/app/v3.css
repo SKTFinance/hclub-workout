@@ -228,6 +228,49 @@
 .as-seg.is-done { background: color-mix(in srgb, var(--sc, #4FC3F7) 45%, transparent); }
 .as-seg.is-now { background: var(--sc, #4FC3F7); }
 
+/* ---------- Viele Gruppen ohne Scrollen (Samuel 22.10. 11:38: „scrollen geht auf keinen Fall")
+   1–2 Gruppen groß nebeneinander, 3–4 eine Reihe, 5–8 zwei Reihen. Kopfzeile platzsparend:
+   Round/Station klein, nur die Uhr bleibt groß. Gilt für den TV (> 700 px). ---------- */
+@media (min-width: 701px) {
+  .iv-count-no { font-size: clamp(34px, 6.5vh, 76px); }
+  .iv-count-of { font-size: clamp(16px, 2.8vh, 32px); }
+  .iv-count-label { font-size: clamp(10px, 1.4vh, 15px); }
+  .iv-hero { padding-top: clamp(2px, 0.8vh, 12px); padding-bottom: clamp(6px, 1.2vh, 14px); }
+  .iv-time { font-size: clamp(88px, 20vh, 250px); }
+
+  .iv-groups, .as-groups { overflow: hidden !important; }
+  .iv-root[data-groups="5"] .iv-groups, .iv-root[data-groups="6"] .iv-groups,
+  .iv-root[data-groups="7"] .iv-groups, .iv-root[data-groups="8"] .iv-groups,
+  .as-root[data-groups="5"] .as-groups, .as-root[data-groups="6"] .as-groups,
+  .as-root[data-groups="7"] .as-groups, .as-root[data-groups="8"] .as-groups {
+    grid-auto-flow: row; grid-auto-columns: auto;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: clamp(8px, 1vw, 14px);
+  }
+  .iv-root[data-groups="5"] .iv-groups, .iv-root[data-groups="6"] .iv-groups,
+  .as-root[data-groups="5"] .as-groups, .as-root[data-groups="6"] .as-groups { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .iv-root[data-groups="7"] .iv-groups, .iv-root[data-groups="8"] .iv-groups,
+  .as-root[data-groups="7"] .as-groups, .as-root[data-groups="8"] .as-groups { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .as-root[data-groups="3"] .as-groups, .as-root[data-groups="4"] .as-groups { grid-auto-columns: minmax(0, 1fr); }
+  .iv-root[data-groups="5"] .iv-time, .iv-root[data-groups="6"] .iv-time,
+  .iv-root[data-groups="7"] .iv-time, .iv-root[data-groups="8"] .iv-time { font-size: clamp(80px, 16vh, 210px); }
+
+  /* Kleine Karten: Bild oben, Text darunter, Next-Zeile nur wenn Platz. */
+  .iv-root[data-groups="5"] .iv-card, .iv-root[data-groups="6"] .iv-card,
+  .iv-root[data-groups="7"] .iv-card, .iv-root[data-groups="8"] .iv-card { padding: clamp(8px, 2.2cqh, 14px); gap: clamp(4px, 1.6cqh, 10px); border-radius: 16px; }
+  .iv-root[data-groups="5"] .iv-card-main, .iv-root[data-groups="6"] .iv-card-main,
+  .iv-root[data-groups="7"] .iv-card-main, .iv-root[data-groups="8"] .iv-card-main { gap: clamp(4px, 1.6cqh, 10px); }
+}
+/* Next-Zeile weg, wenn die Karte sehr niedrig ist */
+@container (max-height: 300px) {
+  .iv-next { display: none; }
+  .iv-station-of { display: none; }
+}
+@container (max-height: 300px) and (min-aspect-ratio: 1.45) {
+  .iv-metric { font-size: min(26cqh, 12cqi); }
+  .iv-name { font-size: min(20cqh, 9cqi); }
+}
+
 /* ---------- Handy-Fernbedienung (V3): Hybryd-Blau, Leuchten, Daumen-Knöpfe ---------- */
 .rc-root {
   --rc-accent: #22BFCC; gap: 18px;

@@ -6,6 +6,8 @@ import { useRouter, useParams } from 'next/navigation';
 import type { Workout, WorkoutConfig, WorkoutMode, ExerciseEntry, LibraryExercise, ForTimeBlock } from '@/lib/types';
 import { HYROX_EXERCISES, TRAINING_EXERCISES } from '@/lib/exercises';
 import { ICON_PICKER_OPTIONS, exerciseIconMap, getExerciseIcon } from '@/lib/exerciseIcons';
+import { USE_LOCAL_STORE, getLocalWorkout, isLocalId, saveLocalWorkout } from '@/lib/localWorkouts';
+import { DISCIPLINES, workoutDiscipline, type Discipline } from '@/lib/discipline';
 
 const ALL_EXERCISES = [...HYROX_EXERCISES, ...TRAINING_EXERCISES];
 
@@ -57,11 +59,15 @@ export default function WorkoutEditorPage() {
   const [forTimeRoundTimerMinutes, setForTimeRoundTimerMinutes] = useState(12);
 
   const loadWorkout = useCallback(async () => {
-    const { data } = await supabase
-      .from('hybryd_workouts')
-      .select('*')
-      .eq('id', id)
-      .single();
+    // V3: Vorschau-eigene Speicherung. local-… kommt aus dem Browser, Live-Workouts werden
+    // nur gelesen; Speichern legt auf der Vorschau eine Kopie im Browser an.
+    const { data } = isLocalId(id)
+      ? { data: getLocalWorkout(id) }
+      : await supabase
+        .from('hybryd_workouts')
+        .select('*')
+        .eq('id', id)
+        .single();
 
     if (data) {
       const w = data as Workout;
@@ -111,6 +117,7 @@ export default function WorkoutEditorPage() {
   async function saveToLibrary(exerciseName: string) {
     if (ALL_EXERCISES.find(e => e.name === exerciseName)) return; // skip built-in
     if (libraryExercises.find(e => e.name === exerciseName)) return; // already saved
+    if (USE_LOCAL_STORE) return; // Vorschau: keine Schreibzugriffe auf Live-Tabellen
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -669,6 +676,18 @@ export default function WorkoutEditorPage() {
       forTimeRoundTimerEnabled,
       forTimeRoundTimerMinutes,
     };
+    if (USE_LOCAL_STORE) {
+      const rec = saveLocalWorkout({
+        id: isLocalId(id) ? id : undefined,
+        user_id: 'local', name,
+        trainer_name: workout?.trainer_name ?? (localStorage.getItem('hclub_trainer_name') || ''),
+        config: configToSave, is_public: isPublic, workout_mode: workoutMode,
+        draft: undefined, // Entwurf des Schnell-Editors ist nach Änderungen hier veraltet
+      });
+      setSaving(false);
+      if (rec.id !== id) router.replace(`/workout/${rec.id}`);
+      return rec.id;
+    }
     await supabase
       .from('hybryd_workouts')
       .update({
@@ -681,13 +700,18 @@ export default function WorkoutEditorPage() {
       })
       .eq('id', id);
     setSaving(false);
+    return id;
   }
 
   function startWorkout() {
-    saveWorkout().then(() => {
-      window.open(`/workout/${id}/live`, '_blank');
+    saveWorkout().then((wid) => {
+      window.open(`/workout/${wid || id}/live`, '_blank');
     });
   }
+
+  // V3: Art (Hyrox/CrossFit) – steht im config, ältere Workouts werden geschätzt.
+  const discipline: Discipline = workoutDiscipline(config);
+  function setDiscipline(d: Discipline) { setConfig((prev) => ({ ...prev, discipline: d })); }
 
   // Ensure rounds structure
   useEffect(() => {
@@ -752,7 +776,7 @@ export default function WorkoutEditorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-hclub-black overflow-x-hidden">
+    <div className="min-h-screen bg-hclub-black overflow-x-hidden ed-v3">
       {/* Header */}
       <header className="border-b border-hclub-gray sticky top-0 bg-hclub-black z-50">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -819,6 +843,20 @@ export default function WorkoutEditorPage() {
               <option value="timed">Timed (timer)</option>
               <option value="fortime">AMRAP</option>
             </select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1 font-oswald uppercase tracking-wider">
+              Type
+            </label>
+            <div className="ed-disc" role="radiogroup" aria-label="Type">
+              {(['hyrox', 'crossfit'] as Discipline[]).map((d) => (
+                <button key={d} type="button" role="radio" aria-checked={discipline === d}
+                  className={discipline === d ? 'is-on' : ''} style={{ ['--k' as string]: DISCIPLINES[d].accent }}
+                  onClick={() => setDiscipline(d)}>
+                  <i aria-hidden="true" />{DISCIPLINES[d].label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex items-end">
             <label className="flex items-center gap-3 cursor-pointer">

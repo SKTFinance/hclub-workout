@@ -41,6 +41,8 @@ export interface AiDraft {
   name: string;
   /** Hyrox oder CrossFit (V3). Bestimmt Übungsauswahl der KI und Darstellung. */
   discipline?: 'hyrox' | 'crossfit';
+  /** Warm-up vor dem Start in Sekunden (Original-Einstellung „Warm-up (s)"). */
+  warmupSeconds?: number;
   summary?: string;
   blocks: AiBlock[];
   restBetweenBlocksSeconds?: number;
@@ -287,7 +289,7 @@ export function workoutToDraft(w: { name: string; workout_mode?: WorkoutMode; co
           return x;
         })).filter((g) => g.length),
     })).filter((b) => b.stations.length);
-    return { name: w.name, discipline, blocks, restBetweenBlocksSeconds: c.roundRestTime || undefined };
+    return { name: w.name, discipline, warmupSeconds: c.warmupTime, blocks, restBetweenBlocksSeconds: c.roundRestTime || undefined };
   }
   const isEmom = /^emom/i.test(c.formatLabel || '') || (c.numRounds === 1 && c.workTime === 60 && c.restTime === 0);
   const r0 = c.rounds?.[0] || {};
@@ -307,6 +309,7 @@ export function workoutToDraft(w: { name: string; workout_mode?: WorkoutMode; co
     name: w.name, discipline,
     blocks: [{ format: 'INTERVALS', workSeconds: c.workTime || 40, restSeconds: c.restTime ?? 20, rounds: c.numRounds || 1, stations }],
     restBetweenBlocksSeconds: c.roundRestTime || undefined,
+    warmupSeconds: c.warmupTime,
   };
 }
 
@@ -371,6 +374,7 @@ export function aiDraftToWorkout(draft: AiDraft): ConvertedWorkout {
     };
     if (!isAmrap && first.rounds && first.rounds > 1) config.forTimeTargetRounds = first.rounds;
     if (draft.discipline) config.discipline = draft.discipline;
+    if (draft.warmupSeconds !== undefined) config.warmupTime = draft.warmupSeconds;
     return { name: draft.name, workout_mode: 'fortime', config, adjustments };
   }
 
@@ -429,8 +433,10 @@ export function aiDraftToWorkout(draft: AiDraft): ConvertedWorkout {
     restTime,
     roundRestTime,
     rounds,
-    formatLabel: b.format === 'EMOM' ? `EMOM ${b.minutes || ''}`.trim() : `${workTime}/${restTime} × ${b.rounds || 4}`,
+    // Original-Modus „Timed" trägt kein eigenes Label (wie alte Workouts); EMOM ist der Zusatz.
+    formatLabel: b.format === 'EMOM' ? `EMOM ${b.minutes || ''}`.trim() : undefined,
   };
   if (draft.discipline) config.discipline = draft.discipline;
+  if (draft.warmupSeconds !== undefined) config.warmupTime = draft.warmupSeconds;
   return { name: draft.name, workout_mode: 'timed', config, adjustments };
 }

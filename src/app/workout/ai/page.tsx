@@ -47,10 +47,12 @@ const MORE_MOVES: Record<Discipline, string[]> = {
 };
 
 const FORMATS: { value: AiFormat; label: string; hint: string }[] = [
-  { value: 'INTERVALS', label: 'Intervals', hint: 'Work / rest timer' },
-  { value: 'EMOM', label: 'EMOM', hint: 'New move every minute' },
-  { value: 'AMRAP', label: 'AMRAP', hint: 'Rounds in a time window' },
-  { value: 'FOR_TIME', label: 'For Time', hint: 'Finish fast, optional cap' },
+  // Original-Modi zuerst und mit Original-Namen (Timed, AMRAP). EMOM und For Time sind
+  // zusätzliche Vorlagen, die intern als Timed bzw. AMRAP laufen.
+  { value: 'INTERVALS', label: 'Timed', hint: 'Original Timed mode: work / rest per station, rounds, round rest' },
+  { value: 'AMRAP', label: 'AMRAP', hint: 'Original AMRAP mode with round timer' },
+  { value: 'EMOM', label: 'EMOM', hint: 'Extra: Timed with 60 s per move' },
+  { value: 'FOR_TIME', label: 'For Time', hint: 'Extra: AMRAP without timer, optional cap' },
 ];
 
 function amountOf(e: AiExercise): string {
@@ -323,7 +325,7 @@ function CreateWorkout() {
     const w = {
       id: 'preview', user_id: 'preview', name: converted.name,
       trainer_name: coach.trim(),
-      config: { ...converted.config, warmupTime: 0 },
+      config: converted.config,
       workout_mode: converted.workout_mode, is_public: false,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     };
@@ -331,7 +333,7 @@ function CreateWorkout() {
     window.open('/workout/preview/live', '_blank');
   }
 
-  async function save() {
+  async function save(openFull = false) {
     if (!converted || !draft || saving) return;
     setSaving(true);
     setError('');
@@ -343,7 +345,7 @@ function CreateWorkout() {
         draft: { ...draft, discipline: disc },
       });
       setSaving(false);
-      router.push(`/dashboard?saved=${rec.id}`);
+      router.push(openFull ? `/workout/${rec.id}` : `/dashboard?saved=${rec.id}`);
       return;
     }
     const { data: { user } } = await supabase.auth.getUser();
@@ -355,7 +357,7 @@ function CreateWorkout() {
     }).select().single();
     setSaving(false);
     if (err || !data) { setError('Could not save. Try again.'); return; }
-    router.push(`/dashboard?saved=${data.id}`);
+    router.push(openFull ? `/workout/${data.id}` : `/dashboard?saved=${data.id}`);
   }
 
   const D = DISCIPLINES[disc];
@@ -578,6 +580,9 @@ function CreateWorkout() {
                   <div><dt>Rounds</dt><dd>{converted ? (converted.workout_mode === 'timed' ? converted.config.numRounds : (converted.config.forTimeTargetRounds || converted.config.forTimeBlocks?.length || 1)) : '–'}</dd></div>
                   <div><dt>Moves</dt><dd>{draft.blocks.reduce((n, b) => n + (b.stations[0]?.length || 0), 0)}</dd></div>
                 </dl>
+                <Stepper label="Warm-up" unit="s" min={0} max={600} step={5}
+                  value={draft.warmupSeconds ?? converted?.config.warmupTime}
+                  onChange={(v) => setDraft({ ...draft, warmupSeconds: v ?? 0 })} />
                 <label className="cw-coach">
                   <span>Coach on screen</span>
                   <input value={coach} onChange={(e) => changeCoach(e.target.value)} placeholder="Your name" maxLength={40} />
@@ -587,8 +592,11 @@ function CreateWorkout() {
                 )}
                 <div className="cw-actions">
                   <button type="button" className="cw-ghost" onClick={preview} disabled={!converted}>Preview</button>
-                  <button type="button" className="cw-primary" onClick={save} disabled={!converted || saving}>{saving ? 'Saving' : editId ? 'Save changes' : 'Save workout'}</button>
+                  <button type="button" className="cw-primary" onClick={() => save()} disabled={!converted || saving}>{saving ? 'Saving' : editId ? 'Save changes' : 'Save workout'}</button>
                 </div>
+                <button type="button" className="cw-full" onClick={() => save(true)} disabled={!converted || saving}>
+                  All settings: copy rounds, fill randomly, per-round times, icons →
+                </button>
                 {error && <p className="cw-error" role="alert">{error}</p>}
                 {USE_LOCAL_STORE && <p className="cw-fine">Preview build: workouts are saved in this browser only.</p>}
               </div>

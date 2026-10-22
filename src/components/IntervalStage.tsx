@@ -79,7 +79,7 @@ export default function IntervalStage(p: IntervalStageProps) {
     ? { label: isWork ? 'Minute' : 'Next minute', no: pad(number), of: pad(maxItems) }
     : multiRound
       ? { label: p.phase === 'roundRest' ? 'Next round' : 'Round', no: pad(p.round + 1), of: pad(p.totalRounds) }
-      : { label: isWork ? 'Interval' : 'Next interval', no: pad(number), of: pad(maxItems) };
+      : { label: isWork ? 'Station' : 'Next station', no: pad(number), of: pad(maxItems) };
   const second = p.kind === 'intervals' && multiRound
     ? { label: isWork ? 'Station' : 'Next station', no: pad(number), of: pad(maxItems) }
     : null;

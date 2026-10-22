@@ -56,9 +56,10 @@ function durationMin(w: Workout): number | null {
 
 function formatOf(w: Workout): string {
   const c = w.config;
+  // Modusnamen wie im Original: „Timed" und „AMRAP"; EMOM/For Time nur als Zusatz.
   if (c.formatLabel) return c.formatLabel;
-  if (w.workout_mode === 'fortime') return c.forTimeRoundTimerEnabled ? `AMRAP ${c.forTimeRoundTimerMinutes || 12}` : 'For Time';
-  return `${c.workTime}/${c.restTime} × ${c.numRounds}`;
+  if (w.workout_mode === 'fortime') return c.forTimeRoundTimerEnabled ? `AMRAP · ${c.forTimeRoundTimerMinutes || 12} min` : 'AMRAP';
+  return `Timed · ${c.workTime}/${c.restTime} × ${c.numRounds}`;
 }
 
 function Dashboard() {
@@ -154,10 +155,10 @@ function Dashboard() {
   }
 
   function edit(w: Workout) {
-    // Vorschau: alles im neuen Editor (Live-Workouts als Kopie). Produktion: eigene
-    // Live-Workouts weiter im bisherigen Editor.
-    if (isLocalId(w.id) || USE_LOCAL_STORE) router.push(`/workout/ai?edit=${w.id}`);
-    else router.push(`/workout/${w.id}`);
+    // Samuel 22.10. 11:38: die Coaches dürfen keine Umstellung merken → „Edit" öffnet den
+    // Original-Editor mit allen Funktionen. Auf der Vorschau speichert er im Browser
+    // (Live-Workouts als Kopie).
+    router.push(`/workout/${w.id}`);
   }
 
   async function logout() {

@@ -749,7 +749,7 @@ export default function LiveWorkoutPage() {
         <div className="v3-idle-brand logo-glow">HYB<span>RYD</span></div>
         <div className="v3-idle-tags">
           <span className="iv-disc">{DISCIPLINES[discipline].label}</span>
-          <span className="v3-idle-format">{config.formatLabel || (workoutMode === 'fortime' ? 'AMRAP' : 'Intervals')}</span>
+          <span className="v3-idle-format">{config.formatLabel || (workoutMode === 'fortime' ? 'AMRAP' : 'Timed')}</span>
         </div>
         <h2 className="v3-idle-name">{workout.name}</h2>
         <p className="v3-idle-coach">{workout.trainer_name}</p>
@@ -1047,7 +1047,7 @@ export default function LiveWorkoutPage() {
   return (
     <IntervalStage
       title={workout.name}
-      formatLabel={config.formatLabel || (ivKind === 'emom' ? 'EMOM' : 'Intervals')}
+      formatLabel={config.formatLabel || (ivKind === 'emom' ? 'EMOM' : 'Timed')}
       phase={ivPhase}
       kind={ivKind}
       timeRemaining={timeRemaining}
