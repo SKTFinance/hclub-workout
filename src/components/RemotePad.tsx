@@ -31,7 +31,7 @@ export default function RemotePad({ st, live, send, stopLabel }: {
       <section className="rc-state" aria-live="polite">
         <div className="rc-name">{st?.name || 'Waiting for the screen'}</div>
         <div className="rc-phase">{PHASE[phase] || phase}{st && st.rounds > 1 && st.mode === 'timed' && running ? ` · Round ${st.round}/${st.rounds}` : ''}</div>
-        <div className="rc-time">{st && (running || phase === 'finished') ? fmt(st.time) : '–:––'}</div>
+        <div className="rc-time">{st && ((running && phase !== 'countdown') || phase === 'finished') ? fmt(st.time) : '–:––'}</div>
       </section>
       <section className="rc-pad">
         <button type="button" disabled={!live || phase === 'finished' || phase === 'countdown'} className={`rc-main ${tap === 'toggle' ? 'is-tap' : ''}`} onClick={() => go({ t: 'toggle' }, 'toggle')}>

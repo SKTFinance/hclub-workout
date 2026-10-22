@@ -10,7 +10,7 @@ export default function RemoteBadge({ code }: { code: string | null }) {
   useEffect(() => { if (code) setUrl(phoneUrl(`/r/${code}`)); }, [code]);
   if (!code || !url) return null;
   return (
-    <div className="rb-badge">
+    <div className="rb-badge" data-url={url}>
       <Qr value={url} size={112} label="Phone remote QR code" />
       <div className="rb-text"><b>Phone remote</b><span>Scan to run this workout from your phone</span></div>
     </div>

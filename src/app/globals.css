@@ -1480,13 +1480,13 @@ input, select, textarea {
 
 /* ---------- Freies Training: TV /tv ---------- */
 .tv-root { position: fixed; inset: 0; overflow: hidden; background: #040E12; color: #E6F6F8; }
-.tv-saver .tv-reel { position: absolute; left: 0; right: 0; height: 34vh; overflow: hidden; opacity: 0.55; }
+.tv-saver .tv-reel { position: absolute; left: 0; right: 0; height: 34vh; overflow: hidden; opacity: 0.9; }
 .tv-reel-a { top: 4vh; } .tv-reel-b { bottom: 4vh; }
 .tv-reel > div { display: flex; gap: 2vh; width: max-content; will-change: transform; animation: tv-slide 140s linear infinite; }
 .tv-reel-b > div { animation-direction: reverse; animation-duration: 170s; }
-.tv-reel img { height: 34vh; width: auto; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 18px; filter: saturate(0.9) brightness(0.8); }
+.tv-reel img { height: 34vh; width: auto; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 18px; filter: saturate(1) brightness(0.95); }
 @keyframes tv-slide { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } }
-.tv-veil { position: absolute; inset: 0; background: radial-gradient(90% 70% at 30% 50%, rgba(4, 14, 18, 0.94) 0%, rgba(4, 14, 18, 0.82) 55%, rgba(4, 14, 18, 0.55) 100%); }
+.tv-veil { position: absolute; inset: 0; background: radial-gradient(90% 70% at 30% 50%, rgba(4, 14, 18, 0.9) 0%, rgba(4, 14, 18, 0.7) 50%, rgba(4, 14, 18, 0.3) 100%); }
 .tv-saver-main { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; gap: 5vw; padding: 7vh 6vw; }
 .tv-saver-copy { max-width: 58vw; display: flex; flex-direction: column; gap: 3.2vh; animation: as-in 1s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .tv-brand { font-family: var(--font-oswald); font-size: clamp(28px, 3.6vw, 56px); letter-spacing: 0.08em; }
@@ -1512,6 +1512,6 @@ input, select, textarea {
 .tv-join div, .tv-pill div { display: flex; flex-direction: column; gap: 4px; }
 .tv-join b, .tv-pill b { font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.14em; font-size: clamp(18px, 2vw, 30px); font-weight: 500; }
 .tv-join span, .tv-pill span { color: #9FB8BD; font-size: clamp(13px, 1.3vw, 20px); }
-.tv-pill { position: absolute; right: 18px; bottom: 18px; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 8px 18px 8px 8px; border-radius: 18px; background: rgba(8, 22, 26, 0.9); border: 1px solid rgba(34, 191, 204, 0.3); }
+.tv-pill { position: absolute; left: 50%; transform: translateX(-50%); bottom: 12px; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 8px 18px 8px 8px; border-radius: 18px; background: rgba(8, 22, 26, 0.9); border: 1px solid rgba(34, 191, 204, 0.3); }
 @media (max-width: 900px) { .tv-saver-main { flex-direction: column; justify-content: center; padding: 5vh 6vw; } .tv-saver-copy { max-width: none; } .tv-qrcard svg { width: 46vw; height: 46vw; } }
 @media (prefers-reduced-motion: reduce) { .tv-reel > div, .tv-eyebrow i { animation: none; } }
