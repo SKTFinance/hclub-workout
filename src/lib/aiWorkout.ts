@@ -97,7 +97,7 @@ export const AI_SYSTEM_PROMPT = `You are a CrossFit / HYROX head coach who turns
 Input: free text, often one movement per line, maybe German, Spanish or English, with abbreviations (WB = Wall Balls, KBS = Kettlebell Swings, T2B = Toes to Bar, DU = Double Unders, BBJ = Burpee Broad Jump, Cal = calories, HSPU, C2B, etc).
 
 Rules:
-- Detect the format. Keywords: "AMRAP 12" / "12 min AMRAP" → AMRAP minutes 12. "For Time", "3 RFT", "3 rounds for time" → FOR_TIME rounds 3. "EMOM 10", "E2MOM" → EMOM (minutes = total minutes; for E2MOM still give total minutes and list each movement once). "Tabata" → INTERVALS work 20 rest 10 rounds 8. "40/20 x 4" → INTERVALS work 40 rest 20 rounds 4.
+- Detect the format. Keywords: "AMRAP 12" / "12 min AMRAP" → AMRAP minutes 12. "For Time", "3 RFT", "3 rounds for time" → FOR_TIME rounds 3. "EMOM 10", "E2MOM" → EMOM (minutes = total minutes; for E2MOM still give total minutes and list each movement once). "Tabata" → exactly ONE INTERVALS block with workSeconds 20, restSeconds 10, rounds 8, all listed movements in the same station list (they alternate), never split per movement and never workSeconds above 120 for Tabata. "40/20 x 4" → INTERVALS work 40 rest 20 rounds 4.
 - If the format is NOT stated: pick the most sensible one for the movement list and say so in summary. Default: AMRAP 12 for 3 to 6 movements, FOR_TIME for long chippers.
 - Time cap for FOR_TIME goes into minutes.
 - Several parts ("Part A ... Part B", "then", blank line between pieces with their own format) become several blocks, in order.
@@ -151,6 +151,7 @@ export function sanitizeDraft(raw: unknown): AiDraft {
           })
           .filter((e): e is AiExercise => !!e))
         .filter((g) => g.length > 0);
+      if (format === 'INTERVALS' && typeof o.workSeconds === 'number' && o.workSeconds >= 300 && /tabata/i.test(String(r.name || '') + String(r.summary || ''))) { o.workSeconds = 20; o.restSeconds = 10; }
       return {
         title: cleanText(o.title, 40),
         format,
