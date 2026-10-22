@@ -15,6 +15,8 @@ import {
 import { getExerciseImage } from '@/lib/exerciseImages';
 import AmrapStage from '@/components/AmrapStage';
 import IntervalStage from '@/components/IntervalStage';
+import RemoteBadge from '@/components/RemoteBadge';
+import { newCode, validCode, useRemoteHost, type RemoteCmd, type RemoteStatus } from '@/lib/remote';
 
 type Phase = 'idle' | 'summary' | 'warmup' | 'countdown' | 'work' | 'rest' | 'roundRest' | 'finished';
 
@@ -63,6 +65,49 @@ export default function LiveWorkoutPage() {
   const forTimeRoundTimerEnabled = workout?.config?.forTimeRoundTimerEnabled || false;
   const forTimeRoundTimerSeconds = (workout?.config?.forTimeRoundTimerMinutes || 12) * 60;
 
+  // ---- Fernbedienung (Handy) und Einbettung (Freies Training, Splitscreen) ----
+  const [rcCode, setRcCode] = useState<string | null>(null);
+  const [embedSlot, setEmbedSlot] = useState<number | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const slot = q.get('embed');
+    if (slot !== null) { setEmbedSlot(Number(slot) || 0); return; }
+    const c = (q.get('rc') || '').toUpperCase();
+    setRcCode(validCode(c) ? c : newCode());
+  }, []);
+  const runCmd = useCallback((c: RemoteCmd) => {
+    const key = (code: string, key?: string) => window.dispatchEvent(new KeyboardEvent('keydown', { code, key: key ?? code }));
+    if (c.t === 'toggle') key('Space', ' ');
+    else if (c.t === 'skip') key('KeyN', 'n');
+    else if (c.t === 'done') key(`Digit${c.g + 1}`, String(c.g + 1));
+    else if (c.t === 'stop') key('Escape', 'Escape');
+    else if (c.t === 'adjust') setTimeRemaining((t) => Math.max(0, t + c.s));
+  }, []);
+  useEffect(() => {
+    if (embedSlot === null) return;
+    const on = (e: MessageEvent) => { if (e.origin === window.location.origin && e.data?.hy === 'cmd') runCmd(e.data.cmd as RemoteCmd); };
+    window.addEventListener('message', on);
+    return () => window.removeEventListener('message', on);
+  }, [embedSlot, runCmd]);
+  const remoteTime = phase === 'work' && workoutMode === 'fortime'
+    ? (forTimeRoundTimerEnabled ? forTimeRoundTimeRemaining : forTimeElapsed)
+    : timeRemaining;
+  const remoteStatus: RemoteStatus | null = workout ? {
+    name: workout.name, mode: workoutMode, phase, time: remoteTime, round: currentRound + 1,
+    rounds: workout.config.numRounds, groups: workout.config.numGroups, paused: isPaused, label: workout.trainer_name,
+  } : null;
+  useRemoteHost(embedSlot === null ? rcCode : null, remoteStatus, runCmd);
+  useEffect(() => {
+    if (embedSlot === null || !remoteStatus) return;
+    window.parent?.postMessage({ hy: 'status', slot: embedSlot, phase, time: remoteTime, paused: isPaused }, window.location.origin);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedSlot, phase, remoteTime, isPaused]);
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (embedSlot !== null && workout && phase === 'idle' && !autoStarted.current) { autoStarted.current = true; startWorkout(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedSlot, workout, phase]);
+
   // Block helpers
   function getForTimeBlocks(c: WorkoutConfig): ForTimeBlock[] {
     if (c.forTimeBlocks && c.forTimeBlocks.length > 0) return c.forTimeBlocks;
@@ -73,9 +118,9 @@ export default function LiveWorkoutPage() {
   const loadData = useCallback(async () => {
     // Vorschau aus dem KI-Baukasten: Workout liegt nur im Browser (localStorage),
     // nichts wird gespeichert oder aus der Datenbank gelesen.
-    if (id === 'preview') {
+    if (id === 'preview' || id.startsWith('free-')) {
       try {
-        const raw = localStorage.getItem('hybryd_preview_workout');
+        const raw = id === 'preview' ? localStorage.getItem('hybryd_preview_workout') : sessionStorage.getItem(`hybryd_${id}`);
         if (raw) setWorkout(JSON.parse(raw) as Workout);
       } catch { /* leer lassen → „Loading" */ }
       return;
@@ -673,6 +718,7 @@ export default function LiveWorkoutPage() {
   if (phase === 'idle') {
     return (
       <div className="workout-fullscreen flex flex-col items-center justify-center overflow-y-auto px-4 pb-[15vh] [@media(max-height:500px)]:justify-start [@media(max-height:500px)]:pt-4 [@media(max-height:500px)]:pb-4">
+        {embedSlot === null && <RemoteBadge code={rcCode} />}
         <h1 className="font-oswald text-6xl md:text-8xl font-bold tracking-wider mb-4 logo-glow [@media(max-height:500px)]:text-4xl [@media(max-height:500px)]:mb-1">
           HYB<span className="text-hclub-magenta">RYD</span>
         </h1>
@@ -751,6 +797,7 @@ export default function LiveWorkoutPage() {
   if (phase === 'summary') {
     return (
       <div className="workout-fullscreen flex flex-col overflow-hidden">
+        {embedSlot === null && <RemoteBadge code={rcCode} />}
         {/* Fixierter Kopf — immer sichtbar */}
         <div className="shrink-0 flex flex-col items-center px-4 pt-4 pb-2">
           <h1 className="font-oswald font-bold tracking-wider fade-in-up text-center leading-none"

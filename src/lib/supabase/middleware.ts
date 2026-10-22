@@ -40,7 +40,7 @@ export async function updateSession(request: NextRequest) {
     // Protected routes
     const isProtected =
       request.nextUrl.pathname.startsWith('/dashboard') ||
-      request.nextUrl.pathname.startsWith('/workout') ||
+      (request.nextUrl.pathname.startsWith('/workout') && !request.nextUrl.pathname.startsWith('/workout/free-')) ||
       request.nextUrl.pathname.startsWith('/settings') ||
       request.nextUrl.pathname.startsWith('/admin');
 

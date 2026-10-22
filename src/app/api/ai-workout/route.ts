@@ -36,10 +36,28 @@ async function callGemini(model: string, key: string, text: string) {
   return JSON.parse(out);
 }
 
+// Anonyme Anfragen: höchstens 10 je Stunde und Adresse (pro Serverinstanz, bewusst einfach).
+const hits = new Map<string, number[]>();
+function freeAllowed(request: Request): boolean {
+  const ip = (request.headers.get('x-forwarded-for') || 'x').split(',')[0].trim();
+  const now = Date.now();
+  const list = (hits.get(ip) || []).filter((t) => now - t < 3600_000);
+  if (list.length >= 10) { hits.set(ip, list); return false; }
+  list.push(now);
+  hits.set(ip, list);
+  if (hits.size > 500) hits.clear();
+  return true;
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Please sign in again.' }, { status: 401 });
+  if (!user) {
+    // Freies Training am TV: kurze anonyme Sitzung mit TV-Code, dafür streng begrenzt.
+    const code = request.headers.get('x-free-code') || '';
+    if (!/^[A-Z2-9]{4,12}$/.test(code)) return NextResponse.json({ error: 'Please sign in again.' }, { status: 401 });
+    if (!freeAllowed(request)) return NextResponse.json({ error: 'Too many requests, try again in a few minutes.' }, { status: 429 });
+  }
 
   const key = process.env.GEMINI_API_KEY;
   if (!key) return NextResponse.json({ error: 'AI is not configured on this server.' }, { status: 503 });

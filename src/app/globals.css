@@ -1423,3 +1423,42 @@ input, select, textarea {
 .ai-coach span { font-family: var(--font-oswald); letter-spacing: 0.2em; text-transform: uppercase; font-size: 12px; color: var(--ai-accent); }
 .ai-coach input { background: rgba(0,0,0,0.3); border: 1px solid var(--ai-line); border-radius: 10px; padding: 8px 12px; color: var(--ai-text); font-size: 16px; min-width: 220px; }
 .ai-coach input:focus { outline: none; border-color: var(--ai-accent); }
+
+/* ---------- Fernbedienungs-QR (TV-Ecke) ---------- */
+.rb-badge {
+  position: absolute; top: 16px; right: 16px; z-index: 30; display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px 10px 10px; border-radius: 16px; background: rgba(8, 22, 26, 0.82);
+  border: 1px solid rgba(34, 191, 204, 0.28); animation: as-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.rb-text { display: flex; flex-direction: column; gap: 2px; max-width: 150px; }
+.rb-text b { font-family: var(--font-oswald); letter-spacing: 0.12em; text-transform: uppercase; font-size: 14px; color: #E6F6F8; font-weight: 500; }
+.rb-text span { font-size: 12px; line-height: 1.35; color: #9FB8BD; }
+@media (max-width: 700px), (max-height: 500px) { .rb-badge { display: none; } }
+
+/* ---------- Handy-Fernbedienung /r/[code] ---------- */
+.rc-root { --rc-accent: #22BFCC; --rc-bg: #06141A; min-height: 100dvh; display: flex; flex-direction: column; gap: 20px; padding: max(16px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom)); background: radial-gradient(120% 60% at 50% 0%, #0B2A31 0%, var(--rc-bg) 60%); color: #E6F6F8; transition: background 0.6s ease; }
+.rc-root.is-rest { --rc-accent: #A5B4FC; --rc-bg: #0C1230; }
+.rc-root.is-rest { background: radial-gradient(120% 60% at 50% 0%, #1B2460 0%, var(--rc-bg) 60%); }
+.rc-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rc-brand { font-family: var(--font-oswald); font-size: 22px; letter-spacing: 0.08em; }
+.rc-brand span { color: var(--rc-accent); } .rc-brand em { font-style: normal; font-size: 12px; letter-spacing: 0.25em; text-transform: uppercase; color: #8AA7AD; margin-left: 6px; }
+.rc-link { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #8AA7AD; }
+.rc-link i { width: 9px; height: 9px; border-radius: 9px; background: #F0B429; }
+.rc-link.is-live { color: #BFE9ED; } .rc-link.is-live i { background: #3DDC97; }
+.rc-state { padding: 8px 4px 0; text-align: center; }
+.rc-name { font-family: var(--font-oswald); text-transform: uppercase; font-size: 26px; letter-spacing: 0.04em; line-height: 1.1; }
+.rc-phase { margin-top: 6px; font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.24em; font-size: 14px; color: var(--rc-accent); }
+.rc-time { font-family: var(--font-oswald); font-size: clamp(84px, 30vw, 132px); line-height: 1; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.rc-pad { display: flex; flex-direction: column; gap: 12px; margin-top: auto; }
+.rc-main { min-height: 88px; border-radius: 22px; border: 0; background: var(--rc-accent); color: #04161B; font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.08em; font-size: 28px; transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s; }
+.rc-main:disabled { opacity: 0.35; }
+.rc-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+.rc-done { min-height: 84px; border-radius: 20px; border: 1px solid rgba(34, 191, 204, 0.5); background: rgba(34, 191, 204, 0.12); color: #E6F6F8; font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.08em; font-size: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s; }
+.rc-done small { font-size: 12px; letter-spacing: 0.2em; color: var(--rc-accent); }
+.rc-sec { min-height: 60px; flex: 1; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.05); color: #E6F6F8; font-family: var(--font-oswald); text-transform: uppercase; letter-spacing: 0.1em; font-size: 18px; }
+.rc-sec.is-primary { background: var(--rc-accent); color: #0C1230; border-color: transparent; }
+.rc-row { display: flex; gap: 10px; }
+.rc-stop { min-height: 48px; background: transparent; border: 0; color: #8AA7AD; font-size: 15px; text-decoration: underline; text-underline-offset: 4px; }
+.is-tap { transform: scale(0.97); }
+.rc-empty { margin: auto; color: #8AA7AD; }
+@media (prefers-reduced-motion: reduce) { .rc-main, .rc-done, .rc-root { transition: none; } .is-tap { transform: none; } }
