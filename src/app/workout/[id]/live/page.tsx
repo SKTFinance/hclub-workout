@@ -99,7 +99,7 @@ export default function LiveWorkoutPage() {
   useRemoteHost(embedSlot === null ? rcCode : null, remoteStatus, runCmd);
   useEffect(() => {
     if (embedSlot === null || !remoteStatus) return;
-    window.parent?.postMessage({ hy: 'status', slot: embedSlot, phase, time: remoteTime, paused: isPaused }, window.location.origin);
+    window.parent?.postMessage({ hy: 'status', slot: embedSlot, status: remoteStatus }, window.location.origin);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [embedSlot, phase, remoteTime, isPaused]);
   const autoStarted = useRef(false);

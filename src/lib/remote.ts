@@ -100,3 +100,13 @@ export function phoneUrl(path: string): string {
   } catch { /* egal */ }
   return `${window.location.origin}${path}${vs ? `${path.includes('?') ? '&' : '?'}_vercel_share=${encodeURIComponent(vs)}` : ''}`;
 }
+
+// ---------- Freies Training: ein Kanal je TV-Code ----------
+export interface TvHandlers { onEvent: (event: string, payload: unknown) => void }
+export function openTv(code: string, onEvent: TvHandlers['onEvent']) {
+  const h = open(`hy-tv-${code}`, onEvent, ['hello', 'tvstate', 'start', 'assigned', 'status', 'cmd', 'ended']);
+  return {
+    send: (event: string, payload: unknown) => h.ch.send({ type: 'broadcast', event, payload }),
+    close: h.close,
+  };
+}
