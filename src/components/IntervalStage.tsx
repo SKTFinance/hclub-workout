@@ -180,7 +180,6 @@ export default function IntervalStage(p: IntervalStageProps) {
               <div className="iv-card-main">
                 <div className="iv-img" key={`${at}-${p.phase}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="iv-img-bg" src={getExerciseImage(items[at])} alt="" aria-hidden="true" draggable={false} />
                   <img className="iv-img-fg" src={getExerciseImage(items[at])} alt="" draggable={false} />
                   <span className="iv-img-sheen" aria-hidden="true" />
                 </div>

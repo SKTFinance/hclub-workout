@@ -103,10 +103,11 @@
 
 /* Bilder: nie abschneiden. Das 4:3-Bild steht ganz (contain) vor einer unscharfen,
    abgedunkelten Kopie seiner selbst, die die Box füllt. */
-.iv-img .iv-img-bg {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-  filter: blur(22px) brightness(0.55) saturate(1.1); transform: scale(1.2);
-}
+/* Kein unscharfes Doppel mehr hinter dem Bild: auf manchen Bildschirmen (TV-Browser) greift der Weichzeichner nicht,
+   dann stand die Übung oben und unten noch einmal angeschnitten (Samuel 23.10., TG 19761). Die Bilder sind dunkel,
+   der Rand verschmilzt mit dem Kartengrund. */
+.iv-img .iv-img-bg { display: none; }
+.iv-img { background: radial-gradient(ellipse at center, #0d1a1c 0%, #071012 70%); }
 .iv-img .iv-img-fg { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; object-position: center; }
 .iv-img .iv-img-sheen { z-index: 2; }
 
